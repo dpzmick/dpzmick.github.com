@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Vim Remote Make &#8211; dpzmick.com</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Just some dude's blog">
+    <meta name="author" content="David Zmick">
+    <meta name="keywords" content="">
+    <link rel="canonical" href="http://dpzmick.com/2015/02/25/vim-remote-make/">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/pixyll.css" type="text/css">
+
+    <!-- MathJax config -->
+    <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        extensions: ["tex2jax.js"],
+        jax:        ["input/TeX", "output/HTML-CSS"],
+        tex2jax:    {
+            inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+            processEscapes: true
+        },
+        "HTML-CSS": {
+             availableFonts:
+             ["TeX"]
+        }
+    });
+    </script>
+
+    <!-- Fonts -->
+    <link href='//fonts.googleapis.com/css?family=Merriweather:900,900italic,300,300italic' rel='stylesheet' type='text/css'>
+    <link href='//fonts.googleapis.com/css?family=Lato:900,300' rel='stylesheet' type='text/css'>
+    
+      <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    
+
+    <!-- Open Graph -->
+    <!-- From: https://github.com/mmistakes/hpstr-jekyll-theme/blob/master/_includes/head.html -->
+    <meta property="og:locale" content="en_US">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Vim Remote Make">
+    <meta property="og:description" content="">
+    <meta property="og:url" content="http://dpzmick.com/2015/02/25/vim-remote-make/">
+    <meta property="og:site_name" content="dpzmick.com">
+
+    <!-- Icons -->
+    <link rel="apple-touch-icon" sizes="57x57" href="apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="apple-touch-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="apple-touch-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="apple-touch-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="apple-touch-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180x180.png">
+    <link rel="icon" type="image/png" href="favicon-192x192.png" sizes="192x192">
+    <link rel="icon" type="image/png" href="favicon-160x160.png" sizes="160x160">
+    <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96">
+    <link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16">
+    <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32">
+</head>
+
+<body class="">
+  <div class="site-wrap">
+    <header class="site-header px2 px-responsive">
+  <div class="mt2 wrap">
+    <div class="measure">
+      <a href="http://dpzmick.com" class="site-title">dpzmick.com</a>
+      <nav class="site-nav right">
+        <a href="/about/">About</a>
+<a href="/contact/">Contact</a>
+
+      </nav>
+      <div class="clearfix"></div>
+      
+        <div class="social-icons">
+  <div class="left">
+    
+      <a class="fa fa-github" href="https://github.com/dpzmick"></a>
+    
+    
+    <a class="fa fa-rss" href="/feed.xml"></a>
+    
+    
+    
+      <a class="fa fa-envelope" href="mailto:dpzmick@gmail.com"></a>
+    
+    
+  </div>
+  <div class="right">
+    
+    
+    
+  </div>
+</div>
+<div class="clearfix"></div>
+
+      
+    </div>
+  </div>
+</header>
+
+
+    <div class="post p2 p-responsive wrap" role="main">
+      <div class="measure">
+        
+
+
+<div class="post-header mb2">
+  <h1>Vim Remote Make</h1>
+  <span class="post-meta">Feb 25, 2015</span><br>
+  
+  <span class="post-meta small">2 minute read</span>
+</div>
+
+<article class="post-content">
+  <h2 id="remote-make">Remote Make</h2>
+<p>So I’m in a class that requires that I use a linux VM to edit code. Since we are
+sharing this VM between all of the group members, I don’t want to jump on there
+and throw my vim config and stuff on the machine. Instead, I’ve been mounting
+the remote filesystem with sshfs and editing files remotely, but then I have to
+run make outside of vim to get any sort of compiler errors. I realized that I
+could probably run make remotely with a script and use makeprg to run that
+script, then get errors in vim (maybe even get syntastic to call the remote make
+or something?), and that takes a little bit of tweaking but it works nicely.</p>
+
+<p>Here’s how I did it.</p>
+
+<p>~/dotfiles/bin/423make:</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#!/bin/bash</span>
+<span class="nv">oldpath</span><span class="o">=</span>/home/cs423/<span class="nv">$1</span>
+<span class="nv">newpath</span><span class="o">=</span>/Users/dz0004455/programming/cs423/remote/<span class="nv">$1</span>
+ssh cs423@<span class="nv">$REMOTE_HOST</span> <span class="s2">&quot;cd ~/$1 &amp;&amp; make&quot;</span>  2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">|</span> sed -e <span class="s2">&quot;s|$oldpath|$newpath|g&quot;</span></code></pre></div>
+
+<p>This script runs the make program remotely (makes lots of assumptions about
+directory structure, but that’s totally fine). Then it pipes the output through
+sed to replace all the paths make spits out on the remote machine with the paths
+on the local machine, so that vim can open the files with errors correctly. If
+you don’t replace the pathnames, vim will try to open the wrong files and fail
+to jump to the errors you wanted it to jump to.</p>
+
+<p>Then, from vim, open a file you need to edit, run :set makeprg=423make\ MP2 (if
+I wanted to build something in /home/cs423/MP2), and then run :make to build the
+program remotely. The make program will populate the quickfix window, which you
+can open with :copen.</p>
+
+<p>Next step might be trying to get syntastic to run my remote make, but I’m
+anxious about the inevitable slow make every time I save the file. Since I’m
+using neovim I can also use the wonderful
+<a href="https://github.com/benekastah/neomake"> neomake </a> plugin to run builds
+asynchronously and populate quickfix.</p>
+
+<h2 id="avoiding-sshfs">avoiding sshfs</h2>
+<p>After using this for a few hours on a less than stellar internet connection, I
+got a little tired of sshfs dropping my connections, so I added two more “scripts”
+to this mix.</p>
+
+<p>423get</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash">rsync -a cs423@<span class="nv">$REMOTE_HOST</span>:/home/cs423/<span class="nv">$1</span>/ ~/programming/cs423/sync/<span class="nv">$1</span>/</code></pre></div>
+
+<p>423push</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash">rsync -a ~/programming/cs423/sync/<span class="nv">$1</span>/ cs423@<span class="nv">$REMOTE_HOST</span>:/home/cs423/<span class="nv">$1</span>/</code></pre></div>
+
+<p>Then, in vim:</p>
+
+<div class="highlight"><pre><code class="language-vim" data-lang="vim"><span class="p">:</span><span class="k">autocmd</span> <span class="nb">BufWrite</span> * :Dispatch<span class="p">!</span> <span class="m">423</span>push MP2</code></pre></div>
+
+<p>so files get pushed back (via rsync) anytime I write. Again, could have used
+neomake for the asynchronous behavior (instead of dispatch), but the dispatch
+solution is slightly easier to type.</p>
+
+
+</article>
+
+
+
+
+
+
+
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+  <div class="p2 wrap">
+    <div class="measure mt1 center">
+      <small>
+        Crafted with &lt;3 by <a href="http://johnotander.com">John Otander</a> (<a href="https://twitter.com/4lpine">@4lpine</a>).<br>
+        &lt;/&gt; available on <a href="https://github.com/johnotander/pixyll">Github</a>.
+      </small>
+    </div>
+  </div>
+</footer>
+
+
+
+<script type="text/javascript"
+        src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+</body>
+</html>

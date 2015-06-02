@@ -1,0 +1,1353 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>dpzmick.com</title>
+    <description>Just some dude&#39;s blog</description>
+    <link>http://dpzmick.com/</link>
+    <atom:link href="http://dpzmick.com/feed.xml" rel="self" type="application/rss+xml" />
+    
+      <item>
+        <title>Vim Remote Make</title>
+        <description>&lt;h2 id=&quot;remote-make&quot;&gt;Remote Make&lt;/h2&gt;
+&lt;p&gt;So I’m in a class that requires that I use a linux VM to edit code. Since we are
+sharing this VM between all of the group members, I don’t want to jump on there
+and throw my vim config and stuff on the machine. Instead, I’ve been mounting
+the remote filesystem with sshfs and editing files remotely, but then I have to
+run make outside of vim to get any sort of compiler errors. I realized that I
+could probably run make remotely with a script and use makeprg to run that
+script, then get errors in vim (maybe even get syntastic to call the remote make
+or something?), and that takes a little bit of tweaking but it works nicely.&lt;/p&gt;
+
+&lt;p&gt;Here’s how I did it.&lt;/p&gt;
+
+&lt;p&gt;~/dotfiles/bin/423make:&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/bash&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;oldpath&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/home/cs423/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;newpath&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/Users/dz0004455/programming/cs423/remote/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;
+ssh cs423@&lt;span class=&quot;nv&quot;&gt;$REMOTE_HOST&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;cd ~/$1 &amp;amp;&amp;amp; make&amp;quot;&lt;/span&gt;  2&amp;gt;&lt;span class=&quot;p&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; sed -e &lt;span class=&quot;s2&quot;&gt;&amp;quot;s|$oldpath|$newpath|g&amp;quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This script runs the make program remotely (makes lots of assumptions about
+directory structure, but that’s totally fine). Then it pipes the output through
+sed to replace all the paths make spits out on the remote machine with the paths
+on the local machine, so that vim can open the files with errors correctly. If
+you don’t replace the pathnames, vim will try to open the wrong files and fail
+to jump to the errors you wanted it to jump to.&lt;/p&gt;
+
+&lt;p&gt;Then, from vim, open a file you need to edit, run :set makeprg=423make\ MP2 (if
+I wanted to build something in /home/cs423/MP2), and then run :make to build the
+program remotely. The make program will populate the quickfix window, which you
+can open with :copen.&lt;/p&gt;
+
+&lt;p&gt;Next step might be trying to get syntastic to run my remote make, but I’m
+anxious about the inevitable slow make every time I save the file. Since I’m
+using neovim I can also use the wonderful
+&lt;a href=&quot;https://github.com/benekastah/neomake&quot;&gt; neomake &lt;/a&gt; plugin to run builds
+asynchronously and populate quickfix.&lt;/p&gt;
+
+&lt;h2 id=&quot;avoiding-sshfs&quot;&gt;avoiding sshfs&lt;/h2&gt;
+&lt;p&gt;After using this for a few hours on a less than stellar internet connection, I
+got a little tired of sshfs dropping my connections, so I added two more “scripts”
+to this mix.&lt;/p&gt;
+
+&lt;p&gt;423get&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;rsync -a cs423@&lt;span class=&quot;nv&quot;&gt;$REMOTE_HOST&lt;/span&gt;:/home/cs423/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/ ~/programming/cs423/sync/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;423push&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;rsync -a ~/programming/cs423/sync/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/ cs423@&lt;span class=&quot;nv&quot;&gt;$REMOTE_HOST&lt;/span&gt;:/home/cs423/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Then, in vim:&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-vim&quot; data-lang=&quot;vim&quot;&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;autocmd&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;BufWrite&lt;/span&gt; * :Dispatch&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;423&lt;/span&gt;push MP2&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;so files get pushed back (via rsync) anytime I write. Again, could have used
+neomake for the asynchronous behavior (instead of dispatch), but the dispatch
+solution is slightly easier to type.&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 25 Feb 2015 00:00:00 -0500</pubDate>
+        <link>http://dpzmick.com/2015/02/25/vim-remote-make/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2015/02/25/vim-remote-make/</guid>
+      </item>
+    
+      <item>
+        <title>Study Groups pt. 2</title>
+        <description>&lt;p&gt;This post is intended to be a continuation of the previous post discussing study
+groups. You can probably find that post pretty easily on this site. If you
+haven’t seen it, go back and read it!&lt;/p&gt;
+
+&lt;p&gt;I would also like to say that I am quite interested in criticism of this little
+article. I don’t intend to go much farther with this project, but discussion
+about it could be quite interesting. And of course if you find errors, let me
+know!&lt;/p&gt;
+
+&lt;h2 id=&quot;simulation&quot;&gt;Simulation&lt;/h2&gt;
+&lt;p&gt;I’ve expanded the model a bit for this one. Here is what happens:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;People enter a room one at a time&lt;/li&gt;
+  &lt;li&gt;People will chose the study group with best fitness and join it&lt;/li&gt;
+  &lt;li&gt;On occasion, an individual will decide to be selfless, meaning, the
+  individual will not join a group if their joining will hurt the fitness of the
+  group
+    &lt;ul&gt;
+      &lt;li&gt;if an individual attempts to be selfless, but there are no groups they can
+join without hurting them, they will have to join normally&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;After a member has joined, for every group, if the group’s size is greater
+  than the optimal group size, there is some chance the group will split
+    &lt;ul&gt;
+      &lt;li&gt;if the group splits, half of the groups members stay in the group and the
+other half all join groups one at a time (goto 1 essentially for every
+member that has left the group)&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Just to recap, fitness is determined based on group size, using this
+differential equation:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \frac{dF}{dn} = \alpha - \beta n &lt;/script&gt;
+
+&lt;p&gt;where $ \alpha $ is an individual member’s contribution (every member is
+assumed to have the same contribution) and $ \beta $ is the amount the member
+will detract from the group (also assumed the same for all members).&lt;/p&gt;
+
+&lt;p&gt;The chance an individual will be selfless is some percentage, also assumed
+constant for all members.&lt;/p&gt;
+
+&lt;p&gt;And finally, the chance come group will split, given that it has exceeded the
+optimal size, is another percentage.&lt;/p&gt;
+
+&lt;p&gt;One more detail, in the simulation, I have set a fixed number of available
+groups. All groups start with 0 members. As long as the number of available
+groups is substantially larger than the number of people to join the groups,
+this fact doesn’t seem to have an effect on the results. However, if we do
+something like try and cram 16 people into 10 groups, that can get kind of
+interesting.&lt;/p&gt;
+
+&lt;p&gt;Because there is some element of randomness, I will run many trials of the
+simulation to get results.&lt;/p&gt;
+
+&lt;h2 id=&quot;criticism-of-the-model&quot;&gt;Criticism of the model&lt;/h2&gt;
+&lt;p&gt;There are a couple obvious problems with this model.&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Realistically, people do not all contribute equally to a group, this is a
+pretty dramatic simplification. Same for member detriment and selflessness.
+    &lt;ul&gt;
+      &lt;li&gt;However, I did a small test to see how much of an impact this has and I
+(weakly) concluded that for large $ n $ this effect goes away.
+Unfortunatley, I’m not really testing with large $ n $, so we will have
+to take this fact into consideration in our interpretation of the results.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;The selflessness idea is fairly unrealistic. In reality an individual can’t
+determine if their joining will damage the fitness of the group, because they
+have no concrete way to compute the group’s fitness. However, because this is
+done by chance, if we keep the chance low we can approximate the effect of
+this optimal size uncertainty. To explain what I mean, consider this. Assume
+an individual can only estimate whether or not they will hurt a group, and
+lets say they are only right 50 percent of the time. Then, lets say that this
+person has a 50 percent chance of being selfless. So essentially, given a
+group above optimal size, there is a 25 percent chance the person won’t join
+it. We can consider this when setting the selflessness parameter.&lt;/li&gt;
+  &lt;li&gt;The way groups split is fairly unrealistic. Groups, like individuals, can’t
+say for sure if they are above optimal size. However, using the same argument
+as the previous, I think we can get away with this.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;So, the biggest flaw we will have to overcome is (1), but, the specific kind of
+experiment I plan to run lessens the impact of this problem.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-experiment&quot;&gt;The Experiment&lt;/h2&gt;
+&lt;p&gt;I intend to try and figure out if group splitting or individual selflessness
+will do a better job at keeping groups close to optimal size (or at least not
+create tons of 1 person groups or tons of very large groups).&lt;/p&gt;
+
+&lt;p&gt;So, for some values of $ \alpha $, and $ \beta $, I varied both the
+selflessness chance and the group split chance from 0.0 to 0.95, in 5 percent
+increments. So every pair is tested.&lt;/p&gt;
+
+&lt;p&gt;I’ve created some plots to demonstrate my results. I’m also kind of lazy, so I
+didn’t label them, but, I’ll give you a badly labeled example here just to be
+nice.&lt;/p&gt;
+
+&lt;p&gt;This particular image is shows the percentage of groups at optimal size for
+various values of selflessness and group split chance.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/study_groups/2/5_optimal.png&quot; alt=&quot;joiners=5, max=50, optimal&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;All of the images from here on out are essentially the same, although they
+grayness may have a different meaning, I’ll be careful to explain what you are
+looking at in the file names and in this document, but I’m not going to go back
+all the images, sorry!&lt;/p&gt;
+
+&lt;h2 id=&quot;results&quot;&gt;Results&lt;/h2&gt;
+&lt;p&gt;First test we are going to look at.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;
+member_contrib=1.000000
+member_detriment=0.500000
+num_joiners=5
+max_groups=50
+trials=1000
+&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Here are the images for all the results:&lt;/p&gt;
+
+&lt;h4 id=&quot;percentage-of-groups-at-optimal-size&quot;&gt;Percentage of groups at optimal size&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&quot;/img/study_groups/2/5_optimal.png&quot; alt=&quot;joiners=5, at optimal&quot; /&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;percentage-of-groups-above-optimal-size&quot;&gt;Percentage of groups above optimal size&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&quot;/img/study_groups/2/5_above_optimal.png&quot; alt=&quot;joiners=5, above optimal&quot; /&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;percentage-of-groups-below-optimal-size&quot;&gt;Percentage of groups below optimal size&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&quot;/img/study_groups/2/5_below_optimal.png&quot; alt=&quot;joiners=5, below optimal&quot; /&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;average-fitness-of-groups&quot;&gt;Average fitness of groups&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&quot;/img/study_groups/2/5_avg_fit.png&quot; alt=&quot;joiners=5, average fitness&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;So, what did we learn here? Well, it looks like the best way to increase chances
+of getting groups to their optimal size is having a moderate percentage of
+groups splitting, with no selflessness. We can also see that we get the fewest
+groups below optimal size at this point (not many really small groups), but we
+still end up with a decent percentage above optimal size.&lt;/p&gt;
+
+&lt;p&gt;One possible explanation for this seemingly unintuitive result could lie in my
+group splitting logic. When groups split, they split down to optimal size, then
+the other members get a chance to go join other groups. These members are likely
+to join small groups, close to their optimal size, bringing the number of small
+groups down. We can end up with a decent number of groups above optimal size
+because splitting doesn’t happen all that often (the split percent in the
+region we are investigating is only 30%).&lt;/p&gt;
+
+&lt;p&gt;We can also kind of see the same thing happen with selflessness around 65-70
+percent, but the effect is nowhere near as pronounced.&lt;/p&gt;
+
+&lt;p&gt;The other notable fact is that, although the greatest percentage of optimal
+groups seems to happen with a small chance of groups splitting, this is not where
+the average group fitness is highest. The greatest rate of chance in average
+fitness still looks to be occurring as the chance a group splits increases,
+meaning that the averages fitness of groups improves faster as we increase
+the chance of a group splitting than it improves as we increase the chance of
+selflessness.&lt;/p&gt;
+
+&lt;p&gt;Also, something strange seems to be happening with the average fitness graph.
+I can’t really explain that or form much of a conclusion about it. Nothing else
+grabbed my attention.&lt;/p&gt;
+
+&lt;p&gt;I ran only a few more tests, here are the parameters and links to my results.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;
+member_contrib=1.000000
+member_detriment=0.500000
+num_joiners=10
+max_groups=50
+trials=1000
+&lt;/code&gt;
+&lt;a href=&quot;/img/study_groups/2/10_optimal.png&quot;&gt;at optimal&lt;/a&gt;
+&lt;a href=&quot;/img/study_groups/2/10_above_optimal.png&quot;&gt;above optimal&lt;/a&gt;
+&lt;a href=&quot;/img/study_groups/2/10_below_optimal.png&quot;&gt;below optimal&lt;/a&gt;
+&lt;a href=&quot;/img/study_groups/2/10_avg_fit.png&quot;&gt;average fitness&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;
+member_contrib=1.000000
+member_detriment=0.500000
+num_joiners=15
+max_groups=50
+trials=1000
+&lt;/code&gt;
+&lt;a href=&quot;/img/study_groups/2/15_optimal.png&quot;&gt;at optimal&lt;/a&gt;
+&lt;a href=&quot;/img/study_groups/2/15_above_optimal.png&quot;&gt;above optimal&lt;/a&gt;
+&lt;a href=&quot;/img/study_groups/2/15_below_optimal.png&quot;&gt;below optimal&lt;/a&gt;
+&lt;a href=&quot;/img/study_groups/2/15_avg_fit.png&quot;&gt;average fitness&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;
+member_contrib=1.000000
+member_detriment=0.500000
+num_joiners=20
+max_groups=50
+trials=1000
+&lt;/code&gt;
+&lt;a href=&quot;/img/study_groups/2/20_optimal.png&quot;&gt;at optimal&lt;/a&gt;
+&lt;a href=&quot;/img/study_groups/2/20_above_optimal.png&quot;&gt;above optimal&lt;/a&gt;
+&lt;a href=&quot;/img/study_groups/2/20_below_optimal.png&quot;&gt;below optimal&lt;/a&gt;
+&lt;a href=&quot;/img/study_groups/2/20_avg_fit.png&quot;&gt;average fitness&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;As you can see, if you looked at these images, the results are fairly consistent
+across my tests.&lt;/p&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;It would seem that selflessness doesn’t much help, but group splitting does. If
+you are shooting to find the optimal group size, have a moderate to low percent
+chance of splitting, and if you want to maximize the average fitness of all the
+study groups in you meta-study-group group, have a moderate to high chance of
+splitting. Either way, splitting groups seems to improve the effectiveness of
+study groups more so than people choosing not to join them when they think they
+would hurt the group, which seems somewhat intuitive.&lt;/p&gt;
+
+&lt;p&gt;To briefly consider the real world, consider that some people damage the group
+more than others, or help the group more. I think that this effect doesn’t
+really damage the strength of my conclusion, because I am simply proposing that
+splitting groups when they seem to be becoming unproductive may be an effective
+way to increase study group effectiveness. When splitting the groups in real
+life, it is probably a good idea to consider who’s who, and of course, if a
+major productivity killer person decides to not join a group, that will help the
+group out quite a bit more than choosing to split later.&lt;/p&gt;
+
+&lt;p&gt;Hopefully this was interesting to you! If you’ve seen anything I haven’t please
+tell me!!&lt;/p&gt;
+
+&lt;h2 id=&quot;a-bit-about-implementation&quot;&gt;A bit about implementation&lt;/h2&gt;
+&lt;p&gt;I wrote this code a couple of different ways, but eventually settled on Haskell
+as the language for the simulation. I also chose to leave randomness in the
+simulation, instead of finding all possible outcomes for some given set of
+parameters and computing percentages from that (the number of cases seems quite
+large, although performance of what I came up with isn’t phenomenal). I also
+wrote a python script to run multiple instances of the simulation (which is
+single threaded), and collect the results. The, finally, I used R to spit out
+the rather unpolished graphics I used.&lt;/p&gt;
+
+&lt;p&gt;The code is on github, here is a
+&lt;a href=&quot;https://github.com/dpzmick/study_groups/tree/8731b5285997c88f0b3e889e57d60cbd9dbab3f3&quot;&gt;link&lt;/a&gt;
+to the commit used to write this post.&lt;/p&gt;
+</description>
+        <pubDate>Mon, 07 Jul 2014 02:15:14 -0400</pubDate>
+        <link>http://dpzmick.com/2014/07/07/study-groups-pt-2/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2014/07/07/study-groups-pt-2/</guid>
+      </item>
+    
+      <item>
+        <title>Study Groups pt. 1</title>
+        <description>&lt;p&gt;Almost without fail, whenever my friends and I get together to study for
+something in a group, we end up in a group that, due to it’s size, decreases our
+productivity. I’m reading a book at the moment about animal behavior, and one of
+the chapters referenced some research done about animal group formation. In some
+models, with simulation, it can be shown that groups almost always grow to be
+larger than their optimal size. In this post I will discuss a preliminary attempt
+at modeling the behavior of study group formation using similar methods. In
+later posts I plan to strengthen the model and (hopefully) present possible
+solutions to the problem.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-model&quot;&gt;The Model&lt;/h2&gt;
+&lt;p&gt;The basic assumptions of the simulation we will use are as follows:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;When a person “arrives” they must chose a study group to join (can’t walk
+away)&lt;/li&gt;
+  &lt;li&gt;People arrive one at a time&lt;/li&gt;
+  &lt;li&gt;Once someone has joined a group, they do not leave&lt;/li&gt;
+  &lt;li&gt;People will always join the best group they can&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;We need a method to determine which group is “best,” a group fitness function.
+So, lets consider how the fitness of a group changes as people join the group.
+Every person the joins benefits the group in some way, but, if the group is
+large, adding another member will likely decrease the group’s productivity. To
+simplify this a bit more, add the following assumptions:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Every person contributes the same amount to the group.&lt;/li&gt;
+  &lt;li&gt;Every person hurts productivity by the same amount.&lt;/li&gt;
+  &lt;li&gt;Both of these amounts are quantifiable&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Using these assumptions we can write the following equation:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \frac{dF}{dn} = \alpha - \beta n &lt;/script&gt;
+
+&lt;p&gt;where:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;$ F $ is the fitness function.&lt;/li&gt;
+  &lt;li&gt;$ n $ is the number of people currently in the group&lt;/li&gt;
+  &lt;li&gt;$ \alpha $ is an individual’s contribution to the study group&lt;/li&gt;
+  &lt;li&gt;$ \beta $ is an individual’s detriment to the study group&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Let’s explore this for a moment before moving on. Consider just
+$ \frac{dF}{dn} = \alpha $. This piece of the equation tells us that as the
+number of people in the study group changes, the change in the fitness of the
+study group is proportional to $ \alpha $, the individual contribution rate.
+But, we know that as the number of people increases, the effectiveness of the
+group decreases, so subtract something that grows as the population grows: $ \beta n $.&lt;/p&gt;
+
+&lt;p&gt;This equations is simple to solve, and we should impose the initial condition
+$ F(0) = 0 $, as a group with zero members has 0 fitness. The solutions then
+are:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; F(n) = \alpha n - \frac{\beta}{2} n^2 &lt;/script&gt;
+
+&lt;p&gt;Additionally, we probably want to know what the optimal study group size is.
+We can easily find (by setting $ \frac{dF}{dn} = 0 $) that the optimal size is
+$ \frac{\alpha}{\beta} $.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-simulation&quot;&gt;The Simulation&lt;/h2&gt;
+&lt;p&gt;The simulation I have in mind is fairly simple.&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Someone shows up&lt;/li&gt;
+  &lt;li&gt;They evaluate all the study groups available to them&lt;/li&gt;
+  &lt;li&gt;They join the best on available (best evaluated using fitness function)&lt;/li&gt;
+  &lt;li&gt;If all available groups have even fitness, join one at random&lt;/li&gt;
+  &lt;li&gt;Repeat until there is no one left to join&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;implementation-and-results&quot;&gt;Implementation and Results&lt;/h2&gt;
+&lt;p&gt;I wrote some  python code to see how this system would perform. I will leave the
+code at the bottom of the document. The results seem to correspond with reality.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/study_groups/1x.5.png&quot; alt=&quot;a=1, b=.5&quot; /&gt;
+&lt;img src=&quot;/img/study_groups/1x.4.png&quot; alt=&quot;a=1, b=.4&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;And here are links to all of the images I’ve generated at the time of writing.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;/img/study_groups/1x.1.png&quot;&gt;(a=1, b=.1)&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;/img/study_groups/1x.2.png&quot;&gt;(a=1, b=.2)&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;/img/study_groups/1x.4.png&quot;&gt;(a=1, b=.4)&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;/img/study_groups/1x.5.png&quot;&gt;(a=1, b=.5)&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;/img/study_groups/1x.8.png&quot;&gt;(a=1, b=.8)&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;/img/study_groups/1x1.png&quot;&gt;(a=1, b=1)&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;From this model, it seems like we tend to form groups larger than would be
+optimal, because people continue to join the group once their joining will
+decrease the productivity of the group but would increase their personal
+productivity.&lt;/p&gt;
+
+&lt;p&gt;As I said at the top I do plan to explore this idea more. I hope to build a more
+complicated simulator allowing groups to split, experiment with a “selflessness
+factor,” some chance that a person will not join a group if it hurts the group
+but helps the person, and a few other things. Please leave some feedback if this
+is interesting to you, we could discuss more ideas!&lt;/p&gt;
+
+&lt;h2 id=&quot;simulation-code-not-pythonic&quot;&gt;Simulation Code (not pythonic!)&lt;/h2&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-python&quot; data-lang=&quot;python&quot;&gt;&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;math&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;pow&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;random&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;###### Parameters&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;1.0&lt;/span&gt; &lt;span class=&quot;c&quot;&gt;# alpha define above&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;  &lt;span class=&quot;c&quot;&gt;# beta, also define above&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maxgroups&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;numjoiners&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;###### Globals&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;maxgroups&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;###### Functions&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;fitness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;pow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;##### Simulation&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__name__&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;__main__&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;Starting the simulation&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;xrange&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;numjoiners&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;best&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fits&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;enumerate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;map&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fitness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)):&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;best&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;or&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;best&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]:&lt;/span&gt;
+                &lt;span class=&quot;n&quot;&gt;best&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fits&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;best&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;best&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;best&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;I refuse to join these groups&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;map&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fitness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;optimal group size &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;%d&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;average non_empty group size &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;%d&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;
+            &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;filter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;lambda&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))))&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+</description>
+        <pubDate>Sat, 31 May 2014 00:00:00 -0400</pubDate>
+        <link>http://dpzmick.com/2014/05/31/study-groups-pt-1/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2014/05/31/study-groups-pt-1/</guid>
+      </item>
+    
+      <item>
+        <title>Decision Matrix</title>
+        <description>&lt;p&gt;Decision matrix analysis is a simple way of selecting one of many options. This
+post exists to allow me to dump thoughts somewhere (so I don’t forget them)
+and share them with others easily. I will probably update this document as
+I have new ideas.&lt;/p&gt;
+
+&lt;h2 id=&quot;brief-description&quot;&gt;Brief Description&lt;/h2&gt;
+&lt;p&gt;Simply put, a decision consists of objectives and alternatives. An objective is
+something you want to fulfill by making the decision. For example, a career
+decision objective may be “Decent Pay” or “Short Commute.” In deciding what
+university to attend, objectives may be things such as “Academic Rating,”
+“Class Size,” and “Cost.” These objectives all have an importance, or weight.
+When selecting a car to purchase, the objective “Low Fuel Consumption” may be
+extremely important to you, but “Heated Seats” might be less important. I would
+say that fuel economy is weighted more heavily than heated seats, if this were
+the case.&lt;/p&gt;
+
+&lt;p&gt;Alternatives, or options, are the different options you have to choose from, so,
+in the car example, my options may be a Honda Accord, Toyota Camry, and a
+Maserati. To evaluate these options, assign a rating for each of your chosen
+objectives. So, say my objectives were Cost and Style. The Maserati
+would get a “Very Displeased” for cost, but a “Very Pleased” for style, and the
+Camry would get a “Very pleased” for cost, and a “Somewhat Pleased” for style.&lt;/p&gt;
+
+&lt;p&gt;So, this decision in table form would look something like this:&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;Objectives&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;Cost: Important&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;Style: Somewhat Important&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Maserati&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Very Displeased&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Very Pleased&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Camry&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Very Pleased&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Somewhat Pleased&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;You can then define a scale for your ratings and weights and use the matrix to
+determine which option best meets your needs. The score for each option is the
+sum of each rating multiplied by the ratings weight.&lt;/p&gt;
+
+&lt;p&gt;This technique is extremely useful for increasing self awareness, as it forces
+you to explain your thought process to yourself, place value on your objectives,
+and collect fairly decent data about your options. The technique also allows you
+to understand trade offs. In the example above, if we chose the Camry, we would
+be sacrificing a bit on Style to save on Cost. Because a low cost is important
+to us, we may be willing to make that trade. Using the technique also creates a
+mechanism to experiment. You can ask question like, “How much cheaper would the
+Maserati need to be for it to become ‘better’ than the Camry,” or, “How much of
+a pay cut am I willing to take to continue living in Houston?”&lt;/p&gt;
+
+&lt;h2 id=&quot;mathematical-definitions&quot;&gt;Mathematical Definitions&lt;/h2&gt;
+&lt;p&gt;To model a decision with $n$ objectives and $m$ alternatives, define:&lt;/p&gt;
+
+&lt;p&gt;The objectives vector:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} =
+    \begin{pmatrix}
+        w_1 \\
+        w_2 \\
+        \vdots  \\
+        w_n
+    \end{pmatrix}
+&lt;/script&gt;
+
+&lt;p&gt;where:&lt;/p&gt;
+
+&lt;p&gt;$ w_i $ = the weight given to the ith objective.&lt;/p&gt;
+
+&lt;p&gt;The vector &lt;script type=&quot;math/tex&quot;&gt;% &lt;![CDATA[
+ \mathbf{a_i} = \begin{pmatrix} r_1 &amp; r_2 &amp; \cdots &amp; r_m \end{pmatrix}  %]]&gt;&lt;/script&gt;
+for the ith alternative, where $ r_k $ is the ith alternative’s rating for the
+kth objective.&lt;/p&gt;
+
+&lt;p&gt;The alternative matrix&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; A = \begin{pmatrix}
+    \mathbf{a_1} \\
+    \mathbf{a_2} \\
+    \vdots \\
+    \mathbf{a_m}
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;The relative strengths of each alternative are given by $ A\mathbf{o} $.&lt;/p&gt;
+
+&lt;h2 id=&quot;example&quot;&gt;Example&lt;/h2&gt;
+&lt;p&gt;Let us revist the car example. Suppose my objectives are Cost, Style, and
+Comfort. Using a 1-5 importance scale, Cost would have an importance of 5, Style
+and importance of 2, and Comfort an importance of 4.&lt;/p&gt;
+
+&lt;p&gt;This means&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} = \begin{pmatrix}
+    5 \\
+    2 \\
+    4
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;Now, let us consider 3 options and evaluate them on a using a negative 3 to 3
+scale.&lt;/p&gt;
+
+&lt;p&gt;The Maserati would get a -3 for Cost, a 3 for Style, and a 3 for Comfort.&lt;/p&gt;
+
+&lt;p&gt;A Camry would get a 1 for Cost, a 1 for Style, and a 2 for comfort.&lt;/p&gt;
+
+&lt;p&gt;And, a Civic would get a 3 for Cost (I have no idea if this is true), a 1 for
+style, and a 2 for comfort.&lt;/p&gt;
+
+&lt;p&gt;So, we build our alternatives matrix.&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
+ A = \begin{pmatrix}
+    -3 &amp; 3 &amp; 3 \\
+     1 &amp; 1 &amp; 2 \\
+     3 &amp; 1 &amp; 2
+\end{pmatrix}  %]]&gt;&lt;/script&gt;
+
+&lt;p&gt;And get each alternative’s score:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
+ A\mathbf{o} =
+\begin{pmatrix}
+    -3 &amp; 3 &amp; 3 \\
+     1 &amp; 1 &amp; 2 \\
+     3 &amp; 1 &amp; 2
+\end{pmatrix}
+\begin{pmatrix}
+    5 \\
+    2 \\
+    4
+\end{pmatrix} =
+\begin{pmatrix}
+    -3(5) + 3(2) + 3(4) \\
+     1(5) + 1(2) + 2(4) \\
+     3(5) + 1(2) + 2(4)
+\end{pmatrix} =
+\begin{pmatrix}
+    3 \\
+    15 \\
+    25
+\end{pmatrix}
+ %]]&gt;&lt;/script&gt;
+
+&lt;p&gt;So, given our objectives, their importances, and our evaluation of our options
+using those objectives, a Civic is probably the best option for us.&lt;/p&gt;
+
+&lt;h2 id=&quot;analysis&quot;&gt;Analysis&lt;/h2&gt;
+&lt;p&gt;Now that we have a model of a decision, it is interesting to ask a few questions
+about the model, for example:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;What are we trading for what? In the car example we traded our desire for
+comfort and style for our desire to keep cost low.&lt;/li&gt;
+  &lt;li&gt;How much would we have to sacrifice on cost to make the Maserati the best
+option?&lt;/li&gt;
+  &lt;li&gt;Which of our objectives have impact? If an objective gets the same, or close
+to the same rating for each candidate, it doesn’t really impact the decision.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;trade-offs&quot;&gt;Trade offs&lt;/h2&gt;
+&lt;p&gt;Referring back to our car example, how can we try and understand what we are
+trading if we chose the Maserati over the Civic?&lt;/p&gt;
+
+&lt;p&gt;Let’s define $ \mathbf{t}(i,j) = \mathbf{a_i} - \mathbf{a_j} $ to be the trades made if
+alternative $ i $ is selected over alternative $ j $. Any negative value in
+$ \mathbf{t} $ represents a sacrificed objective in the trade, and any positive
+value represents something gained. So, if the 1st element is negative and the
+last two are positive, we’ve sacrificed on our first objective for gains on our
+second and third.&lt;/p&gt;
+
+&lt;p&gt;Remember that $ \mathbf{a_1} = \begin{pmatrix} -3 &amp;amp; 3 &amp;amp; 3 \end{pmatrix} $ for the
+Maserati and $ \mathbf{a_3} = \begin{pmatrix} 3 &amp;amp; 1 &amp;amp; 2 \end{pmatrix} $ for the Civic.&lt;/p&gt;
+
+&lt;p&gt;$ \mathbf{t}(1,3) =  \mathbf{a_1} - \mathbf{a_3} = \begin{pmatrix} -6 &amp;amp; 1 &amp;amp; 1 \end{pmatrix} $
+So, if we were to choose the Maserati over the Civic, we would be sacrificing
+money (first objective) to gain comfort and style (second and third objectives).
+But, we aren’t willing to make this trade; we’ve demonstrated that in the
+previous example. Let us investigate the trade here again. A trade make sense
+if the gains in the trade outweigh the loses ($gains - losses \gt 0 $). The
+total gain is the sum of each positive number in $t$ multiplied by the weight
+associated with it. Similarly, total loss is just the sum of each negative
+number multiplied by the associated weight.&lt;/p&gt;
+
+&lt;p&gt;Remember&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} =
+\begin{pmatrix}
+    5 \\
+    2 \\
+    4
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;In this example, $ gains = 1(2) + 1(4) = 6 $ and $ losses = 6(5) = 30 $. We
+can see this is not a valid trade because $ 6 - 30 = -24 $ is much less than
+zero! If we were to go the other way (what do we trade if we chose the Civic
+over the Maserati), all the signs would reverse, and the trade would be a good
+trade.&lt;/p&gt;
+
+&lt;p&gt;Since gains are positive and losses are negative in the vector we get by
+subtracting alternatives, we can express the validity of a choice of alternative
+$i$ over alternative $j$ more simply with the statement:
+$ \sum_{k=0}^{n} \mathbf{t}(i,j)_k w_k \gt 0 $&lt;/p&gt;
+
+&lt;p&gt;Check: $ \sum_{k=0}^{3} \mathbf{t}(1,3)_k w_k = -6(5) + 1(2) + 1(4) = -24 $&lt;/p&gt;
+
+&lt;p&gt;To understand what adjustments in objective importance might be needed to make
+the Maserati a better choice, we can try adjusting weights and recalculating
+Or, we can try using a bit of linear programming.&lt;/p&gt;
+
+&lt;p&gt;We are attempting to satisfy $ -6w_1 + 1w_2 + 1w_3 \gt 0 $ under the
+constraint $ 0 \ge w_1, w_2, w_3 \ge 5 $ (from our rating scale). A good
+solver can give you results in this region. To simplify the solution, lets say
+we feel very strongly about the importance of cost, we don’t plan on assigning
+any less importance to that, but a good salesman may be able to convince us that
+our comfort or style is more important than we think at the moment.&lt;/p&gt;
+
+&lt;p&gt;This leaves us with $ -30 +1w_2 + 1w_3 \gt 0 $ bounded by $ 0 \ge w_2, w_3 \ge 5 $&lt;/p&gt;
+
+&lt;p&gt;Making a plot of this region, we can see that there exit no feasible solutions,
+so, we can tell that it is not possible for us to choose to purchase the
+Maserati over the Civic without compromising on cost.&lt;/p&gt;
+
+&lt;p&gt;The green region is the region given by our weighting system (1-5) and the orange
+region is the region of weights for Comfort and Style that would make the
+Maserati reasonable for us.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/decision_matrix/not_feasible.png&quot; alt=&quot;plot of feasible region&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;If we decided to become flexible on cost and make comfort extremely important
+(weight of 5), then the region would look like this (where the red region is the
+region in which we would the Maserati, the importance of cost is along the
+y-axis and the importance of style is along the x-axis)&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/decision_matrix/feasible.png&quot; alt=&quot;plot of feasible region&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;This analysis could continue and could be done in more dimensions analytically,
+but I believe I have demonstrated the methodology I’ve found to be interesting
+(maybe even useful?). I may explain in detail how I choose to use some of these
+ideas in WhichOne in a future post.&lt;/p&gt;
+
+&lt;h4 id=&quot;other-ideas&quot;&gt;Other ideas:&lt;/h4&gt;
+&lt;ol&gt;
+  &lt;li&gt;Determine analytically what weights to assign so that an alternative beats
+another (instead of just guessing).&lt;/li&gt;
+  &lt;li&gt;Find a way to represent all the trades that exist in a decision with a single
+structure.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;objective-impact&quot;&gt;Objective Impact&lt;/h2&gt;
+&lt;p&gt;Say I give you&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} = \begin{pmatrix}
+    5 \\
+    1 \\
+    3
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;and&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
+ A = \begin{pmatrix}
+    3 &amp; -1 &amp; 3 \\
+    3 &amp; 3  &amp; 1 \\
+    3 &amp; -1 &amp; -3
+\end{pmatrix}  %]]&gt;&lt;/script&gt;
+
+&lt;p&gt;Notice that the rankings for the first objective are all
+exactly the same! This means that the first objective has no impact on the
+decision; it only inflates scores. This fact motivates a method of determining
+objective impact.&lt;/p&gt;
+
+&lt;p&gt;My dad suggests using the variance of the weighted ratings to determine this
+impact score. Before I discuss my thoughts about this method let me explain it.
+First a bit more notation.&lt;/p&gt;
+
+&lt;p&gt;let&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o_k} = \begin{pmatrix}
+    0 \\
+    \vdots \\
+    0 \\
+    w_k \\
+    0 \\
+    \vdots \\
+    0
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;be the vector containing the weight of the kth objective, in the
+appropriate space, with all other weights set to zero.&lt;/p&gt;
+
+&lt;p&gt;I’ve decided to call $ A\mathbf{o}_k $ the impact vector for objective $k$
+because the vector represents how the objective $k$ changes alternatives scores
+in this decision.&lt;/p&gt;
+
+&lt;p&gt;Using the above defined objectives vector and alternatives matrix we get the
+following impact vectors:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; A \begin{pmatrix}
+    5 \\
+    0 \\
+    0
+\end{pmatrix} = \begin{pmatrix}
+    15 \\\\
+    15 \\\\
+    15
+\end{pmatrix} &lt;/script&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; A \begin{pmatrix}
+    0 \\
+    1 \\
+    0
+\end{pmatrix} = \begin{pmatrix}
+    -1 \\
+    3 \\
+    -1
+\end{pmatrix} &lt;/script&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; A \begin{pmatrix}
+    0 \\
+    0 \\
+    3
+\end{pmatrix} = \begin{pmatrix}
+    9 \\
+    1 \\
+    -9
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;Now, let the impact of the kth objective
+$ Impact(k) = PopulationVariance( A\mathbf{o_k} ) $, so in this example
+$ Impact(1) = 0 $,
+$ Impact(2) = \frac{32}{9} \approx 3.5556 $
+$ Impact(3) = \frac{488}{9} \approx 54.222 $&lt;/p&gt;
+
+&lt;p&gt;These results seem to be a good indicator of how much impact each objective has
+on the decision. However, it may be better to use the standard deviation instead
+of variance to reduce the effect squaring. Variance/standard deviation of the
+impact vectors is also a good measure of impact because it not only factors in
+ratings for each objective and the score each objective was given. However, I’m
+not entirely convinced that the variance or s.d. gives the best possible picture
+of how an objectives “changes” a decision, because it only looks at impact
+vectors, not at how these vectors pull your choices one way or another (doesn’t
+factor in trade offs to determine influence). Again, this is more of a
+theoretical question, practically variance/s.d. performs well.&lt;/p&gt;
+
+&lt;h4 id=&quot;warning-what-follows-is-not-well-structured-or-explained&quot;&gt;WARNING: What follows is not well structured or explained.&lt;/h4&gt;
+
+&lt;p&gt;Here is another idea for understanding trade offs and objective impact I’ve been
+toying with.&lt;/p&gt;
+
+&lt;p&gt;Lets make the problem a 2D problem, for the sake of visualization, by dropping
+the last alternative. This leaves us with&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} = \begin{pmatrix}
+    5 \\
+    1 \\
+    3
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;and&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
+ A = \begin{pmatrix}
+    3 &amp; -1 &amp; 3 \\
+    3 &amp; 3  &amp; 1 \\
+\end{pmatrix}  %]]&gt;&lt;/script&gt;
+
+&lt;p&gt;And, our impact vectors are&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \begin{pmatrix}
+    15 \\
+    15
+\end{pmatrix} &lt;/script&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \begin{pmatrix}
+    -1 \\
+    3
+\end{pmatrix} &lt;/script&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \begin{pmatrix}
+    9 \\
+    3
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;Let’s plot those along with the line $ y = x $&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/decision_matrix/impact.png&quot; alt=&quot;plot of impact vectors&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;This plot may be a bit difficult to wrap your head around (it is for me), but
+let’s walk through it. Our x and y axis represent alternative scores.&lt;/p&gt;
+
+&lt;p&gt;Think about what would happen if an objective resulted in an impact vector of&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \begin{pmatrix}
+    15 \\\
+    0
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;This objective clearly favors the first alternative (it adds 15
+to $ a_1 $’s score, and 0 to $ a_2 $’s score. In this case that would be
+something that very much favors the first alternative. Plotted, we would get this.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/decision_matrix/wow.png&quot; alt=&quot;wow plot&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;So, we can say, in the 2D case, that the closer to the positive x-axis a vector
+is ($x \gt y$ ), the more it favors the first alternative.  The closer to the
+positive y-axis the vector is ( $ x \lt y $ ), the more it favors the second
+alternative. So, looking back at our example for this section, the big blue
+vector has no impact.&lt;/p&gt;
+
+&lt;p&gt;It may be possible to define an importance function using these vectors and
+their distance from the neutral line ( $ x_1 = x_2 = \cdots = x_n $ ) for n
+alternatives, but I haven’t yet explored this entirely. If I do, I will post
+again probably explaining the process. Practically, variance works well enough.
+But, I think this is a really cool, fun way to think about objectives.&lt;/p&gt;
+
+&lt;h4 id=&quot;maserati-and-camry-example&quot;&gt;Maserati and Camry example&lt;/h4&gt;
+&lt;p&gt;Let’s do this with the Maserati and Camry again. Same objectives.&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} = \begin{pmatrix}
+    5 \\
+    2 \\
+    4
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;and only two alternatives (to avoid going into 3d space)&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
+ A = \begin{pmatrix}
+    -3 &amp; 3 &amp; 3 \\
+     3 &amp; 1 &amp; 2
+\end{pmatrix}  %]]&gt;&lt;/script&gt;
+
+&lt;p&gt;Impact Vectors:&lt;/p&gt;
+
+&lt;p&gt;For Cost (in blue):&lt;/p&gt;
+
+&lt;p&gt;$$ A \begin{pmatrix} 5 \ 0 \ 0 \end{pmatrix} =
+\begin{pmatrix}
+    -15 &lt;br /&gt;
+    15
+\end{pmatrix} $&lt;/p&gt;
+
+&lt;p&gt;For Comfort (in orange):&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; A \begin{pmatrix} 0 \\ 2 \\ 0 \end{pmatrix} =
+\begin{pmatrix}
+    6 \\
+    2
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;For Style (in red):&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; A \begin{pmatrix} 0 \\ 0 \\ 4 \end{pmatrix} =
+\begin{pmatrix}
+    12 \\
+    8
+\end{pmatrix} &lt;/script&gt;
+
+&lt;p&gt;Here is a plot:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/decision_matrix/maserati_camry.png&quot; alt=&quot;maserati camry plot&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;In terms of impact, the cost vector is perpendicular to the neutral line. This
+is as far from neutral as possible! Cost clearly has a large amount of impact.
+Understanding the “which direction does this objective pull my decision” thing
+is quite a bit harder here and I can only kind of see it. But, this train of
+though may still hold some potential.&lt;/p&gt;
+
+&lt;h4 id=&quot;other-ideas-1&quot;&gt;Other ideas:&lt;/h4&gt;
+&lt;ol&gt;
+  &lt;li&gt;Finish determining impact using distance of impact vector to neutral line.&lt;/li&gt;
+  &lt;li&gt;Evaluate trade offs using the “pull” of an impact vector.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading! If you have any thoughts please drop them in the comments.&lt;/p&gt;
+</description>
+        <pubDate>Fri, 17 Jan 2014 00:00:00 -0500</pubDate>
+        <link>http://dpzmick.com/2014/01/17/decision-matrix/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2014/01/17/decision-matrix/</guid>
+      </item>
+    
+      <item>
+        <title>Particle Simulator</title>
+        <description>&lt;p&gt;This post is a write up of a very small “day project” I did recently. The
+project was a &lt;em&gt;very&lt;/em&gt; naive particle motion simulation.&lt;/p&gt;
+
+&lt;h2 id=&quot;what-is-it&quot;&gt;What is it&lt;/h2&gt;
+&lt;p&gt;I thought it would be cool to try and simulate simple masses moving around in
+space as a programming exercise. So, I used some simple physics and made a
+little toy.&lt;/p&gt;
+
+&lt;h2 id=&quot;physics&quot;&gt;Physics&lt;/h2&gt;
+&lt;p&gt;Particles are not charged. They are just particles with a mass, and some
+velocity. Say particles $ p_1 $ and $ p_2 $ are floating around in space. Let’s
+also assume that $ p_1 $ is moving with some velocity, but $ p_2 $ is not
+moving. If we want to figure out where $ p_1 $ will be in $ t $ time, how would
+we do that?&lt;/p&gt;
+
+&lt;p&gt;We know that the force on $p_1$ will change its movement. Once we compute
+that force, we can compute the acceleration the particle is undergoing, figure
+out the new velocity of the particle, and use that to find the final location.&lt;/p&gt;
+
+&lt;p&gt;But, the problem is not quite that easy. As the particle moves, the force on the
+particle will change, so its acceleration will change as it move, and it will
+always be undergoing acceleration. So we can’t just use $ \Delta x = vt $,
+because $v$ is changing with time. We need to find some way to deal with the
+continuous nature of the system.&lt;/p&gt;
+
+&lt;p&gt;But, for now, let us look at a very simple model. We have the two particles
+mentioned above. We will compute the net force on $p_1$ particle, then figure
+out its acceleration (change in velocity), change the velocity, then figure out
+its location in $t$ seconds. We must (possibly foolishly) assume that the affect
+of acceleration due to the forces on the particle during this time period is
+negligible.&lt;/p&gt;
+
+&lt;p&gt;The first thing we need is the force on $p_1$. Since there are only two object
+in our world, the only force that will exist is the force between $p_1$ and
+$p_2$. This force is attractive, and is computed using the following:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \textbf{F} = G \frac{m_1m_2}{\mid\textbf{r}^2\mid} \hat{\textbf{r}} &lt;/script&gt;
+
+&lt;p&gt;Where $ G $ is the Gravitational Constant, $ m_1 $ and $ m_2 $ are the masses
+of $ p_1 $ and $ p_2 $ respectively, $ \textbf{r} $ is the vector between
+$ p_1 $ and $ p_2 $, so $|\textbf{r}|$ (magnitudue of the vector $\textbf{r}$
+is the distance between them. $ \hat{r} $ is the unit vector (has length of one,
+that is what the litte hat means) describing the direction of the force
+(towards $p_2$).&lt;/p&gt;
+
+&lt;p&gt;So, now we have the force. We need to find the acceleration. That is easy,
+because Newton made it easy:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \textbf{F} = m\textbf{a} &lt;/script&gt;
+
+&lt;p&gt;Substituting the derivative of velocity for acceleration, we can see that&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \textbf{F} = m \frac{d\textbf{v}}{dt} &lt;/script&gt;
+
+&lt;p&gt;But, we aren’t really going to use calculus to solve this (at least I think I’m
+pretending we aren’t for now), so lets go ahead an use
+$\frac{\Delta v}{\Delta t}$ for acceleration for now:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \textbf{F} = m \frac{\Delta \textbf{v}}{\Delta t} &lt;/script&gt;
+
+&lt;p&gt;Do some algebra to get:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \Delta \textbf{v} = \frac{\textbf{F}}{m} \Delta t &lt;/script&gt;
+
+&lt;p&gt;So, we know $\textbf{F}$, let’s go ahead and substitute that in, then cancel
+unneeded masses:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt; \Delta \textbf{v} = \frac{ G m\_2 \hat{\textbf{r}} } { | \textbf{r} |^2 }
+\Delta t &lt;/script&gt;
+
+&lt;p&gt;So, now we can easily figure out how much the velocity of a particle should
+change in $t$ seconds, given it only has a single force acting on it.&lt;/p&gt;
+
+&lt;p&gt;So, now we can compute the particles new velocity. Since we have assumed that no
+acceleration happens during the time period.&lt;/p&gt;
+
+&lt;h3 id=&quot;quick-numeric-example-of-something-kind-of-like-the-above&quot;&gt;Quick Numeric Example of Something Kind of like the Above&lt;/h3&gt;
+&lt;p&gt;Let $p_1$ and $p_2$ both be particles with mass 100 kg.&lt;/p&gt;
+
+&lt;p&gt;$p_1$ is located at $(0,0)$, and $p_2$ is at $(5,5)$.&lt;/p&gt;
+
+&lt;p&gt;$p_1$ is not moving, $p_2$ has a velocity of 10 m/s in y-direction, and 10 m/s
+in x-direction.&lt;/p&gt;
+
+&lt;p&gt;We want to find where $p_2$ will be in 0.1 seconds.&lt;/p&gt;
+
+&lt;p&gt;I am not going to use the formula we just derived in this example to avoid
+dealing too much with vectors, but I will use the same process. This is the
+process my simulator used.&lt;/p&gt;
+
+&lt;h4 id=&quot;step-1-find-the-force&quot;&gt;Step 1: Find the force&lt;/h4&gt;
+&lt;p&gt;Find distance:
+&lt;script type=&quot;math/tex&quot;&gt; |\textbf{r}|^2 = \sqrt{ (5-0)^2 + (5-0)^2 } = \sqrt{50} = 5\sqrt{2} &lt;/script&gt;&lt;/p&gt;
+
+&lt;p&gt;Find magnitude of $ \textbf{F} $:
+&lt;script type=&quot;math/tex&quot;&gt; \textbf{F} = G \frac{(100)(100)}{(5\sqrt{2})^2} = G \frac{1000}{50} = 20G &lt;/script&gt;&lt;/p&gt;
+
+&lt;p&gt;To resolve components of $\textbf{F}$ we need an angle, since the triangle
+representing the force is and isosceles right triangle, the angle with respect
+to the horizontal is $ \frac{\pi}{4} $&lt;/p&gt;
+
+&lt;p&gt;Since the sine and cosine of $ \frac{\pi}{4} $ are both $\frac{\sqrt{2}}{2}$,
+we can easily get the x and y components of the force.&lt;/p&gt;
+
+&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt; F\_x = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2} &lt;/script&gt;
+&lt;script type=&quot;math/tex&quot;&gt; F\_y = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2} &lt;/script&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;step-2-find-delta-v&quot;&gt;Step 2: Find $\Delta v$&lt;/h4&gt;
+&lt;p&gt;We know that the velocity of the particle the instant $t=0$ is
+$\langle 5,5 \rangle$. At $t=0.00001$ the velocity will be different, at
+$t=0.000001$ the velocity will be different, because our particles are always 
+accelerating. This is where we will use our (possibly foolish) assumption.
+We assumed that $ \Delta t $ is so small that the
+acceleration that occurs while $ \Delta t $ passes is so small we can ignore
+it.&lt;/p&gt;
+
+&lt;p&gt;Because of our assumption, we can do this (In components):&lt;/p&gt;
+
+&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt; \Delta v\_x = \frac{F\_x}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10} &lt;/script&gt;
+&lt;script type=&quot;math/tex&quot;&gt; \Delta v\_y = \frac{F\_y}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10} &lt;/script&gt;&lt;/p&gt;
+
+&lt;p&gt;So, the velocity of $p_2$ will need to change that much due to the force.&lt;/p&gt;
+
+&lt;h4 id=&quot;step-3-find-a-new-velocity-for-p2&quot;&gt;Step 3: Find a new velocity for $p_2$&lt;/h4&gt;
+
+&lt;p&gt;The initial velocity was 5 up and 5 right. This force is pulling us down and
+left, so:&lt;/p&gt;
+
+&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt; V\_{x,new} = V\_x - \Delta V\_x = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999&lt;/script&gt;
+&lt;script type=&quot;math/tex&quot;&gt; V\_{y,new} = V\_y - \Delta V\_y = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999&lt;/script&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;step-4-find-new-position&quot;&gt;Step 4: Find new position&lt;/h4&gt;
+&lt;p&gt;Now, since we have assumed zero acceleration in the entire time frame from $t=0$
+to $t=0.1$, we can use simple formulas to compute next locations.&lt;/p&gt;
+
+&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt; x\_{new} = x\_{old} + V\_{x,new} \Delta t = 5 + 9.99999(0.01) = 5.9999 &lt;/script&gt;
+&lt;script type=&quot;math/tex&quot;&gt; y\_{new} = y\_{old} + V\_{y,new} \Delta t = 5 + 9.99999(0.01) = 5.9999 &lt;/script&gt;&lt;/p&gt;
+
+&lt;p&gt;So, the particle was at $(5,5)$, and it now is at $(5.9999,5.99999)$. Yay?&lt;/p&gt;
+
+&lt;p&gt;Each time-step in my simulation performed this calculation. So, it looks kind of
+like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;function Timestep:
+    calculate net force on each particle
+    calclate change in velocity for each particle
+    update each particle&#39;s velocity
+    move each particle
+    repeat
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&quot;the-assumption&quot;&gt;The assumption&lt;/h3&gt;
+&lt;p&gt;I am not sure if the technique I used to deal with the dynamic nature of the
+system is a good or bad technique. On one hand, I can see bad behavior arising
+very easily. Lets think about a correct solution for a moment.&lt;/p&gt;
+
+&lt;p&gt;Doing this correctly, with calculus, is described &lt;a href=&quot;http://hyperphysics.phy-astr.gsu.edu/hbase/avari.html&quot;&gt;here&lt;/a&gt;,
+but, I think that my technique is just an approximation of this technique. With
+sufficiently small $ \Delta t$ for each time step, I think the approximation may
+be decent. I am not sure, and have not actually worked much of this out with pen
+and paper, so everything I just said, and all of my physics may be completely
+wrong.&lt;/p&gt;
+
+&lt;h3 id=&quot;more-implementation-notes&quot;&gt;More implementation notes&lt;/h3&gt;
+&lt;p&gt;Other than not really doing the physics correctly, my simulation had some other
+issues.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;If a particle flew off the top, it came back into the space on the bottom,
+but, it a particle were sitting still at the top, and a particle were
+sitting still at the bottom of the space, they would not feel force “over the
+edge.” So, essentially, I defined a really weird shaped space with really
+really strange physical properties. If I were to try again, doing this
+correctly, I would probably let particles fly off the edge and cease to exist
+after doing so.&lt;/li&gt;
+  &lt;li&gt;No collision detection. If particles collided, nothing happened, they just
+flew threw each other. This is a serious problem. As particles get closer, the
+force between them increases substantially, then they collide in nature. My
+particles get really close, the force increases substantially, then they fly
+through each other and continue on their marry way.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h3&gt;
+&lt;p&gt;If I were to do this project again, I would certainly go about it differently. I
+did not do a good job actually representing any real physics with my little toy,
+but the goals of a short “day project” are fun and learning, both of which have
+happened here. Most interesting to me is my apparent incompetence with physics.
+This represents a major hole in my knowledge and is absolutely something I need
+to work to fill. I guess I do know that I should have just gotten paper out and
+started doing this correctly with calculus, but I would really like to be able
+to determine how wrong what I just did really is. I still feel like a really
+really small $ \Delta t $ would make my approximation pretty valid, but I do not
+really know how to prove that. This is an issue with my understanding of
+physics. Alternatively, I’ve fixated so much on this idea that I don’t see what
+is really going on. In a few months I will revisit this project and will likely
+be able to tell how crazy I was when I did it (part of the reason I spent all
+this time documenting my incorrect work).&lt;/p&gt;
+
+&lt;p&gt;If you for some reason read this far, thank you for reading, maybe drop
+something in the comments?&lt;/p&gt;
+</description>
+        <pubDate>Thu, 27 Jun 2013 00:00:00 -0400</pubDate>
+        <link>http://dpzmick.com/2013/06/27/particle-simulator/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2013/06/27/particle-simulator/</guid>
+      </item>
+    
+      <item>
+        <title>When will I use it: Prime Factorization - Ideadoc</title>
+        <description>&lt;p&gt;I am planning on making a series of youtube videos attempting to answer the
+question “why do I need to learn this?” that is frequently asked in junior high
+and high school math. The first thing listed in the KatyISD curriculum for 6th
+grade PreAP is Prime factorization, so here is what I am planning. Feedback is
+requested!&lt;/p&gt;
+
+&lt;h1 id=&quot;prime-factorization&quot;&gt;Prime Factorization&lt;/h1&gt;
+
+&lt;h2 id=&quot;what-is-it&quot;&gt;What is it?&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;All about breaking things down into smaller parts&lt;/li&gt;
+  &lt;li&gt;Prime numbers building blocks of numbers&lt;/li&gt;
+  &lt;li&gt;Do example, draw picture. $ 75 = 3 \cdot 5 \cdot 5 = 3 \cdot 5^2 $&lt;/li&gt;
+  &lt;li&gt;Learning to take a whole and break down into constituent parts.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;music&quot;&gt;Music&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Work of music
+    &lt;ul&gt;
+      &lt;li&gt;Instruments
+        &lt;ul&gt;
+          &lt;li&gt;Individual music
+            &lt;ul&gt;
+              &lt;li&gt;Phrases
+                &lt;ul&gt;
+                  &lt;li&gt;Notes&lt;/li&gt;
+                &lt;/ul&gt;
+              &lt;/li&gt;
+            &lt;/ul&gt;
+          &lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Applies when listening to music, try to deconstruct complete musical work into
+small parts to understand individual parts, understand structure, etc.&lt;/li&gt;
+  &lt;li&gt;Helps conceptualize fit. Playing music requires being able to conceptualize the
+whole piece and find where you fit.&lt;/li&gt;
+  &lt;li&gt;FUN FACT: Riemann zeta function inspired by harmonics&lt;/li&gt;
+  &lt;li&gt;Video: Cut up a piece of music (sped up, vihart style) to demonstrate pieces.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;visual-arts&quot;&gt;Visual Arts&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Constituents
+    &lt;ul&gt;
+      &lt;li&gt;Shapes&lt;/li&gt;
+      &lt;li&gt;Colors&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Important to be able to break down a complete visual into small parts to
+create it.&lt;/li&gt;
+  &lt;li&gt;Video: cut up painting into shapes and colors.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;writing&quot;&gt;Writing&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Breaks down into words and letters&lt;/li&gt;
+  &lt;li&gt;Important to understand how words and letters fit together to write well.
+Syntax&lt;/li&gt;
+  &lt;li&gt;In both of the above, manipulating these essential elements in new ways can
+result in really cool new art (example, a cool statue of some sort)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;social-studies&quot;&gt;Social Studies&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Break down social structures&lt;/li&gt;
+  &lt;li&gt;Break down laws&lt;/li&gt;
+  &lt;li&gt;Need to be able to understand people and laws as a whole and as the parts to
+be be effective working in a field involving social stuff.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;sports&quot;&gt;Sports&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Break entire sports match down into individual plays.&lt;/li&gt;
+  &lt;li&gt;Individual plays break down into each player’s responsibility.&lt;/li&gt;
+  &lt;li&gt;Understand the role of a single player and the role of a play in the behavior
+of the entire game&lt;/li&gt;
+  &lt;li&gt;FUN FACT: Human body temperature in Celsius is 37 degress, PRIME!&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;math&quot;&gt;Math&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Prime numbers are cool!&lt;/li&gt;
+  &lt;li&gt;Riemann Hypothesis
+    &lt;ul&gt;
+      &lt;li&gt;Prime numbers, while seeming randomly distributed, are really distributed
+pretty uniformly.&lt;/li&gt;
+      &lt;li&gt;Same idea as gas molecules. They are randomly scatter in a room, but
+randomly scatter evenly.&lt;/li&gt;
+      &lt;li&gt;Not yet proved, proof or disproof worth $1 Million.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Polignac’s Conjecture
+    &lt;ul&gt;
+      &lt;li&gt;There are infinitely many n lengthed gaps between primes&lt;/li&gt;
+      &lt;li&gt;Not proved or disproved for ANY value of n&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Goldbach’s conjecture
+    &lt;ul&gt;
+      &lt;li&gt;Can any number greater than two be written as the sum of two primes?&lt;/li&gt;
+      &lt;li&gt;Also not proved or disproved, although it seems to hold.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Again, helps teach how to break down big problem into smaller ones&lt;/li&gt;
+  &lt;li&gt;Prime factorization can be used to simplify calculations with big numbers.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;cs&quot;&gt;CS&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Encryption
+    &lt;ul&gt;
+      &lt;li&gt;Almost all secure transactions depend on the fact that it is extremely
+difficult for computers to quickly factor huge prime numbers.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Hashing
+    &lt;ul&gt;
+      &lt;li&gt;Prime factorization used in hashing algorithms, which are a used to create
+compact representations of data so it can be stored, sorted, and looked up
+more effectively. Things like google and facebook would be MUCH slower
+without hashing.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Random Numbers
+    &lt;ul&gt;
+      &lt;li&gt;Because primes seem to be randomly distributed, they can be used as the
+basis of random number generators, which are extremely useful in science
+and simulations and games.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;physics&quot;&gt;Physics&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Possible relationship between zeros of zeta function and energy levels in
+atoms.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;other-fun-facts&quot;&gt;Other fun facts&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Cicadas spend time underground, then surface and makes lots of noise
+    &lt;ul&gt;
+      &lt;li&gt;Surfacing happens after 13 or 17 years underground&lt;/li&gt;
+      &lt;li&gt;Put a link in the doobeleedo&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Prime numbers are really cool math, and can also be useful in math, and some
+major part of infrastructure depend on prime factorization.&lt;/li&gt;
+  &lt;li&gt;But, if those things are not what you are into, it is still important to learn
+practice breaking down big thing into little things, because there is no way
+to not have to use that somewhere in life.&lt;/li&gt;
+  &lt;li&gt;I don’t much enjoy sitting down and trying to find the prime factorization of
+a number, but when I finish, I step back and think about what I have done and
+realize it is pretty cool. I’ve found a way to take an arbitrary number and
+find what makes it up, the most essential, elemental, pieces of the number. It
+is like peering into the essence of the number, which is kind of cool, and
+satisfying.&lt;/li&gt;
+&lt;/ul&gt;
+
+</description>
+        <pubDate>Tue, 14 May 2013 00:00:00 -0400</pubDate>
+        <link>http://dpzmick.com/2013/05/14/when-will-i-use-it-prime-factorization/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2013/05/14/when-will-i-use-it-prime-factorization/</guid>
+      </item>
+    
+  </channel>
+</rss>
