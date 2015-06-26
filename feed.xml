@@ -11,9 +11,9 @@
         <description>&lt;h1 id=&quot;work-in-progress&quot;&gt;WORK IN PROGRESS&lt;/h1&gt;
 
 &lt;p&gt;For my CS242 final project, I wanted to do something with Erlang to fiddle
-around with its concurrency model, and, I like to simulate things.&lt;/p&gt;
+around with its concurrency model. Also, I like to simulate things.&lt;/p&gt;
 
-&lt;p&gt;Initially I thought I would try to write a traffic simulator, but after a very
+&lt;p&gt;Initially I thought I would try to write a traffic simulator but, after a very
 useful conversation with a friend of mine, decided on something different.&lt;/p&gt;
 
 &lt;p&gt;Ants are cool. Individually they are not super clever, but as a group they can
@@ -24,8 +24,8 @@ like it might be at least an interesting fit for Erlang’s actor model.&lt;/p&g
 &lt;p&gt;Let’s start with a video:&lt;/p&gt;
 
 &lt;p&gt;In this video we have an XXXXXX by YYYYY grid with AAAAAA ants running around
-one it. The ants all start at the upper edge of the grid then start moving
-around on the grid.&lt;/p&gt;
+on it. The ants all start at the upper edge of the grid then start moving
+around.&lt;/p&gt;
 
 &lt;h2 id=&quot;model&quot;&gt;Model&lt;/h2&gt;
 &lt;p&gt;I’ve attempted to capture two behaviors of real ants with my simulation. Ants
@@ -36,12 +36,12 @@ they might want to move in a certain direction. Every cell in the simulation has
 a pheromone weight indicating the strength of the pheromones at that cell.&lt;/p&gt;
 
 &lt;p&gt;An ant can move to either its north, south, east, or west neighbor. To decide
-which direction to go, the ant looks at the pheromone strength at each of the
+which direction to go, the ant looks at the pheromone strength at each of its
 neighboring cells, and the distance the neighboring cell is from the ant’s
 starting location (more on this is a sec).&lt;/p&gt;
 
-&lt;p&gt;The ant decides computes a probability that it will move to each of its
-neighboring cells, then picks one with those computed probabilities.&lt;/p&gt;
+&lt;p&gt;The ant computes the probability that it will move to each of its neighboring
+cells, then picks one with those computed probabilities.&lt;/p&gt;
 
 &lt;p&gt;I like my ants like I like my editors: modal. They can be in “away from home”
 mode or “towards home” mode. Ants know the absolute coordinates of its starting
@@ -56,12 +56,12 @@ step.&lt;/p&gt;
 &lt;h2 id=&quot;pheromone-propagation&quot;&gt;Pheromone Propagation&lt;/h2&gt;
 &lt;p&gt;The mechanism I’ve used here is pretty naive (surprise surprise).&lt;/p&gt;
 
-&lt;p&gt;When an ant is at a given cell, it gets the max pheromone weight of its 4
-(North, South, East, and West) neighbors. It then checks if the weight of the
+&lt;p&gt;When an ant is at a given cell, it gets the max pheromone weight of its four
+(north, south, east, and west) neighbors. It then checks if the weight of the
 cell it is currently on is greater than the max weight of its neighbors. If the
-cell is weighted more heavily (stronger scent), it does nothing. If its current
-cell has a lower pheromone value than the max of its neighbors, it updates the
-weight of the current cell to half of the weight of its neighbors.&lt;/p&gt;
+current cell is weighted more heavily (stronger scent), it does nothing. If its
+current cell has a lower pheromone value than the max of its neighbors, it
+updates the weight of the current cell to half of the weight of its neighbors.&lt;/p&gt;
 
 &lt;p&gt;When ants find food, they set the pheromone weight at the cell which the food
 was on to a high value, then they start trying to return to their starting
@@ -76,7 +76,7 @@ two for the cell’s new value.&lt;/p&gt;
 think much about pheromone propagation. When an ant finds food, all it has to do
 is mark that cell with a high weight and change directions. It does not have to
 start thinking about leaving a trail behind it as it moves back home because the
-automatic cell update step will take care of that.&lt;/p&gt;
+automatic cell weight update step will take care of that.&lt;/p&gt;
 
 &lt;h2 id=&quot;the-erlang-stuff&quot;&gt;The Erlang Stuff&lt;/h2&gt;
 &lt;p&gt;If you aren’t familiar with Erlang, here is a super quick overview of the
@@ -96,7 +96,7 @@ pulls messages out of the mailbox and deals with them.&lt;/p&gt;
 &lt;p&gt;The system is obviously a bit more complicated than that, but for now this is
 about all we need to understand.&lt;/p&gt;
 
-&lt;p&gt;My Erlang code creates two main types of actors: an ant, and a cell.&lt;/p&gt;
+&lt;p&gt;My Erlang code creates two main types of actors: an ant and a cell.&lt;/p&gt;
 
 &lt;p&gt;Cells know who their neighbors are, their weight, if they have food on them, and
 the current ant (can be undefined) occupying the cell.&lt;/p&gt;
@@ -104,16 +104,73 @@ the current ant (can be undefined) occupying the cell.&lt;/p&gt;
 &lt;p&gt;A cell knows how to handle the following messages:&lt;/p&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;stop - stop running&lt;/li&gt;
-  &lt;li&gt;register_neighbor - sets some other cell as the cells N, S, E, or W neighbor&lt;/li&gt;
   &lt;li&gt;who_are_your_neighbors - asks the cell to send a message back with its
 neighbors&lt;/li&gt;
   &lt;li&gt;move_me_to_you - tells the cell to set its current occupant to the ant sending
 the message&lt;/li&gt;
   &lt;li&gt;ive_left - tells the cell that the ant sending the message has left the cell&lt;/li&gt;
-  &lt;li&gt;some other things like, tell_id, tell_weight, has_food, and other ways to ask
-the cell for pieces of information about itself&lt;/li&gt;
+  &lt;li&gt;some other logistical things that are not important here&lt;/li&gt;
 &lt;/ul&gt;
+
+&lt;p&gt;Ants know what cell they are on, what direction they are going, where they
+started, and a few other less important things.&lt;/p&gt;
+
+&lt;p&gt;Ants know how to these messages:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;wakeup_and_move - tells the ant to try to move somewhere&lt;/li&gt;
+  &lt;li&gt;neighbors - a message sent to an ant by a cell when the cell reports who its
+neighbors are&lt;/li&gt;
+  &lt;li&gt;move_to - tells an ant to change its current cell to some other cell&lt;/li&gt;
+  &lt;li&gt;move_failed - tells an ant that its move failed&lt;/li&gt;
+  &lt;li&gt;some more logistical things that aren’t important here&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;simulation&quot;&gt;Simulation&lt;/h3&gt;
+&lt;p&gt;When the simulator starts, it loads a config file specifying things like the
+size of the grid and the locations of food, builds the grid of cells, puts ants
+on the upper edge of the board, then starts a wakeup_and_move_loop for each ant.&lt;/p&gt;
+
+&lt;p&gt;Simply put, these loops tell their ant to wake up and perform their move over
+and over again until the simulation is shut down.&lt;/p&gt;
+
+&lt;h3 id=&quot;wakeupandmove&quot;&gt;Wakeup_and_move&lt;/h3&gt;
+&lt;p&gt;When an ant receives a wakeup_and_move message, it has to figure where it wants
+to move, if it can move there, and it needs to perform the pheromone propagation
+step. I don’t want to let two ants occupy the same cell at once, but it isn’t so
+bad if one ant is sort of in two places at once (I think). That rule results in
+the following set of messages for an ant move.&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;The ant receives a wakeup_and_move message&lt;/li&gt;
+  &lt;li&gt;The ant sends a who_are_your_neighbors message to its current cell&lt;/li&gt;
+  &lt;li&gt;The current cell receives the who_are_your_neighbors message and sends the
+ant a “neighbors” message with the list of its neighboring cells&lt;/li&gt;
+  &lt;li&gt;The ant decides which of these neighbors to move to using probabilities
+explained earlier.&lt;/li&gt;
+  &lt;li&gt;The ant performs the pheromone propagation step&lt;/li&gt;
+  &lt;li&gt;The ant sends a move_me_to_you message to its selected cell&lt;/li&gt;
+  &lt;li&gt;The selected cell checks if it is currently occupied
+    &lt;ul&gt;
+      &lt;li&gt;If it isn’t occupied, it sets its current occupant to the ant trying to and
+sends a you_moved message back to the ant&lt;/li&gt;
+      &lt;li&gt;If it is occupied, it sends a move_failed message back to the ant&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;The ant receives either a move_failed or a you_moved message
+    &lt;ul&gt;
+      &lt;li&gt;If the ant received a you_moved message, it sends an ive_left message to
+its current cell, updates its current cell to the selected cell, then goes
+back to sleep&lt;/li&gt;
+      &lt;li&gt;If the ant receives a move_failed message, it does nothign and goes back
+to sleep&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h5 id=&quot;sequence-diagram&quot;&gt;Sequence Diagram:&lt;/h5&gt;
+
+&lt;p&gt;&lt;a href=&quot;/img/ants/sequence.png&quot;&gt;&lt;img src=&quot;/img/ants/sequence.png&quot; alt=&quot;sequence diagram&quot; /&gt;&lt;/a&gt;&lt;/p&gt;
 
 &lt;h2 id=&quot;getting-the-data-out&quot;&gt;Getting the data out&lt;/h2&gt;
 
