@@ -116,14 +116,14 @@
   <h1>Ants</h1>
   <span class="post-meta">Jun 9, 2015</span><br>
   
-  <span class="post-meta small">7 minute read</span>
+  <span class="post-meta small">12 minute read</span>
 </div>
 
 <article class="post-content">
   <h1 id="work-in-progress">WORK IN PROGRESS</h1>
 
-<p>For my CS242 final project, I wanted to do something with Erlang to fiddle
-around with its concurrency model. Also, I like to simulate things.</p>
+<p>For my four week CS242 final project, I wanted to do something with Erlang to
+fiddle around with its concurrency model. Also, I like to simulate things.</p>
 
 <p>Initially I thought I would try to write a traffic simulator but, after a very
 useful conversation with a friend of mine, decided on something different.</p>
@@ -138,6 +138,8 @@ like it might be at least an interesting fit for Erlang’s actor model.</p>
 <p>In this video we have an XXXXXX by YYYYY grid with AAAAAA ants running around
 on it. The ants all start at the upper edge of the grid then start moving
 around.</p>
+
+<p>There is food at (XXX,YYY).</p>
 
 <h2 id="model">Model</h2>
 <p>I’ve attempted to capture two behaviors of real ants with my simulation. Ants
@@ -190,6 +192,12 @@ is mark that cell with a high weight and change directions. It does not have to
 start thinking about leaving a trail behind it as it moves back home because the
 automatic cell weight update step will take care of that.</p>
 
+<p>I wrote a tool to visualize the pheromone values left at the end of the
+simulation. The following image a zoomed in view of the pheromone values near
+the food in the simulation I showed a video of earlier:</p>
+
+<p>SCENT VIS GOES HERE</p>
+
 <h2 id="the-erlang-stuff">The Erlang Stuff</h2>
 <p>If you aren’t familiar with Erlang, here is a super quick overview of the
 concurrency construct in the language.</p>
@@ -211,7 +219,8 @@ about all we need to understand.</p>
 <p>My Erlang code creates two main types of actors: an ant and a cell.</p>
 
 <p>Cells know who their neighbors are, their weight, if they have food on them, and
-the current ant (can be undefined) occupying the cell.</p>
+the current ant (can be undefined) occupying the cell. Only one ant can occupy a
+given cell at any moment in time.</p>
 
 <p>A cell knows how to handle the following messages:</p>
 
@@ -240,7 +249,7 @@ neighbors are</li>
 
 <h3 id="simulation">Simulation</h3>
 <p>When the simulator starts, it loads a config file specifying things like the
-size of the grid and the locations of food, builds the grid of cells, puts ants
+size of the grid and the location of food, builds the grid of cells, puts ants
 on the upper edge of the board, then starts a wakeup_and_move_loop for each ant.</p>
 
 <p>Simply put, these loops tell their ant to wake up and perform their move over
@@ -259,7 +268,7 @@ the following set of messages for an ant move.</p>
   <li>The current cell receives the who_are_your_neighbors message and sends the
 ant a “neighbors” message with the list of its neighboring cells</li>
   <li>The ant decides which of these neighbors to move to using probabilities
-explained earlier.</li>
+explained earlier</li>
   <li>The ant performs the pheromone propagation step</li>
   <li>The ant sends a move_me_to_you message to its selected cell</li>
   <li>The selected cell checks if it is currently occupied
@@ -274,7 +283,7 @@ sends a you_moved message back to the ant</li>
       <li>If the ant received a you_moved message, it sends an ive_left message to
 its current cell, updates its current cell to the selected cell, then goes
 back to sleep</li>
-      <li>If the ant receives a move_failed message, it does nothign and goes back
+      <li>If the ant receives a move_failed message, it does nothing and goes back
 to sleep</li>
     </ul>
   </li>
@@ -284,11 +293,108 @@ to sleep</li>
 
 <p><a href="/img/ants/sequence.png"><img src="/img/ants/sequence.png" alt="sequence diagram" /></a></p>
 
+<p>If you look carefully, you might notice that between steps 7 and 8, two cells
+think they are occupied by the same ant. This prevent collisions but introduces
+this strange “ant in flux” state. I would rather accept the double occupancy
+issue than the collision issue.</p>
+
 <h2 id="getting-the-data-out">Getting the data out</h2>
+<p>As the simulation runs, the ants are generating all sorts of data that should
+probably be recorded somewhere. This is a bit of a challenge because there is no
+single entity that knows the state of the entire system at any given time, so
+you can’t just ask it to record a sample of the state of the simulation
+somewhere every once and a while.</p>
+
+<p>My first attempt at this failed. I made a single process, called the “reporter”
+that was responsible for aggregating all of the events (ants moving) and writing
+them to disk. This almost worked.</p>
+
+<p>To explain what went wrong, we need to take a diversion for a moment.</p>
+
+<h3 id="message-prioritization">Message Prioritization</h3>
+
+<p>My first attempt at a reporter had a pretty big issue with this, because it
+prioritized the “stop” message, and I/O to disk is pretty slow. Every time the
+reporter tried to handle a new message, it would first scan the mailbox for a
+“stop” message, then go handle the first message on the queue. While handling
+this message (slow, because it often did some disk I/O), that queue would grow
+quite a bit. At one point, there were 53 million messages in the reporter queue,
+that were getting scanned every time the reporter attempted to handle a new
+message. Ouch.</p>
 
 <h2 id="building-the-visualizations">Building the visualizations</h2>
 
 <h2 id="conclusions">Conclusions</h2>
+
+<h2 id="other-erlang-notes">Other Erlang Notes</h2>
+<p>Message priority is sort of important in this simulation. For example, imagine
+that some misbehaving process sends an ant two wakeup_and_move messages in a
+row, where the second one is sent before the ant is done dealing with the first
+one.</p>
+
+<p>The ants mailbox would look like this: [wakeup_and_move, wakeup_and_move].</p>
+
+<p>Then, the ant handles the first wakeup by sending a message to its current cell
+to ask for its neighbors. The cell could then send the ant a list of its
+neighbors. Whether or not the cell actually gets a chance to run depends on the
+behavior of the scheduler, so this example is one of many possible behaviors the
+system might exhibit.</p>
+
+<p>Assuming the scheduler behaves the way I’m pretending it would the ant’s mailbox
+is this: [wakeup_and_move, neighbors].</p>
+
+<p>So, the ant, again, sends a message to its current cell, asking for its
+neighbors.</p>
+
+<p>Mailbox: [neighbors, neighbors].</p>
+
+<p>Now we have a problem. When an ant handles a neighbors message, it picks a new
+cell to move to, somewhat at random. So this ant will pick a new cell to move
+to, twice in a row. There is a pretty good chance these two cells will not be
+the same cell. So the ant is probably going to end up trying to go in two
+different directions, and it might actually succeed and create quite a confusion.</p>
+
+<p>There are all sort of opportunities for issues like this through the simulation.
+One of the approaches the Erlang community uses to solve this problem is
+selectively receiving messages at different points in the process excecution.</p>
+
+<p>Here is an example of how something like this looks for the ant actor:</p>
+
+<div class="highlight"><pre><code class="language-erlang" data-lang="erlang"><span class="nf">inner_loop</span><span class="p">(</span><span class="nv">State</span><span class="p">)</span> <span class="o">-&gt;</span>
+    <span class="k">receive</span>
+        <span class="n">neighbors</span> <span class="o">-&gt;</span> <span class="n">handle_neighbors</span><span class="p">(</span><span class="nv">State</span><span class="p">),</span> <span class="n">inner_loop</span><span class="p">(</span><span class="nv">State</span><span class="p">);</span>
+        <span class="p">...</span>
+        <span class="n">move_failed</span> <span class="o">-&gt;</span> <span class="n">loop</span><span class="p">(</span><span class="nv">State</span><span class="p">)</span>
+    <span class="k">end</span><span class="p">.</span>
+
+<span class="nf">loop</span><span class="p">(</span><span class="nv">State</span><span class="p">)</span> <span class="o">-&gt;</span>
+    <span class="k">receive</span>
+        <span class="n">wakeup_and_move</span> <span class="o">-&gt;</span> <span class="n">inner_loop</span><span class="p">(</span><span class="nv">State</span><span class="p">)</span>
+    <span class="k">end</span><span class="p">.</span></code></pre></div>
+
+<p>So when the ant is in it’s outer loop, it can only receive a wakeup_and_move
+message. Once it receives one of those, it moves to an inner loop that can
+receiver neighbors messages, and move failed messages, but leaves any other
+message in the mailbox.</p>
+
+<p>This way, after receiving a wakeup_and_move message, the ant can’t receive
+another wakeup and move message until it returns to the outer loop.</p>
+
+<p>This still doesn’t totally solve the problem. A badly behaved process could
+still decide to send multiple neighbors messages and really screw things up for
+everyone.</p>
+
+<p>There is a serious downside to this approach though. In Erlang, when a process
+(actor) gets to a receive block, it does a linear scan of its mailbox, from
+newest message to oldest message to see if it can find anything that matches the
+messages in the current receive block.</p>
+
+<p>Therefore, you can imagine a badly behaved process generating a ton of
+wakeup_and_move messages that flood an ants mailbox while the ant is in the
+inner_loop receive block. Then, when attempting to handle a new message, the ant
+would have to scan through the entire list of messages until it found the right
+one. This can be pretty slow, and, as the mailboxes grow, the memory consumption
+grows.</p>
 
 </article>
 
