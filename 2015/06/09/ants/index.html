@@ -122,79 +122,51 @@
 <article class="post-content">
   <h1 id="work-in-progress">WORK IN PROGRESS</h1>
 
-<p>For my four week CS242 final project, I wanted to do something with Erlang to
-fiddle around with its concurrency model. Also, I like to simulate things.</p>
+<p>For my CS242 final project, I simulated ants with Erlang.</p>
 
-<p>Initially I thought I would try to write a traffic simulator but, after a very
-useful conversation with a friend of mine, decided on something different.</p>
-
-<p>Ants are cool. Individually they are not super clever, but as a group they can
-do things like find food and not die. So, you might be able to think of ants as
-a bunch of stupid actors running around and interacting in some way. This seems
-like it might be at least an interesting fit for Erlang’s actor model.</p>
-
-<p>Let’s start with a video:</p>
-
-<p>In this video we have an XXXXXX by YYYYY grid with AAAAAA ants running around
-on it. The ants all start at the upper edge of the grid then start moving
-around.</p>
-
-<p>There is food at (XXX,YYY).</p>
+<p>In the following video we have an XXXXXX by YYYYY grid with AAAAAA ants running
+around on it. There is food at (XXX,YYY).</p>
 
 <h2 id="model">Model</h2>
 <p>I’ve attempted to capture two behaviors of real ants with my simulation. Ants
-want to find food, and they communicate using pheromones (scents).</p>
+communicate using pheromones (scents), and they want to find food.</p>
 
-<p>In my model, pheromones are a way for an ant to communicate to other ants that
-they might want to move in a certain direction. Every cell in the simulation has
-a pheromone weight indicating the strength of the pheromones at that cell.</p>
+<p>Pheromones are a way for an ant to communicate the location of food to other
+ants. Each cell in the simulation has a pheromone strength associated with it.
+When an ant moves, it uses the pheromone strength of the cells around it as part
+of the computation of the probability it will move in that direction.</p>
 
-<p>An ant can move to either its north, south, east, or west neighbor. To decide
-which direction to go, the ant looks at the pheromone strength at each of its
-neighboring cells, and the distance the neighboring cell is from the ant’s
-starting location (more on this is a sec).</p>
+<p>Additionally, my ants have multiple movement modes.<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup> They can be in “away
+from home” mode or “towards home” mode. When an ant starts moving, it favors
+moving away from its starting cell. When it finds food, it switches modes and
+favors moving towards its starting cell. If it ever reaches the starting cell,
+it switches modes again and goes to find more food. I think that real ants also
+use pheromones to find their way back home (instead of magically remembering the
+absolute coordinates of their home), but I used this to simplify the model while
+still sort of capturing the return to home behavior.</p>
 
-<p>The ant computes the probability that it will move to each of its neighboring
-cells, then picks one with those computed probabilities.</p>
-
-<p>I like my ants like I like my editors: modal. They can be in “away from home”
-mode or “towards home” mode. Ants know the absolute coordinates of its starting
-cell. When an ant starts moving, it favors moving away from its starting cell.
-When it finds food, it switches modes and favors moving towards its starting
-cell. If it ever reaches the starting cell, it switches modes again and goes to
-find more food.</p>
-
-<p>Every time an ant is prepared to move, it performs the pheromone propagation
-step.</p>
+<p>Food can be placed at any cell in the simulation. Because of time constraints,
+nothing actually tracks how much food gets carried home, and the supply of food
+at a given cell does not change when an ant discovers food. If I were to
+continue the project, it would be really interesting to see how much food
+actually gets “home” and to include a changing food supply in the model.</p>
 
 <h2 id="pheromone-propagation">Pheromone Propagation</h2>
-<p>The mechanism I’ve used here is pretty naive (surprise surprise).</p>
-
 <p>When an ant is at a given cell, it gets the max pheromone weight of its four
 (north, south, east, and west) neighbors. It then checks if the weight of the
-cell it is currently on is greater than the max weight of its neighbors. If the
-current cell is weighted more heavily (stronger scent), it does nothing. If its
-current cell has a lower pheromone value than the max of its neighbors, it
-updates the weight of the current cell to half of the weight of its neighbors.</p>
+its current cell is greater than the max weight of its neighbors. If the current
+cell is weighted more heavily (stronger scent), it does nothing. If its current
+cell has a lower pheromone value than the max of its neighbors, it updates the
+weight of the current cell to half of the weight of its neighbors.</p>
 
 <p>When ants find food, they set the pheromone weight at the cell which the food
-was on to a high value, then they start trying to return to their starting
-location. This should, in theory, cause the pheromone trail to follow them. This
-sort of works, but I’ve found that the strength of the trail drops off too
-quickly. I should use something a bit less naive that neighbor max divided by
-two for the cell’s new value.</p>
+was on to a high value, then they start moving back home. This should, in
+theory, cause the pheromone trail to follow them. I’ve found that the strength
+of the trail drops off too quickly. This doesn’t work as well as hoped, but is
+is simple and easy to implement.</p>
 
-<p>After updating the cell value, the ant moves to a new cell.</p>
-
-<p>The good thing about this trick is that I can avoid having to make the ants
-think much about pheromone propagation. When an ant finds food, all it has to do
-is mark that cell with a high weight and change directions. It does not have to
-start thinking about leaving a trail behind it as it moves back home because the
-automatic cell weight update step will take care of that.</p>
-
-<p>I wrote a tool to visualize the pheromone values left at the end of the
-simulation. The following image a zoomed in view of the pheromone values near
-the food in the simulation I showed a video of earlier:</p>
+<p>The following image a zoomed in view of the pheromone values near
+the food at the end of simulation I showed a video of earlier:</p>
 
 <p>SCENT VIS GOES HERE</p>
 
@@ -305,26 +277,53 @@ single entity that knows the state of the entire system at any given time, so
 you can’t just ask it to record a sample of the state of the simulation
 somewhere every once and a while.</p>
 
-<p>My first attempt at this failed. I made a single process, called the “reporter”
-that was responsible for aggregating all of the events (ants moving) and writing
-them to disk. This almost worked.</p>
+<p>I decided that ants should be responsible for reporting their own movements and
+should report any change they choose to make. For a couple of reasons that don’t
+totally make sense, I decided to create one file per ant, and have the ants log
+those (timestamped) events to those files. So, for a 2000 ant simulation, I end
+up with 2000 event files on disk somewhere.</p>
 
-<p>To explain what went wrong, we need to take a diversion for a moment.</p>
+<p>There are all sorts of things wrong with the one file per ant approach, but it
+worked and didn’t slow down the next step toooooo much so I went with it.</p>
 
-<h3 id="message-prioritization">Message Prioritization</h3>
+<h2 id="aggregate-data">Aggregate Data</h2>
+<p>The first thing we have to do is read the data from all the files the ants made,
+and sort it chronologically. Small runs generate enough data to fit in the
+memory of my laptop, and if I was planning to let the sim run for like an hour
+or something, I would usually do that overnight, so the amount of time it takes
+to aggregate the data only matters if sim + aggregation + vis time starts to be
+greater than 8 hours. So, I didn’t spend time trying to do anything clever here.</p>
 
-<p>My first attempt at a reporter had a pretty big issue with this, because it
-prioritized the “stop” message, and I/O to disk is pretty slow. Every time the
-reporter tried to handle a new message, it would first scan the mailbox for a
-“stop” message, then go handle the first message on the queue. While handling
-this message (slow, because it often did some disk I/O), that queue would grow
-quite a bit. At one point, there were 53 million messages in the reporter queue,
-that were getting scanned every time the reporter attempted to handle a new
-message. Ouch.</p>
+<p>The aggregation script just reads all the ant data into memory, then uses the
+python <a href="https://docs.python.org/2/library/heapq.html"><code>heapq.merge</code></a> function to
+merge the data in a slightly more efficient manner and write it back out to disk
+in two files, one for moves, and one for pheromone updates.</p>
 
-<h2 id="building-the-visualizations">Building the visualizations</h2>
+<p>I should remark that <a href="https://docs.python.org/2/library/heapq.html"><code>heapq.merge</code></a> is actually a really cool function.
+From the python docs:</p>
+
+<blockquote>
+  <p>Merge multiple sorted inputs into a single sorted output … Returns an
+iterator over the sorted values.  … does not pull the data into memory
+all at once …</p>
+</blockquote>
+
+<p>So, aggregating this data efficiently would actually be pretty easy. Read
+everything with a lazy iterator then use <a href="https://docs.python.org/2/library/heapq.html"><code>heapq.merge</code></a> to merge
+everything.</p>
+
+<h2 id="making-the-video">Making the Video</h2>
+<p>Ants are moving all the time in an uncoordinated manner, moving a lot, and
+sometimes moving at exactly the same time, so there isn’t a totally obvious way
+to decide when to draw a video frame. I ended up taking 100 miliseconds worth of
+actions (timestamps are in real earth time) and use the last position of every
+ant in that time slice to make a frame. Making frames was easy. I used a big
+numpy array of pixel, then threw that array at MoviePy. Then MoviePy spit out a
+video.</p>
 
 <h2 id="conclusions">Conclusions</h2>
+<p>Better ways to simulate ants but Erlang is cool and this was fun thanks for
+reading.</p>
 
 <h2 id="other-erlang-notes">Other Erlang Notes</h2>
 <p>Message priority is sort of important in this simulation. For example, imagine
@@ -395,6 +394,13 @@ inner_loop receive block. Then, when attempting to handle a new message, the ant
 would have to scan through the entire list of messages until it found the right
 one. This can be pretty slow, and, as the mailboxes grow, the memory consumption
 grows.</p>
+<div class="footnotes">
+  <ol>
+    <li id="fn:1">
+      <p>I like my ants like I like my editors. <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
 
 </article>
 
