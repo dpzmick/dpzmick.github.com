@@ -33,21 +33,20 @@ use pheromones to find their way back home (instead of magically remembering the
 absolute coordinates of their home), but I used this to simplify the model while
 still sort of capturing the return to home behavior.&lt;/p&gt;
 
-&lt;p&gt;Food can be placed at any cell in the simulation. Because of time constraints,
-nothing actually tracks how much food gets carried home, and the supply of food
-at a given cell does not change when an ant discovers food. If I were to
-continue the project, it would be really interesting to see how much food
-actually gets “home” and to include a changing food supply in the model.&lt;/p&gt;
+&lt;p&gt;Food can be placed at any cell in the simulation. Nothing actually tracks how
+much food gets carried home, and the supply of food at a given cell does not
+change when an ant discovers food. If I were to continue the project, it would
+be really interesting to see how much food actually gets “home” and to include a
+changing food supply in the model.&lt;/p&gt;
 
 &lt;h2 id=&quot;pheromone-propagation&quot;&gt;Pheromone Propagation&lt;/h2&gt;
-&lt;p&gt;When an ant is at a given cell, it gets the max pheromone weight of its
-neighbors. It then checks if the weight of the its current cell is greater than
-the max weight of its neighbors. If the current cell is weighted more heavily
-(stronger scent), it does nothing. If its current cell has a lower pheromone
-value than the max of its neighbors, it updates the weight of the current cell
-to half of the weight of its neighbors.&lt;/p&gt;
+&lt;p&gt;When an ant is at a given cell, it gets the max pheromone strength of its
+neighbors. It then checks if the strength of the its current cell is greater
+than the max strength of its neighbors. If its current cell has a lower
+pheromone value than the max of its neighbors, the ant updates the strength of
+the current cell to half of the max strength of its neighbors.&lt;/p&gt;
 
-&lt;p&gt;When ants find food, they set the pheromone weight at the cell which the food
+&lt;p&gt;When ants find food, they set the pheromone strength at the cell which the food
 was on to a high value, then they start moving back home. This should, in
 theory, cause the pheromone trail to follow them.  This doesn’t work as well as
 hoped because the pheromone trail drops off too quickly, but is is simple and
@@ -62,41 +61,31 @@ simulation I showed a video of earlier:&lt;/p&gt;
 &lt;p&gt;If you aren’t familiar with Erlang, here is a super quick overview of the
 concurrency construct in the language.&lt;/p&gt;
 
-&lt;p&gt;Actors (processes in Erlang terminology) run concurrently (and in parallel if
-you have multiple CPUS and a modern Erlang VM) and send messages to each other.
-These messages are asynchronous, so if actor A sends a message to actor B, it
-doesn’t wait for B to respond to proceed with what it is doing (unless you make
-it). There is no way for actors to communicate other than sending messages to
-each other.&lt;/p&gt;
+&lt;p&gt;Actors (processes in Erlang terminology) run concurrently and send messages to
+each other. These messages are asynchronous, so if actor A sends a message to
+actor B, it doesn’t wait for B to respond to proceed with it’s next instruction.
+A message can also contain any sort of data you care to send.&lt;/p&gt;
 
-&lt;p&gt;To handle the messages, every actor has a “mailbox” of incoming messages. When
-it is ready to receive a message, an actor initiates a message receive, which
-pulls messages out of the mailbox and deals with them.&lt;/p&gt;
+&lt;p&gt;An ant actor and a grid cell actor form the core of my simulation.&lt;/p&gt;
 
-&lt;p&gt;The system is obviously a bit more complicated than that, but for now this is
-about all we need to understand.&lt;/p&gt;
+&lt;p&gt;Cells know who their neighbors are, their pheromone strength, if they have food
+on them, and the current ant (can be undefined) occupying the cell. Only one ant
+can occupy a given cell at any moment in time.&lt;/p&gt;
 
-&lt;p&gt;My Erlang code creates two main types of actors: an ant and a cell.&lt;/p&gt;
-
-&lt;p&gt;Cells know who their neighbors are, their weight, if they have food on them, and
-the current ant (can be undefined) occupying the cell. Only one ant can occupy a
-given cell at any moment in time.&lt;/p&gt;
-
-&lt;p&gt;A cell knows how to handle the following messages:&lt;/p&gt;
+&lt;p&gt;A cell knows how to handle the following messages (and a few others):&lt;/p&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;who_are_your_neighbors - asks the cell to send a message back with its
+  &lt;li&gt;who_are_your_neighbors - asks the cell to send a message to someone with its
 neighbors&lt;/li&gt;
   &lt;li&gt;move_me_to_you - tells the cell to set its current occupant to the ant sending
 the message&lt;/li&gt;
   &lt;li&gt;ive_left - tells the cell that the ant sending the message has left the cell&lt;/li&gt;
-  &lt;li&gt;some other logistical things that are not important here&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;Ants know what cell they are on, what direction they are going, where they
 started, and a few other less important things.&lt;/p&gt;
 
-&lt;p&gt;Ants know how to these messages:&lt;/p&gt;
+&lt;p&gt;Ants know how to these messages (and a few others):&lt;/p&gt;
 
 &lt;ul&gt;
   &lt;li&gt;wakeup_and_move - tells the ant to try to move somewhere&lt;/li&gt;
@@ -104,7 +93,6 @@ started, and a few other less important things.&lt;/p&gt;
 neighbors are&lt;/li&gt;
   &lt;li&gt;move_to - tells an ant to change its current cell to some other cell&lt;/li&gt;
   &lt;li&gt;move_failed - tells an ant that its move failed&lt;/li&gt;
-  &lt;li&gt;some more logistical things that aren’t important here&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;h3 id=&quot;simulation&quot;&gt;Simulation&lt;/h3&gt;
@@ -112,15 +100,15 @@ neighbors are&lt;/li&gt;
 size of the grid and the location of food, builds the grid of cells, puts ants
 on the upper edge of the board, then starts a wakeup_and_move_loop for each ant.&lt;/p&gt;
 
-&lt;p&gt;Simply put, these loops tell their ant to wake up and perform their move over
-and over again until the simulation is shut down.&lt;/p&gt;
+&lt;p&gt;These loops tell their ant to wake up and perform their move over and over again
+until the simulation is shut down.&lt;/p&gt;
 
 &lt;h3 id=&quot;wakeupandmove&quot;&gt;Wakeup_and_move&lt;/h3&gt;
 &lt;p&gt;When an ant receives a wakeup_and_move message, it has to figure where it wants
 to move, if it can move there, and it needs to perform the pheromone propagation
 step. I don’t want to let two ants occupy the same cell at once, but it isn’t so
-bad if one ant is sort of in two places at once (I think). That rule results in
-the following set of messages for an ant move.&lt;/p&gt;
+bad if one ant is sort of in two places at once (I think). Those rules motivate
+the following sequence of messages for an ant move:&lt;/p&gt;
 
 &lt;ol&gt;
   &lt;li&gt;The ant receives a wakeup_and_move message&lt;/li&gt;
