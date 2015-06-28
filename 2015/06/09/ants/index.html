@@ -116,7 +116,7 @@
   <h1>Ants</h1>
   <span class="post-meta">Jun 9, 2015</span><br>
   
-  <span class="post-meta small">12 minute read</span>
+  <span class="post-meta small">8 minute read</span>
 </div>
 
 <article class="post-content">
@@ -128,24 +128,24 @@
 around on it. There is food at (XXX,YYY).</p>
 
 <h2 id="model">Model</h2>
-<p>I’ve attempted to capture two behaviors of real ants with my simulation. Ants
+<p>I’ve attempted to capture two behaviors of real ants with my simulation: ants
 communicate using pheromones (scents), and they want to find food.</p>
 
 <p>Pheromones are a way for an ant to communicate the location of food to other
 ants. Each cell in the simulation has a pheromone strength associated with it.
-When an ant moves, it uses the pheromone strength of the cells around it as part
-of the computation of the probability it will move in that direction.</p>
+When an ant moves, it uses the pheromone strength of the cells around it to
+compute the probability that it will move in that direction.</p>
 
 <p>Additionally, my ants have multiple movement modes.<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup> They can be in “away
 from home” mode or “towards home” mode. When an ant starts moving, it favors
 moving away from its starting cell. When it finds food, it switches modes and
 favors moving towards its starting cell. If it ever reaches the starting cell,
-it switches modes again and goes to find more food. I think that real ants also
+it switches modes again and goes to find more food. I believe that real ants also
 use pheromones to find their way back home (instead of magically remembering the
-absolute coordinates of their home), but I used this to simplify the model while
-still sort of capturing the return to home behavior.</p>
+absolute coordinates of their homes), but I used this method to simplify the
+model while still sort of capturing the return to home behavior.</p>
 
-<p>Food can be placed at any cell in the simulation. Nothing actually tracks how
+<p>Food can be placed on any cell in the simulation. Nothing actually tracks how
 much food gets carried home, and the supply of food at a given cell does not
 change when an ant discovers food. If I were to continue the project, it would
 be really interesting to see how much food actually gets “home” and to include a
@@ -154,15 +154,15 @@ changing food supply in the model.</p>
 <h2 id="pheromone-propagation">Pheromone Propagation</h2>
 <p>When an ant is at a given cell, it gets the max pheromone strength of its
 neighbors. It then checks if the strength of the its current cell is greater
-than the max strength of its neighbors. If its current cell has a lower
+than the max strength of its neighboring cells. If its current cell has a lower
 pheromone value than the max of its neighbors, the ant updates the strength of
 the current cell to half of the max strength of its neighbors.</p>
 
-<p>When ants find food, they set the pheromone strength at the cell which the food
-was on to a high value, then they start moving back home. This should, in
-theory, cause the pheromone trail to follow them.  This doesn’t work as well as
-hoped because the pheromone trail drops off too quickly, but is is simple and
-easy to implement, so I stuck with it.</p>
+<p>When ants find food, they set the pheromone strength of the cell the food was on
+to a high value, then they start moving back home. This should, in theory, cause
+the pheromone trail to follow them. This doesn’t work as well as I had hoped
+because the pheromone trail drops off too quickly, but, it is easy to implement,
+so I stuck with it.</p>
 
 <p>Here is a zoomed in view of the pheromone values near the food at the end of
 simulation I showed a video of earlier:</p>
@@ -181,7 +181,7 @@ A message can also contain any sort of data you care to send.</p>
 <p>An ant actor and a grid cell actor form the core of my simulation.</p>
 
 <p>Cells know who their neighbors are, their pheromone strength, if they have food
-on them, and the current ant (can be undefined) occupying the cell. Only one ant
+on them, and which ant occupies the cell (can be undefined). Only one ant
 can occupy a given cell at any moment in time.</p>
 
 <p>A cell knows how to handle the following messages (and a few others):</p>
@@ -197,7 +197,7 @@ the message</li>
 <p>Ants know what cell they are on, what direction they are going, where they
 started, and a few other less important things.</p>
 
-<p>Ants know how to these messages (and a few others):</p>
+<p>Ants know how to handle these messages (and a few others):</p>
 
 <ul>
   <li>wakeup_and_move - tells the ant to try to move somewhere</li>
@@ -212,8 +212,8 @@ neighbors are</li>
 size of the grid and the location of food, builds the grid of cells, puts ants
 on the upper edge of the board, then starts a wakeup_and_move_loop for each ant.</p>
 
-<p>These loops tell their ant to wake up and perform their move over and over again
-until the simulation is shut down.</p>
+<p>These loops tell their respective ants to wake up and perform their move over
+and over again until the simulation is shut down.</p>
 
 <h3 id="wakeupandmove">Wakeup_and_move</h3>
 <p>When an ant receives a wakeup_and_move message, it has to figure where it wants
@@ -233,8 +233,8 @@ explained earlier</li>
   <li>The ant sends a move_me_to_you message to its selected cell</li>
   <li>The selected cell checks if it is currently occupied
     <ul>
-      <li>If it isn’t occupied, it sets its current occupant to the ant trying to and
-sends a you_moved message back to the ant</li>
+      <li>If it isn’t occupied, it sets its current occupant to the ant trying to
+move and sends a you_moved message back to the ant</li>
       <li>If it is occupied, it sends a move_failed message back to the ant</li>
     </ul>
   </li>
@@ -253,12 +253,12 @@ to sleep</li>
 
 <p><a href="/img/ants/sequence.png"><img src="/img/ants/sequence.png" alt="sequence diagram" /></a></p>
 
-<p>If you look carefully, you might notice that between steps 7 and 8, two cells
-think they are occupied by the same ant. This prevent collisions but introduces
+<p>If you look carefully, you might notice that, between steps 7 and 8, two cells
+think they are occupied by the same ant. This prevents collisions but introduces
 this strange “ant in flux” state. I would rather accept the double occupancy
 issue than the collision issue.</p>
 
-<h2 id="getting-the-data-out">Getting the data out</h2>
+<h2 id="data">Data</h2>
 <p>As the simulation runs, the ants are generating all sorts of data that should
 probably be recorded somewhere. This is a bit of a challenge because there is no
 single entity that knows the state of the entire system at any given time, so
@@ -266,122 +266,38 @@ you can’t just ask it to record a sample of the state of the simulation
 somewhere every once and a while.</p>
 
 <p>I decided that ants should be responsible for reporting their own movements and
-should report any change they choose to make. For a couple of reasons that don’t
-totally make sense, I decided to create one file per ant, and have the ants log
-those (timestamped) events to those files. So, for a 2000 ant simulation, I end
-up with 2000 event files on disk somewhere.</p>
+should report the pheromone strength changes they make. For a couple of reasons
+that don’t totally make sense, I decided to create one file per ant, and have
+the ants log timestamped (wall clock time) events to those files. So, for a 2000
+ant simulation, I end up with 2000 ant-event files on disk somewhere.</p>
 
-<p>There are all sorts of things wrong with the one file per ant approach, but it
-worked and didn’t slow down the next step toooooo much so I went with it.</p>
+<p>There are all sorts of things wrong with the one file per ant approach.</p>
 
-<h2 id="aggregate-data">Aggregate Data</h2>
-<p>The first thing we have to do is read the data from all the files the ants made,
-and sort it chronologically. Small runs generate enough data to fit in the
-memory of my laptop, and if I was planning to let the sim run for like an hour
-or something, I would usually do that overnight, so the amount of time it takes
-to aggregate the data only matters if sim + aggregation + vis time starts to be
-greater than 8 hours. So, I didn’t spend time trying to do anything clever here.</p>
+<p>The biggest is speed. Having one file per ant means I have to merge all of these
+ant-event files before making a visualization. These files can get large so this
+is a slow process (and memory intensive if you write your script poorly (oops)).</p>
 
-<p>The aggregation script just reads all the ant data into memory, then uses the
-python <a href="https://docs.python.org/2/library/heapq.html"><code>heapq.merge</code></a> function to
-merge the data in a slightly more efficient manner and write it back out to disk
-in two files, one for moves, and one for pheromone updates.</p>
+<p>Other than speed, one file per ant puts an upper limit on the number of ants I
+can simulate at a time, because I can’t open an unlimited number of files on any
+operating system. I won’t even mention the strange I/O behavior.</p>
 
-<p>I should remark that <a href="https://docs.python.org/2/library/heapq.html"><code>heapq.merge</code></a> is actually a really cool function.
-From the python docs:</p>
-
-<blockquote>
-  <p>Merge multiple sorted inputs into a single sorted output … Returns an
-iterator over the sorted values.  … does not pull the data into memory
-all at once …</p>
-</blockquote>
-
-<p>So, aggregating this data efficiently would actually be pretty easy. Read
-everything with a lazy iterator then use <a href="https://docs.python.org/2/library/heapq.html"><code>heapq.merge</code></a> to merge
-everything.</p>
+<p>Fortunately, computers are fast, events are small, and I have a decent amount of
+memory in my laptop, so this technique was “fast enough” given the scope of the
+project.</p>
 
 <h2 id="making-the-video">Making the Video</h2>
 <p>Ants are moving all the time in an uncoordinated manner, moving a lot, and
 sometimes moving at exactly the same time, so there isn’t a totally obvious way
 to decide when to draw a video frame. I ended up taking 100 miliseconds worth of
-actions (timestamps are in real earth time) and use the last position of every
-ant in that time slice to make a frame. Making frames was easy. I used a big
-numpy array of pixel, then threw that array at MoviePy. Then MoviePy spit out a
-video.</p>
+move actions (timestamps are in real earth time) and use the last position of
+every ant in that time slice to make a frame. Making frames was easy. I used a
+big numpy array of pixels, threw that array at MoviePy, and MoviePy spit
+out a video.</p>
 
 <h2 id="conclusions">Conclusions</h2>
 <p>Better ways to simulate ants but Erlang is cool and this was fun thanks for
 reading.</p>
 
-<h2 id="other-erlang-notes">Other Erlang Notes</h2>
-<p>Message priority is sort of important in this simulation. For example, imagine
-that some misbehaving process sends an ant two wakeup_and_move messages in a
-row, where the second one is sent before the ant is done dealing with the first
-one.</p>
-
-<p>The ants mailbox would look like this: [wakeup_and_move, wakeup_and_move].</p>
-
-<p>Then, the ant handles the first wakeup by sending a message to its current cell
-to ask for its neighbors. The cell could then send the ant a list of its
-neighbors. Whether or not the cell actually gets a chance to run depends on the
-behavior of the scheduler, so this example is one of many possible behaviors the
-system might exhibit.</p>
-
-<p>Assuming the scheduler behaves the way I’m pretending it would the ant’s mailbox
-is this: [wakeup_and_move, neighbors].</p>
-
-<p>So, the ant, again, sends a message to its current cell, asking for its
-neighbors.</p>
-
-<p>Mailbox: [neighbors, neighbors].</p>
-
-<p>Now we have a problem. When an ant handles a neighbors message, it picks a new
-cell to move to, somewhat at random. So this ant will pick a new cell to move
-to, twice in a row. There is a pretty good chance these two cells will not be
-the same cell. So the ant is probably going to end up trying to go in two
-different directions, and it might actually succeed and create quite a confusion.</p>
-
-<p>There are all sort of opportunities for issues like this through the simulation.
-One of the approaches the Erlang community uses to solve this problem is
-selectively receiving messages at different points in the process excecution.</p>
-
-<p>Here is an example of how something like this looks for the ant actor:</p>
-
-<div class="highlight"><pre><code class="language-erlang" data-lang="erlang"><span class="nf">inner_loop</span><span class="p">(</span><span class="nv">State</span><span class="p">)</span> <span class="o">-&gt;</span>
-    <span class="k">receive</span>
-        <span class="n">neighbors</span> <span class="o">-&gt;</span> <span class="n">handle_neighbors</span><span class="p">(</span><span class="nv">State</span><span class="p">),</span> <span class="n">inner_loop</span><span class="p">(</span><span class="nv">State</span><span class="p">);</span>
-        <span class="p">...</span>
-        <span class="n">move_failed</span> <span class="o">-&gt;</span> <span class="n">loop</span><span class="p">(</span><span class="nv">State</span><span class="p">)</span>
-    <span class="k">end</span><span class="p">.</span>
-
-<span class="nf">loop</span><span class="p">(</span><span class="nv">State</span><span class="p">)</span> <span class="o">-&gt;</span>
-    <span class="k">receive</span>
-        <span class="n">wakeup_and_move</span> <span class="o">-&gt;</span> <span class="n">inner_loop</span><span class="p">(</span><span class="nv">State</span><span class="p">)</span>
-    <span class="k">end</span><span class="p">.</span></code></pre></div>
-
-<p>So when the ant is in it’s outer loop, it can only receive a wakeup_and_move
-message. Once it receives one of those, it moves to an inner loop that can
-receiver neighbors messages, and move failed messages, but leaves any other
-message in the mailbox.</p>
-
-<p>This way, after receiving a wakeup_and_move message, the ant can’t receive
-another wakeup and move message until it returns to the outer loop.</p>
-
-<p>This still doesn’t totally solve the problem. A badly behaved process could
-still decide to send multiple neighbors messages and really screw things up for
-everyone.</p>
-
-<p>There is a serious downside to this approach though. In Erlang, when a process
-(actor) gets to a receive block, it does a linear scan of its mailbox, from
-newest message to oldest message to see if it can find anything that matches the
-messages in the current receive block.</p>
-
-<p>Therefore, you can imagine a badly behaved process generating a ton of
-wakeup_and_move messages that flood an ants mailbox while the ant is in the
-inner_loop receive block. Then, when attempting to handle a new message, the ant
-would have to scan through the entire list of messages until it found the right
-one. This can be pretty slow, and, as the mailboxes grow, the memory consumption
-grows.</p>
 <div class="footnotes">
   <ol>
     <li id="fn:1">
