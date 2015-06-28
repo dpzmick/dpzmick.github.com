@@ -40,21 +40,21 @@ continue the project, it would be really interesting to see how much food
 actually gets “home” and to include a changing food supply in the model.&lt;/p&gt;
 
 &lt;h2 id=&quot;pheromone-propagation&quot;&gt;Pheromone Propagation&lt;/h2&gt;
-&lt;p&gt;When an ant is at a given cell, it gets the max pheromone weight of its four
-(north, south, east, and west) neighbors. It then checks if the weight of the
-its current cell is greater than the max weight of its neighbors. If the current
-cell is weighted more heavily (stronger scent), it does nothing. If its current
-cell has a lower pheromone value than the max of its neighbors, it updates the
-weight of the current cell to half of the weight of its neighbors.&lt;/p&gt;
+&lt;p&gt;When an ant is at a given cell, it gets the max pheromone weight of its
+neighbors. It then checks if the weight of the its current cell is greater than
+the max weight of its neighbors. If the current cell is weighted more heavily
+(stronger scent), it does nothing. If its current cell has a lower pheromone
+value than the max of its neighbors, it updates the weight of the current cell
+to half of the weight of its neighbors.&lt;/p&gt;
 
 &lt;p&gt;When ants find food, they set the pheromone weight at the cell which the food
 was on to a high value, then they start moving back home. This should, in
-theory, cause the pheromone trail to follow them. I’ve found that the strength
-of the trail drops off too quickly. This doesn’t work as well as hoped, but is
-is simple and easy to implement.&lt;/p&gt;
+theory, cause the pheromone trail to follow them.  This doesn’t work as well as
+hoped because the pheromone trail drops off too quickly, but is is simple and
+easy to implement, so I stuck with it.&lt;/p&gt;
 
-&lt;p&gt;The following image a zoomed in view of the pheromone values near
-the food at the end of simulation I showed a video of earlier:&lt;/p&gt;
+&lt;p&gt;Here is a zoomed in view of the pheromone values near the food at the end of
+simulation I showed a video of earlier:&lt;/p&gt;
 
 &lt;p&gt;SCENT VIS GOES HERE&lt;/p&gt;
 
