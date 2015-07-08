@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Ants &#8211; dpzmick.com</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Just some dude's blog">
+    <meta name="description" content="CS242 Final Project - Ant simulator in Erlang">
     <meta name="author" content="David Zmick">
     <meta name="keywords" content="">
     <link rel="canonical" href="http://dpzmick.com/2015/06/09/ants/">
@@ -42,7 +42,7 @@
     <meta property="og:locale" content="en_US">
     <meta property="og:type" content="article">
     <meta property="og:title" content="Ants">
-    <meta property="og:description" content="">
+    <meta property="og:description" content="Just some dude's blog">
     <meta property="og:url" content="http://dpzmick.com/2015/06/09/ants/">
     <meta property="og:site_name" content="dpzmick.com">
 
@@ -116,7 +116,7 @@
   <h1>Ants</h1>
   <span class="post-meta">Jun 9, 2015</span><br>
   
-  <span class="post-meta small">8 minute read</span>
+  <span class="post-meta small">10 minute read</span>
 </div>
 
 <article class="post-content">
@@ -262,14 +262,14 @@ issue than the collision issue.</p>
 <p>As the simulation runs, the ants are generating all sorts of data that should
 probably be recorded somewhere. This is a bit of a challenge because there is no
 single entity that knows the state of the entire system at any given time, so
-you can’t just ask it to record a sample of the state of the simulation
-somewhere every once and a while.</p>
+you can’t just record a sample of the state of the simulation
+somewhere every once in a while.</p>
 
-<p>I decided that ants should be responsible for reporting their own movements and
-should report the pheromone strength changes they make. For a couple of reasons
-that don’t totally make sense, I decided to create one file per ant, and have
-the ants log timestamped (wall clock time) events to those files. So, for a 2000
-ant simulation, I end up with 2000 ant-event files on disk somewhere.</p>
+<p>So, I decided that ants should be responsible for reporting their own movements
+and should report the pheromone strength changes they make. For a couple of
+reasons that don’t totally make sense, I decided to create one file per ant, and
+have the ants log timestamped (wall clock time) events to those files. So, for a
+2000 ant simulation, I end up with 2000 ant-event files on disk somewhere.</p>
 
 <p>There are all sorts of things wrong with the one file per ant approach.</p>
 
@@ -278,8 +278,8 @@ ant-event files before making a visualization. These files can get large so this
 is a slow process (and memory intensive if you write your script poorly (oops)).</p>
 
 <p>Other than speed, one file per ant puts an upper limit on the number of ants I
-can simulate at a time, because I can’t open an unlimited number of files on any
-operating system. I won’t even mention the strange I/O behavior.</p>
+can simulate at a time because I can’t open an unlimited number of files on any
+sort of machine. I won’t even mention the strange I/O behavior.</p>
 
 <p>Fortunately, computers are fast, events are small, and I have a decent amount of
 memory in my laptop, so this technique was “fast enough” given the scope of the
@@ -287,17 +287,48 @@ project.</p>
 
 <h2 id="making-the-video">Making the Video</h2>
 <p>Ants are moving all the time in an uncoordinated manner, moving a lot, and
-sometimes moving at exactly the same time, so there isn’t a totally obvious way
-to decide when to draw a video frame. I ended up taking 100 miliseconds worth of
-move actions (timestamps are in real earth time) and use the last position of
-every ant in that time slice to make a frame. Making frames was easy. I used a
-big numpy array of pixels, threw that array at MoviePy, and MoviePy spit
-out a video.</p>
+sometimes moving at exactly the same time so there isn’t a totally obvious way
+to decide when to draw a video frame. I took 100 miliseconds worth of simulation
+data (timestamps are in real earth time) and used the last position of every ant
+in that time slice to make a frame.</p>
+
+<p>MoviePy makes the rest really easy. All I have to do is build a frame by
+populating a numpy array, and throw that array at MoviePy. MoviePy treats that
+like an array of pixels and spits out a video that plays some number of frames
+per second.</p>
 
 <h2 id="conclusions">Conclusions</h2>
-<p>Better ways to simulate ants but Erlang is cool and this was fun thanks for
-reading.</p>
+<p>The naive model of any movement I used almost works. If I were to improve the
+pheromone propagation mechanism and add changing food supplies, I suspect the
+behavior would become a bit more interesting. Another next step would be the
+addition of some obstacles on the grid so that the “always favor moving away”
+approach would fail, necessitating a more intricate “looking for food”
+mechanism.</p>
 
+<p>Erlang is an interesting language and I’m glad I had an opportunity to fiddle
+with it, but some of its peculiarities can be annoying. First of all, the lack
+of static typing is a pain (I know about dialyzer). It is also difficult to do
+things like prioritize certain messages over others (if I want to shut down the
+simulation, I want my stop message to take precedence over anything else), and
+badly behaving actors can create strange situations. For example, it is possible
+that some misbehaving actor can fly in and start sending wakeup_and_move
+messages to ants while they are executing the 8 step move and confuse the ant,
+the cell the ant is trying to move to, and the cell the ant is currently on.
+Despite its oddities, the language and the VM are super cool and I would use
+them again when appropriate.</p>
+
+<p>Unfortunately, I would not say that this project was particularly appropriate
+for Erlang. The actor model was an interesting way to think about ants and
+cells, but the problem doesn’t quite fit Erlang’s strengths as a fault-tolerant
+language for distributed systems. There is a possibility that the distributed
+nature of Erlang might enable some interesting simulation sort of things, but
+there is little reason to take advantage of the fault tolerance in a project
+like this. Additionally, there are others ways to implement a simulation like
+this which mitigate many of the issues I encountered along the way (and
+introduce other ones).</p>
+
+<p>Overall, this was a fun project and I’m glad to have gotten to work on it. The
+buggy, messy code is on <a href="https://github.com/dpzmick/ants">github</a>.</p>
 <div class="footnotes">
   <ol>
     <li id="fn:1">

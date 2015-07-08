@@ -150,14 +150,14 @@ issue than the collision issue.&lt;/p&gt;
 &lt;p&gt;As the simulation runs, the ants are generating all sorts of data that should
 probably be recorded somewhere. This is a bit of a challenge because there is no
 single entity that knows the state of the entire system at any given time, so
-you can’t just ask it to record a sample of the state of the simulation
-somewhere every once and a while.&lt;/p&gt;
+you can’t just record a sample of the state of the simulation
+somewhere every once in a while.&lt;/p&gt;
 
-&lt;p&gt;I decided that ants should be responsible for reporting their own movements and
-should report the pheromone strength changes they make. For a couple of reasons
-that don’t totally make sense, I decided to create one file per ant, and have
-the ants log timestamped (wall clock time) events to those files. So, for a 2000
-ant simulation, I end up with 2000 ant-event files on disk somewhere.&lt;/p&gt;
+&lt;p&gt;So, I decided that ants should be responsible for reporting their own movements
+and should report the pheromone strength changes they make. For a couple of
+reasons that don’t totally make sense, I decided to create one file per ant, and
+have the ants log timestamped (wall clock time) events to those files. So, for a
+2000 ant simulation, I end up with 2000 ant-event files on disk somewhere.&lt;/p&gt;
 
 &lt;p&gt;There are all sorts of things wrong with the one file per ant approach.&lt;/p&gt;
 
@@ -166,8 +166,8 @@ ant-event files before making a visualization. These files can get large so this
 is a slow process (and memory intensive if you write your script poorly (oops)).&lt;/p&gt;
 
 &lt;p&gt;Other than speed, one file per ant puts an upper limit on the number of ants I
-can simulate at a time, because I can’t open an unlimited number of files on any
-operating system. I won’t even mention the strange I/O behavior.&lt;/p&gt;
+can simulate at a time because I can’t open an unlimited number of files on any
+sort of machine. I won’t even mention the strange I/O behavior.&lt;/p&gt;
 
 &lt;p&gt;Fortunately, computers are fast, events are small, and I have a decent amount of
 memory in my laptop, so this technique was “fast enough” given the scope of the
@@ -175,17 +175,48 @@ project.&lt;/p&gt;
 
 &lt;h2 id=&quot;making-the-video&quot;&gt;Making the Video&lt;/h2&gt;
 &lt;p&gt;Ants are moving all the time in an uncoordinated manner, moving a lot, and
-sometimes moving at exactly the same time, so there isn’t a totally obvious way
-to decide when to draw a video frame. I ended up taking 100 miliseconds worth of
-move actions (timestamps are in real earth time) and use the last position of
-every ant in that time slice to make a frame. Making frames was easy. I used a
-big numpy array of pixels, threw that array at MoviePy, and MoviePy spit
-out a video.&lt;/p&gt;
+sometimes moving at exactly the same time so there isn’t a totally obvious way
+to decide when to draw a video frame. I took 100 miliseconds worth of simulation
+data (timestamps are in real earth time) and used the last position of every ant
+in that time slice to make a frame.&lt;/p&gt;
+
+&lt;p&gt;MoviePy makes the rest really easy. All I have to do is build a frame by
+populating a numpy array, and throw that array at MoviePy. MoviePy treats that
+like an array of pixels and spits out a video that plays some number of frames
+per second.&lt;/p&gt;
 
 &lt;h2 id=&quot;conclusions&quot;&gt;Conclusions&lt;/h2&gt;
-&lt;p&gt;Better ways to simulate ants but Erlang is cool and this was fun thanks for
-reading.&lt;/p&gt;
+&lt;p&gt;The naive model of any movement I used almost works. If I were to improve the
+pheromone propagation mechanism and add changing food supplies, I suspect the
+behavior would become a bit more interesting. Another next step would be the
+addition of some obstacles on the grid so that the “always favor moving away”
+approach would fail, necessitating a more intricate “looking for food”
+mechanism.&lt;/p&gt;
 
+&lt;p&gt;Erlang is an interesting language and I’m glad I had an opportunity to fiddle
+with it, but some of its peculiarities can be annoying. First of all, the lack
+of static typing is a pain (I know about dialyzer). It is also difficult to do
+things like prioritize certain messages over others (if I want to shut down the
+simulation, I want my stop message to take precedence over anything else), and
+badly behaving actors can create strange situations. For example, it is possible
+that some misbehaving actor can fly in and start sending wakeup_and_move
+messages to ants while they are executing the 8 step move and confuse the ant,
+the cell the ant is trying to move to, and the cell the ant is currently on.
+Despite its oddities, the language and the VM are super cool and I would use
+them again when appropriate.&lt;/p&gt;
+
+&lt;p&gt;Unfortunately, I would not say that this project was particularly appropriate
+for Erlang. The actor model was an interesting way to think about ants and
+cells, but the problem doesn’t quite fit Erlang’s strengths as a fault-tolerant
+language for distributed systems. There is a possibility that the distributed
+nature of Erlang might enable some interesting simulation sort of things, but
+there is little reason to take advantage of the fault tolerance in a project
+like this. Additionally, there are others ways to implement a simulation like
+this which mitigate many of the issues I encountered along the way (and
+introduce other ones).&lt;/p&gt;
+
+&lt;p&gt;Overall, this was a fun project and I’m glad to have gotten to work on it. The
+buggy, messy code is on &lt;a href=&quot;https://github.com/dpzmick/ants&quot;&gt;github&lt;/a&gt;.&lt;/p&gt;
 &lt;div class=&quot;footnotes&quot;&gt;
   &lt;ol&gt;
     &lt;li id=&quot;fn:1&quot;&gt;
