@@ -8,9 +8,7 @@
     
       <item>
         <title>Ants</title>
-        <description>&lt;h1 id=&quot;work-in-progress&quot;&gt;WORK IN PROGRESS&lt;/h1&gt;
-
-&lt;p&gt;For my CS242 final project, I simulated ants with Erlang.&lt;/p&gt;
+        <description>&lt;p&gt;For my CS242 final project, I simulated ants with Erlang.&lt;/p&gt;
 
 &lt;p&gt;In the following video we have a 1000 by 1000 grid with 2000 ants running
 around on it. There is food in a small square on the upper left. The simulation
