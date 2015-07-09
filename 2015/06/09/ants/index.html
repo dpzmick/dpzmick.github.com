@@ -124,8 +124,13 @@
 
 <p>For my CS242 final project, I simulated ants with Erlang.</p>
 
-<p>In the following video we have an XXXXXX by YYYYY grid with AAAAAA ants running
-around on it. There is food at (XXX,YYY).</p>
+<p>In the following video we have a 1000 by 1000 grid with 2000 ants running
+around on it. There is food in a small square on the upper left. The simulation
+ran for 1 hour (53,840,103 events were recorded).</p>
+
+<div class="video-container">
+<iframe width="560" height="315" src="https://www.youtube.com/embed/tThh8m7cezw?start=185" frameborder="0" allowfullscreen=""></iframe>
+</div>
 
 <h2 id="model">Model</h2>
 <p>I’ve attempted to capture two behaviors of real ants with my simulation: ants
@@ -145,6 +150,9 @@ use pheromones to find their way back home (instead of magically remembering the
 absolute coordinates of their homes), but I used this method to simplify the
 model while still sort of capturing the return to home behavior.</p>
 
+<p>There is a mechanism to change the relative importance of distance and pheromone
+strength. When an ant finds food, it ignores pheromones until it gets back home.</p>
+
 <p>Food can be placed on any cell in the simulation. Nothing actually tracks how
 much food gets carried home, and the supply of food at a given cell does not
 change when an ant discovers food. If I were to continue the project, it would
@@ -163,11 +171,6 @@ to a high value, then they start moving back home. This should, in theory, cause
 the pheromone trail to follow them. This doesn’t work as well as I had hoped
 because the pheromone trail drops off too quickly, but, it is easy to implement,
 so I stuck with it.</p>
-
-<p>Here is a zoomed in view of the pheromone values near the food at the end of
-simulation I showed a video of earlier:</p>
-
-<p>SCENT VIS GOES HERE</p>
 
 <h2 id="the-erlang-stuff">The Erlang Stuff</h2>
 <p>If you aren’t familiar with Erlang, here is a super quick overview of the
@@ -324,11 +327,12 @@ language for distributed systems. There is a possibility that the distributed
 nature of Erlang might enable some interesting simulation sort of things, but
 there is little reason to take advantage of the fault tolerance in a project
 like this. Additionally, there are others ways to implement a simulation like
-this which mitigate many of the issues I encountered along the way (and
+this which mitigate many of the issues I encountered along the way (but might
 introduce other ones).</p>
 
-<p>Overall, this was a fun project and I’m glad to have gotten to work on it. The
-buggy, messy code is on <a href="https://github.com/dpzmick/ants">github</a>.</p>
+<p>Overall, this was a fun project and I’m glad to have gotten to work on it.</p>
+
+<p>The buggy, messy code is on <a href="https://github.com/dpzmick/ants">github</a>.</p>
 <div class="footnotes">
   <ol>
     <li id="fn:1">

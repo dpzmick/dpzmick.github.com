@@ -12,8 +12,13 @@
 
 &lt;p&gt;For my CS242 final project, I simulated ants with Erlang.&lt;/p&gt;
 
-&lt;p&gt;In the following video we have an XXXXXX by YYYYY grid with AAAAAA ants running
-around on it. There is food at (XXX,YYY).&lt;/p&gt;
+&lt;p&gt;In the following video we have a 1000 by 1000 grid with 2000 ants running
+around on it. There is food in a small square on the upper left. The simulation
+ran for 1 hour (53,840,103 events were recorded).&lt;/p&gt;
+
+&lt;div class=&quot;video-container&quot;&gt;
+&lt;iframe width=&quot;560&quot; height=&quot;315&quot; src=&quot;https://www.youtube.com/embed/tThh8m7cezw?start=185&quot; frameborder=&quot;0&quot; allowfullscreen=&quot;&quot;&gt;&lt;/iframe&gt;
+&lt;/div&gt;
 
 &lt;h2 id=&quot;model&quot;&gt;Model&lt;/h2&gt;
 &lt;p&gt;I’ve attempted to capture two behaviors of real ants with my simulation: ants
@@ -33,6 +38,9 @@ use pheromones to find their way back home (instead of magically remembering the
 absolute coordinates of their homes), but I used this method to simplify the
 model while still sort of capturing the return to home behavior.&lt;/p&gt;
 
+&lt;p&gt;There is a mechanism to change the relative importance of distance and pheromone
+strength. When an ant finds food, it ignores pheromones until it gets back home.&lt;/p&gt;
+
 &lt;p&gt;Food can be placed on any cell in the simulation. Nothing actually tracks how
 much food gets carried home, and the supply of food at a given cell does not
 change when an ant discovers food. If I were to continue the project, it would
@@ -51,11 +59,6 @@ to a high value, then they start moving back home. This should, in theory, cause
 the pheromone trail to follow them. This doesn’t work as well as I had hoped
 because the pheromone trail drops off too quickly, but, it is easy to implement,
 so I stuck with it.&lt;/p&gt;
-
-&lt;p&gt;Here is a zoomed in view of the pheromone values near the food at the end of
-simulation I showed a video of earlier:&lt;/p&gt;
-
-&lt;p&gt;SCENT VIS GOES HERE&lt;/p&gt;
 
 &lt;h2 id=&quot;the-erlang-stuff&quot;&gt;The Erlang Stuff&lt;/h2&gt;
 &lt;p&gt;If you aren’t familiar with Erlang, here is a super quick overview of the
@@ -212,11 +215,12 @@ language for distributed systems. There is a possibility that the distributed
 nature of Erlang might enable some interesting simulation sort of things, but
 there is little reason to take advantage of the fault tolerance in a project
 like this. Additionally, there are others ways to implement a simulation like
-this which mitigate many of the issues I encountered along the way (and
+this which mitigate many of the issues I encountered along the way (but might
 introduce other ones).&lt;/p&gt;
 
-&lt;p&gt;Overall, this was a fun project and I’m glad to have gotten to work on it. The
-buggy, messy code is on &lt;a href=&quot;https://github.com/dpzmick/ants&quot;&gt;github&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Overall, this was a fun project and I’m glad to have gotten to work on it.&lt;/p&gt;
+
+&lt;p&gt;The buggy, messy code is on &lt;a href=&quot;https://github.com/dpzmick/ants&quot;&gt;github&lt;/a&gt;.&lt;/p&gt;
 &lt;div class=&quot;footnotes&quot;&gt;
   &lt;ol&gt;
     &lt;li id=&quot;fn:1&quot;&gt;
