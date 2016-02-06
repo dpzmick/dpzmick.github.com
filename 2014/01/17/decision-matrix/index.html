@@ -87,7 +87,7 @@
     
     
     
-      <a class="fa fa-envelope" href="contact/"></a>
+    <a class="fa fa-envelope" href="/contact"></a>
     
     
       <a class="fa fa-linkedin" href="https://www.linkedin.com/in/dpzmick"></a>
@@ -116,7 +116,7 @@
   <h1>Decision Matrix</h1>
   <span class="post-meta">Jan 17, 2014</span><br>
   
-  <span class="post-meta small">15 minute read</span>
+  <span class="post-meta small">14 minute read</span>
 </div>
 
 <article class="post-content">
@@ -186,32 +186,31 @@ a pay cut am I willing to take to continue living in Houston?”</p>
 
 <p>The objectives vector:</p>
 
-<script type="math/tex; mode=display"> \mathbf{o} =
+<script type="math/tex; mode=display">\mathbf{o} =
     \begin{pmatrix}
         w_1 \\
         w_2 \\
         \vdots  \\
         w_n
-    \end{pmatrix}
-</script>
+    \end{pmatrix}</script>
 
 <p>where:</p>
 
 <p>$ w_i $ = the weight given to the ith objective.</p>
 
 <p>The vector <script type="math/tex">% <![CDATA[
- \mathbf{a_i} = \begin{pmatrix} r_1 & r_2 & \cdots & r_m \end{pmatrix}  %]]></script>
+\mathbf{a_i} = \begin{pmatrix} r_1 & r_2 & \cdots & r_m \end{pmatrix} %]]></script>
 for the ith alternative, where $ r_k $ is the ith alternative’s rating for the
 kth objective.</p>
 
 <p>The alternative matrix</p>
 
-<script type="math/tex; mode=display"> A = \begin{pmatrix}
+<script type="math/tex; mode=display">A = \begin{pmatrix}
     \mathbf{a_1} \\
     \mathbf{a_2} \\
     \vdots \\
     \mathbf{a_m}
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>The relative strengths of each alternative are given by $ A\mathbf{o} $.</p>
 
@@ -222,11 +221,11 @@ and importance of 2, and Comfort an importance of 4.</p>
 
 <p>This means</p>
 
-<script type="math/tex; mode=display"> \mathbf{o} = \begin{pmatrix}
+<script type="math/tex; mode=display">\mathbf{o} = \begin{pmatrix}
     5 \\
     2 \\
     4
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>Now, let us consider 3 options and evaluate them on a using a negative 3 to 3
 scale.</p>
@@ -241,16 +240,16 @@ style, and a 2 for comfort.</p>
 <p>So, we build our alternatives matrix.</p>
 
 <script type="math/tex; mode=display">% <![CDATA[
- A = \begin{pmatrix}
+A = \begin{pmatrix}
     -3 & 3 & 3 \\
      1 & 1 & 2 \\
      3 & 1 & 2
-\end{pmatrix}  %]]></script>
+\end{pmatrix} %]]></script>
 
 <p>And get each alternative’s score:</p>
 
 <script type="math/tex; mode=display">% <![CDATA[
- A\mathbf{o} =
+A\mathbf{o} =
 \begin{pmatrix}
     -3 & 3 & 3 \\
      1 & 1 & 2 \\
@@ -270,8 +269,7 @@ style, and a 2 for comfort.</p>
     3 \\
     15 \\
     25
-\end{pmatrix}
- %]]></script>
+\end{pmatrix} %]]></script>
 
 <p>So, given our objectives, their importances, and our evaluation of our options
 using those objectives, a Civic is probably the best option for us.</p>
@@ -315,12 +313,12 @@ number multiplied by the associated weight.</p>
 
 <p>Remember</p>
 
-<script type="math/tex; mode=display"> \mathbf{o} =
+<script type="math/tex; mode=display">\mathbf{o} =
 \begin{pmatrix}
     5 \\
     2 \\
     4
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>In this example, $ gains = 1(2) + 1(4) = 6 $ and $ losses = 6(5) = 30 $. We
 can see this is not a valid trade because $ 6 - 30 = -24 $ is much less than
@@ -381,20 +379,20 @@ structure.</li>
 <h2 id="objective-impact">Objective Impact</h2>
 <p>Say I give you</p>
 
-<script type="math/tex; mode=display"> \mathbf{o} = \begin{pmatrix}
+<script type="math/tex; mode=display">\mathbf{o} = \begin{pmatrix}
     5 \\
     1 \\
     3
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>and</p>
 
 <script type="math/tex; mode=display">% <![CDATA[
- A = \begin{pmatrix}
+A = \begin{pmatrix}
     3 & -1 & 3 \\
     3 & 3  & 1 \\
     3 & -1 & -3
-\end{pmatrix}  %]]></script>
+\end{pmatrix} %]]></script>
 
 <p>Notice that the rankings for the first objective are all
 exactly the same! This means that the first objective has no impact on the
@@ -407,7 +405,7 @@ First a bit more notation.</p>
 
 <p>let</p>
 
-<script type="math/tex; mode=display"> \mathbf{o_k} = \begin{pmatrix}
+<script type="math/tex; mode=display">\mathbf{o_k} = \begin{pmatrix}
     0 \\
     \vdots \\
     0 \\
@@ -415,7 +413,7 @@ First a bit more notation.</p>
     0 \\
     \vdots \\
     0
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>be the vector containing the weight of the kth objective, in the
 appropriate space, with all other weights set to zero.</p>
@@ -427,7 +425,7 @@ in this decision.</p>
 <p>Using the above defined objectives vector and alternatives matrix we get the
 following impact vectors:</p>
 
-<script type="math/tex; mode=display"> A \begin{pmatrix}
+<script type="math/tex; mode=display">A \begin{pmatrix}
     5 \\
     0 \\
     0
@@ -435,9 +433,9 @@ following impact vectors:</p>
     15 \\\\
     15 \\\\
     15
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
-<script type="math/tex; mode=display"> A \begin{pmatrix}
+<script type="math/tex; mode=display">A \begin{pmatrix}
     0 \\
     1 \\
     0
@@ -445,9 +443,9 @@ following impact vectors:</p>
     -1 \\
     3 \\
     -1
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
-<script type="math/tex; mode=display"> A \begin{pmatrix}
+<script type="math/tex; mode=display">A \begin{pmatrix}
     0 \\
     0 \\
     3
@@ -455,7 +453,7 @@ following impact vectors:</p>
     9 \\
     1 \\
     -9
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>Now, let the impact of the kth objective
 $ Impact(k) = PopulationVariance( A\mathbf{o_k} ) $, so in this example
@@ -482,36 +480,36 @@ toying with.</p>
 <p>Lets make the problem a 2D problem, for the sake of visualization, by dropping
 the last alternative. This leaves us with</p>
 
-<script type="math/tex; mode=display"> \mathbf{o} = \begin{pmatrix}
+<script type="math/tex; mode=display">\mathbf{o} = \begin{pmatrix}
     5 \\
     1 \\
     3
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>and</p>
 
 <script type="math/tex; mode=display">% <![CDATA[
- A = \begin{pmatrix}
+A = \begin{pmatrix}
     3 & -1 & 3 \\
     3 & 3  & 1 \\
-\end{pmatrix}  %]]></script>
+\end{pmatrix} %]]></script>
 
 <p>And, our impact vectors are</p>
 
-<script type="math/tex; mode=display"> \begin{pmatrix}
+<script type="math/tex; mode=display">\begin{pmatrix}
     15 \\
     15
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
-<script type="math/tex; mode=display"> \begin{pmatrix}
+<script type="math/tex; mode=display">\begin{pmatrix}
     -1 \\
     3
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
-<script type="math/tex; mode=display"> \begin{pmatrix}
+<script type="math/tex; mode=display">\begin{pmatrix}
     9 \\
     3
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>Let’s plot those along with the line $ y = x $</p>
 
@@ -522,10 +520,10 @@ let’s walk through it. Our x and y axis represent alternative scores.</p>
 
 <p>Think about what would happen if an objective resulted in an impact vector of</p>
 
-<script type="math/tex; mode=display"> \begin{pmatrix}
+<script type="math/tex; mode=display">\begin{pmatrix}
     15 \\\
     0
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>This objective clearly favors the first alternative (it adds 15
 to $ a_1 $’s score, and 0 to $ a_2 $’s score. In this case that would be
@@ -548,19 +546,19 @@ But, I think this is a really cool, fun way to think about objectives.</p>
 <h4 id="maserati-and-camry-example">Maserati and Camry example</h4>
 <p>Let’s do this with the Maserati and Camry again. Same objectives.</p>
 
-<script type="math/tex; mode=display"> \mathbf{o} = \begin{pmatrix}
+<script type="math/tex; mode=display">\mathbf{o} = \begin{pmatrix}
     5 \\
     2 \\
     4
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>and only two alternatives (to avoid going into 3d space)</p>
 
 <script type="math/tex; mode=display">% <![CDATA[
- A = \begin{pmatrix}
+A = \begin{pmatrix}
     -3 & 3 & 3 \\
      3 & 1 & 2
-\end{pmatrix}  %]]></script>
+\end{pmatrix} %]]></script>
 
 <p>Impact Vectors:</p>
 
@@ -574,19 +572,19 @@ But, I think this is a really cool, fun way to think about objectives.</p>
 
 <p>For Comfort (in orange):</p>
 
-<script type="math/tex; mode=display"> A \begin{pmatrix} 0 \\ 2 \\ 0 \end{pmatrix} =
+<script type="math/tex; mode=display">A \begin{pmatrix} 0 \\ 2 \\ 0 \end{pmatrix} =
 \begin{pmatrix}
     6 \\
     2
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>For Style (in red):</p>
 
-<script type="math/tex; mode=display"> A \begin{pmatrix} 0 \\ 0 \\ 4 \end{pmatrix} =
+<script type="math/tex; mode=display">A \begin{pmatrix} 0 \\ 0 \\ 4 \end{pmatrix} =
 \begin{pmatrix}
     12 \\
     8
-\end{pmatrix} </script>
+\end{pmatrix}</script>
 
 <p>Here is a plot:</p>
 

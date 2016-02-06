@@ -87,7 +87,7 @@
     
     
     
-      <a class="fa fa-envelope" href="contact/"></a>
+    <a class="fa fa-envelope" href="/contact"></a>
     
     
       <a class="fa fa-linkedin" href="https://www.linkedin.com/in/dpzmick"></a>
@@ -155,7 +155,7 @@ simplify this a bit more, add the following assumptions:</p>
 
 <p>Using these assumptions we can write the following equation:</p>
 
-<script type="math/tex; mode=display"> \frac{dF}{dn} = \alpha - \beta n </script>
+<script type="math/tex; mode=display">\frac{dF}{dn} = \alpha - \beta n</script>
 
 <p>where:</p>
 
@@ -177,7 +177,7 @@ group decreases, so subtract something that grows as the population grows: $ \be
 $ F(0) = 0 $, as a group with zero members has 0 fitness. The solutions then
 are:</p>
 
-<script type="math/tex; mode=display"> F(n) = \alpha n - \frac{\beta}{2} n^2 </script>
+<script type="math/tex; mode=display">F(n) = \alpha n - \frac{\beta}{2} n^2</script>
 
 <p>Additionally, we probably want to know what the optimal study group size is.
 We can easily find (by setting $ \frac{dF}{dn} = 0 $) that the optimal size is
@@ -226,7 +226,7 @@ is interesting to you, we could discuss more ideas!</p>
 
 <h2 id="simulation-code-not-pythonic">Simulation Code (not pythonic!)</h2>
 
-<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="nb">pow</span>
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="nb">pow</span>
 <span class="kn">from</span> <span class="nn">random</span> <span class="kn">import</span> <span class="n">randint</span>
 <span class="c">###### Parameters</span>
 <span class="n">a</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="c"># alpha define above</span>
@@ -242,8 +242,8 @@ is interesting to you, we could discuss more ideas!</p>
     <span class="k">return</span> <span class="n">a</span><span class="o">*</span><span class="n">n</span> <span class="o">-</span> <span class="p">(</span><span class="n">b</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="nb">pow</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
 
 <span class="c">##### Simulation</span>
-<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="k">print</span><span class="p">(</span><span class="s">&quot;Starting the simulation&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">"__main__"</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Starting the simulation"</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">numjoiners</span><span class="p">):</span>
         <span class="n">best</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">fits</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">fitness</span><span class="p">,</span> <span class="n">pool</span><span class="p">)):</span>
@@ -254,14 +254,14 @@ is interesting to you, we could discuss more ideas!</p>
         <span class="k">elif</span> <span class="n">best</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">pool</span><span class="p">[</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">print</span><span class="p">(</span><span class="s">&quot;I refuse to join these groups&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"I refuse to join these groups"</span><span class="p">)</span>
             <span class="k">break</span>
     <span class="k">print</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span>
     <span class="k">print</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">fitness</span><span class="p">,</span><span class="n">pool</span><span class="p">))</span>
 
-    <span class="k">print</span><span class="p">(</span><span class="s">&quot;optimal group size </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">a</span><span class="o">/</span><span class="n">b</span><span class="p">)</span> <span class="p">)</span>
-    <span class="k">print</span><span class="p">(</span><span class="s">&quot;average non_empty group size </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span>
-            <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">a</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">pool</span><span class="p">))))</span></code></pre></div>
+    <span class="k">print</span><span class="p">(</span><span class="s">"optimal group size </span><span class="si">%</span><span class="s">d"</span> <span class="o">%</span> <span class="p">(</span><span class="n">a</span><span class="o">/</span><span class="n">b</span><span class="p">)</span> <span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"average non_empty group size </span><span class="si">%</span><span class="s">d"</span> <span class="o">%</span>
+            <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">a</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">pool</span><span class="p">))))</span></code></pre></figure>
 
 
 </article>

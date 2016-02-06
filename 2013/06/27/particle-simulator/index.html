@@ -87,7 +87,7 @@
     
     
     
-      <a class="fa fa-envelope" href="contact/"></a>
+    <a class="fa fa-envelope" href="/contact"></a>
     
     
       <a class="fa fa-linkedin" href="https://www.linkedin.com/in/dpzmick"></a>
@@ -116,7 +116,7 @@
   <h1>Particle Simulator</h1>
   <span class="post-meta">Jun 27, 2013</span><br>
   
-  <span class="post-meta small">9 minute read</span>
+  <span class="post-meta small">8 minute read</span>
 </div>
 
 <article class="post-content">
@@ -156,7 +156,7 @@ negligible.</p>
 in our world, the only force that will exist is the force between $p_1$ and
 $p_2$. This force is attractive, and is computed using the following:</p>
 
-<script type="math/tex; mode=display"> \textbf{F} = G \frac{m_1m_2}{\mid\textbf{r}^2\mid} \hat{\textbf{r}} </script>
+<script type="math/tex; mode=display">\textbf{F} = G \frac{m_1m_2}{\mid\textbf{r}^2\mid} \hat{\textbf{r}}</script>
 
 <p>Where $ G $ is the Gravitational Constant, $ m_1 $ and $ m_2 $ are the masses
 of $ p_1 $ and $ p_2 $ respectively, $ \textbf{r} $ is the vector between
@@ -168,27 +168,27 @@ that is what the litte hat means) describing the direction of the force
 <p>So, now we have the force. We need to find the acceleration. That is easy,
 because Newton made it easy:</p>
 
-<script type="math/tex; mode=display"> \textbf{F} = m\textbf{a} </script>
+<script type="math/tex; mode=display">\textbf{F} = m\textbf{a}</script>
 
 <p>Substituting the derivative of velocity for acceleration, we can see that</p>
 
-<script type="math/tex; mode=display"> \textbf{F} = m \frac{d\textbf{v}}{dt} </script>
+<script type="math/tex; mode=display">\textbf{F} = m \frac{d\textbf{v}}{dt}</script>
 
 <p>But, we aren’t really going to use calculus to solve this (at least I think I’m
 pretending we aren’t for now), so lets go ahead an use
 $\frac{\Delta v}{\Delta t}$ for acceleration for now:</p>
 
-<script type="math/tex; mode=display"> \textbf{F} = m \frac{\Delta \textbf{v}}{\Delta t} </script>
+<script type="math/tex; mode=display">\textbf{F} = m \frac{\Delta \textbf{v}}{\Delta t}</script>
 
 <p>Do some algebra to get:</p>
 
-<script type="math/tex; mode=display"> \Delta \textbf{v} = \frac{\textbf{F}}{m} \Delta t </script>
+<script type="math/tex; mode=display">\Delta \textbf{v} = \frac{\textbf{F}}{m} \Delta t</script>
 
 <p>So, we know $\textbf{F}$, let’s go ahead and substitute that in, then cancel
 unneeded masses:</p>
 
-<script type="math/tex; mode=display"> \Delta \textbf{v} = \frac{ G m\_2 \hat{\textbf{r}} } { | \textbf{r} |^2 }
-\Delta t </script>
+<script type="math/tex; mode=display">\Delta \textbf{v} = \frac{ G m\_2 \hat{\textbf{r}} } { | \textbf{r} |^2 }
+\Delta t</script>
 
 <p>So, now we can easily figure out how much the velocity of a particle should
 change in $t$ seconds, given it only has a single force acting on it.</p>
@@ -212,10 +212,10 @@ process my simulator used.</p>
 
 <h4 id="step-1-find-the-force">Step 1: Find the force</h4>
 <p>Find distance:
-<script type="math/tex"> |\textbf{r}|^2 = \sqrt{ (5-0)^2 + (5-0)^2 } = \sqrt{50} = 5\sqrt{2} </script></p>
+<script type="math/tex">|\textbf{r}|^2 = \sqrt{ (5-0)^2 + (5-0)^2 } = \sqrt{50} = 5\sqrt{2}</script></p>
 
 <p>Find magnitude of $ \textbf{F} $:
-<script type="math/tex"> \textbf{F} = G \frac{(100)(100)}{(5\sqrt{2})^2} = G \frac{1000}{50} = 20G </script></p>
+<script type="math/tex">\textbf{F} = G \frac{(100)(100)}{(5\sqrt{2})^2} = G \frac{1000}{50} = 20G</script></p>
 
 <p>To resolve components of $\textbf{F}$ we need an angle, since the triangle
 representing the force is and isosceles right triangle, the angle with respect
@@ -224,8 +224,8 @@ to the horizontal is $ \frac{\pi}{4} $</p>
 <p>Since the sine and cosine of $ \frac{\pi}{4} $ are both $\frac{\sqrt{2}}{2}$,
 we can easily get the x and y components of the force.</p>
 
-<p><script type="math/tex"> F\_x = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2} </script>
-<script type="math/tex"> F\_y = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2} </script></p>
+<p><script type="math/tex">F\_x = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2}</script>
+<script type="math/tex">F\_y = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2}</script></p>
 
 <h4 id="step-2-find-delta-v">Step 2: Find $\Delta v$</h4>
 <p>We know that the velocity of the particle the instant $t=0$ is
@@ -238,8 +238,8 @@ it.</p>
 
 <p>Because of our assumption, we can do this (In components):</p>
 
-<p><script type="math/tex"> \Delta v\_x = \frac{F\_x}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10} </script>
-<script type="math/tex"> \Delta v\_y = \frac{F\_y}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10} </script></p>
+<p><script type="math/tex">\Delta v\_x = \frac{F\_x}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10}</script>
+<script type="math/tex">\Delta v\_y = \frac{F\_y}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10}</script></p>
 
 <p>So, the velocity of $p_2$ will need to change that much due to the force.</p>
 
@@ -248,28 +248,29 @@ it.</p>
 <p>The initial velocity was 5 up and 5 right. This force is pulling us down and
 left, so:</p>
 
-<p><script type="math/tex"> V\_{x,new} = V\_x - \Delta V\_x = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999</script>
-<script type="math/tex"> V\_{y,new} = V\_y - \Delta V\_y = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999</script></p>
+<p><script type="math/tex">V\_{x,new} = V\_x - \Delta V\_x = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999</script>
+<script type="math/tex">V\_{y,new} = V\_y - \Delta V\_y = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999</script></p>
 
 <h4 id="step-4-find-new-position">Step 4: Find new position</h4>
 <p>Now, since we have assumed zero acceleration in the entire time frame from $t=0$
 to $t=0.1$, we can use simple formulas to compute next locations.</p>
 
-<p><script type="math/tex"> x\_{new} = x\_{old} + V\_{x,new} \Delta t = 5 + 9.99999(0.01) = 5.9999 </script>
-<script type="math/tex"> y\_{new} = y\_{old} + V\_{y,new} \Delta t = 5 + 9.99999(0.01) = 5.9999 </script></p>
+<p><script type="math/tex">x\_{new} = x\_{old} + V\_{x,new} \Delta t = 5 + 9.99999(0.01) = 5.9999</script>
+<script type="math/tex">y\_{new} = y\_{old} + V\_{y,new} \Delta t = 5 + 9.99999(0.01) = 5.9999</script></p>
 
 <p>So, the particle was at $(5,5)$, and it now is at $(5.9999,5.99999)$. Yay?</p>
 
 <p>Each time-step in my simulation performed this calculation. So, it looks kind of
 like this:</p>
 
-<pre><code>function Timestep:
+<div class="highlighter-rouge"><pre class="highlight"><code>function Timestep:
     calculate net force on each particle
     calclate change in velocity for each particle
     update each particle's velocity
     move each particle
     repeat
 </code></pre>
+</div>
 
 <h3 id="the-assumption">The assumption</h3>
 <p>I am not sure if the technique I used to deal with the dynamic nature of the

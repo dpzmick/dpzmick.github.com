@@ -7,6 +7,273 @@
     <atom:link href="http://dpzmick.com/feed.xml" rel="self" type="application/rss+xml" />
     
       <item>
+        <title>CS241 Automatic Deploy Generation</title>
+        <description>&lt;p&gt;I’m on the course staff for the systems programming course here at the
+University of Illinois, leading the team responsible for the our large (often 2
+week) assignments. When we prepare assignments we usually write up our own
+solution to the assignment, then trim the solution down and provide the students
+with some skeleton code. In the past, this trimming down has been done by hand.
+Doing it by hand really sucks. It’s very easy to miss something important, and
+it becomes much more painful to make any changes to the assignment (the changes
+must be made in the solution directory and the student code directory). I wanted
+to alleviate this pain a bit.&lt;/p&gt;
+
+&lt;h2 id=&quot;what-should-be-deployed&quot;&gt;What should be deployed?&lt;/h2&gt;
+&lt;p&gt;We obviously want to deploy code, but it would be nice to do a few things to the
+code first. We probably want to stick some sort of header on every file, like&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span class=&quot;cm&quot;&gt;/*
+ * CS 241 - System Programming: Spring 2016
+ * MP 0
+ */&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;This is a pretty nice example of something that we don’t want to change on every
+single file every semester. It would probably also be nice to ensure that all
+line endings are unix line endings (maybe no one other than me actually cares
+about this), and to run the code through some sort of formatter (I prefer
+clang-format with llvm style).&lt;/p&gt;
+
+&lt;p&gt;For the actual code, it might be nice if we could use c &lt;code class=&quot;highlighter-rouge&quot;&gt;ifdefs&lt;/code&gt; to control what
+is considered deploy code and what is considered solution code. In one of our
+current assignments we push out intentionally broken code, so we can’t just mark
+code as “solution code” and remove it.&lt;/p&gt;
+
+&lt;p&gt;Maybe something like this would be nice:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+&lt;span class=&quot;cp&quot;&gt;#ifdef DEPLOY
+&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// student code goes here
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;cp&quot;&gt;#else
+&lt;/span&gt;    &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;awesome_thing&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;awesome_syscall&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cryptic_argument&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;awesome_thing&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;cp&quot;&gt;#endif
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;This turns out to be really easy to do. There’s a simple utility called
+&lt;code class=&quot;highlighter-rouge&quot;&gt;unifdef&lt;/code&gt; that just works. Run &lt;code class=&quot;highlighter-rouge&quot;&gt;unifdef -DDEPLOY&lt;/code&gt; on the solution file with
+these &lt;code class=&quot;highlighter-rouge&quot;&gt;ifdef&lt;/code&gt; guards, and you get exactly what you wanted out:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// student code goes here
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;We also probably want to copy over the Makefile for the assignment, but this
+doesn’t need any modification. A few of our assignments need data files or
+example input files and things like that. These also don’t need any
+modification.&lt;/p&gt;
+
+&lt;p&gt;Finally, it might be nice to be able to generate a reference implementation from
+our working solution code. This would need to be generated from an optimized
+build of the solution code, without debug symbols (let’s run it through strip
+just to be safe).&lt;/p&gt;
+
+&lt;h2 id=&quot;making-scripts&quot;&gt;Making Scripts&lt;/h2&gt;
+&lt;p&gt;We need to pick some sort of tool that is really good at running command line
+tools (clang-format, dos2unix, unifdef) and really good at matching patterns in
+filenames. I know of at least one tool that is pretty good at both of these
+things. I decided to use GNU make to define these scripts.&lt;/p&gt;
+
+&lt;p&gt;First, lets consider what happens to any c source file.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-make&quot; data-lang=&quot;make&quot;&gt;&lt;span class=&quot;nl&quot;&gt;$(DEPLOY_DIR)/%.c&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;creating&quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;mkdir -p &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; dirname &lt;span class=&quot;nv&quot;&gt;$@)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;unifdef -DDEPLOY &lt;span class=&quot;err&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;@:&lt;span class=&quot;nv&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; | &lt;span class=&quot;nv&quot;&gt;$(FORMATTER)&lt;/span&gt; &amp;gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;-temp
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;cat &lt;span class=&quot;nv&quot;&gt;$(CODE_HEADER)&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;-temp | dos2unix &amp;gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;rm $@-temp&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Any &lt;code class=&quot;highlighter-rouge&quot;&gt;%.c&lt;/code&gt; target in the deploy directory, first, depends on the existence of the
+deploy directory. Then, we have to make sure the file’s directory actually
+exists (we might have code in &lt;code class=&quot;highlighter-rouge&quot;&gt;libs/weirdthing/cool_file.c&lt;/code&gt;). Then, the code
+runs through &lt;code class=&quot;highlighter-rouge&quot;&gt;unifdef&lt;/code&gt; and a formatter, we stick the header on it, and pipe it
+through &lt;code class=&quot;highlighter-rouge&quot;&gt;dos2unix&lt;/code&gt;. That was easy! Well, not quite. If you aren’t familiar with
+GNU make, this line might throw you off a bit:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-make&quot; data-lang=&quot;make&quot;&gt;&lt;span class=&quot;nl&quot;&gt;$(@&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;$(DEPLOY_DIR)/%=$(SOURCE_DIR)/%)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;This is a patterned replacement (&lt;a href=&quot;https://www.gnu.org/software/make/manual/html_node/Text-Functions.html&quot;&gt;Text
+Function&lt;/a&gt;
+in make terminology). It basically says, take the string &lt;code class=&quot;highlighter-rouge&quot;&gt;$@&lt;/code&gt; (the target of the
+rule), and replace the pattern &lt;code class=&quot;highlighter-rouge&quot;&gt;$(DEPLOY_DIR)&lt;/code&gt; with &lt;code class=&quot;highlighter-rouge&quot;&gt;$(SOURCE_DIR)&lt;/code&gt;. In other
+words, to generate a file &lt;code class=&quot;highlighter-rouge&quot;&gt;deploy/test.c&lt;/code&gt; we would start with the file
+&lt;code class=&quot;highlighter-rouge&quot;&gt;solution/test.c&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;We do the same thing for &lt;code class=&quot;highlighter-rouge&quot;&gt;*.h&lt;/code&gt; files.&lt;/p&gt;
+
+&lt;p&gt;Generating a reference implementaton is also pretty straightforward:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-make&quot; data-lang=&quot;make&quot;&gt;&lt;span class=&quot;nl&quot;&gt;$(DEPLOY_DIR)/%-reference&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;making reference for&quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;make -s -C &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;cp &lt;span class=&quot;err&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;@:&lt;span class=&quot;nv&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;/%-reference&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;strip -s &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;make clean -s -C &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;We run make in the solution directory, then copy the executable with name
+given in the target into the deploy directory, then run strip.&lt;/p&gt;
+
+&lt;p&gt;For anything else:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-make&quot; data-lang=&quot;make&quot;&gt;&lt;span class=&quot;nl&quot;&gt;$(DEPLOY_DIR)/%&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;copying&quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;mkdir -p &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; dirname &lt;span class=&quot;nv&quot;&gt;$@)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;-cp &lt;span class=&quot;err&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;@:&lt;span class=&quot;nv&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;err&quot;&gt; $@&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Just copy the file. This rule comes last, so that make will fall through to this
+rule. Again, you see a bunch of text replacement going on.&lt;/p&gt;
+
+&lt;p&gt;You may have noticed that each of my rules is for something in the deploy
+directory, then I do some text replacement to get the intended original source.
+This is intentional.  There are a few cases where I do text replacement to
+generate the output file name, then do text replacement again to get the input
+file name back, but I’m not writing the Makefile to process input files, I’m
+writing it so that it knows how to generate the appropriate output files (since
+that’s the Makefile model).&lt;/p&gt;
+
+&lt;p&gt;Here’s what I mean:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-make&quot; data-lang=&quot;make&quot;&gt;&lt;span class=&quot;c&quot;&gt;# recursively fetch all of the C and H files in the source directory
+&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;C_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;&#39;*.c&#39;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;H_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;&#39;*.h&#39;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;nl&quot;&gt;.PHONY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;all&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;all&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;clean $(DEPLOY_DIR) code_files other_files $(REFERENCE_IMPL:%=$(DEPLOY_DIR)/%-reference)&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# these targets define which files we want to build in the deploy directory
+# they do not specify how to build them
+&lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;.PHONY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;code_files&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;code_files&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(C_SOURCES:$(SOURCE_DIR)/%=$(DEPLOY_DIR)/%) $(H_SOURCES:$(SOURCE_DIR)/%=$(DEPLOY_DIR)/%)&lt;/span&gt;
+
+&lt;span class=&quot;nl&quot;&gt;.PHONY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;other_files&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;other_files&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(OTHER_FILES:%=$(DEPLOY_DIR)/%)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;h2 id=&quot;using-the-makefile&quot;&gt;Using the Makefile&lt;/h2&gt;
+&lt;p&gt;Our git repo looks like this:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;.
+├── mp1
+│   └── solution
+└── mp2
+    └── solution
+...&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Where each of the mp folders holds a single assignment (we call our assignments
+“Machine Problems”). I stuck the Makefile described above in the root of the
+repo, then define an assignment specific Makefile in the assignment directory.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;.
+├── Deploy.mk
+├── mp1
+│   ├── Makefile
+│   └── solution
+└── mp2
+    ├── Makefile
+    └── solution
+...&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;A project specific Makefile &lt;code class=&quot;highlighter-rouge&quot;&gt;mp1/Makefile&lt;/code&gt; defines the variables the full
+Makefile needs to function, and includes the full Makefile. For example:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-make&quot; data-lang=&quot;make&quot;&gt;&lt;span class=&quot;nv&quot;&gt;DEPLOY_DIR&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;deploy
+&lt;span class=&quot;nv&quot;&gt;SOURCE_DIR&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;solution
+
+&lt;span class=&quot;c&quot;&gt;# Every file listed will be copied into the deploy directory with no
+# modification
+&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;OTHER_FILES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; Makefile &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+              test_file.txt &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+              a/b/c/test.dat
+
+&lt;span class=&quot;nv&quot;&gt;REFERENCE_IMPL&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;mp1
+
+&lt;span class=&quot;err&quot;&gt;-include&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;../deploy.make.common&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Now, running &lt;code class=&quot;highlighter-rouge&quot;&gt;make&lt;/code&gt; in the &lt;code class=&quot;highlighter-rouge&quot;&gt;/mp1&lt;/code&gt; directory creates the folder &lt;code class=&quot;highlighter-rouge&quot;&gt;deploy&lt;/code&gt;
+containing the deployable code, and a reference implementation for the
+assignment.&lt;/p&gt;
+
+&lt;p&gt;Now, my life is a lot easier.&lt;/p&gt;
+
+&lt;h2 id=&quot;full-deploymk-file&quot;&gt;Full Deploy.mk file&lt;/h2&gt;
+&lt;p&gt;not using a gist cause I tend to accidentally delete those:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-make&quot; data-lang=&quot;make&quot;&gt;&lt;span class=&quot;c&quot;&gt;# this is a makefile which is included by project specific makefiles
+# this file defines how to build a deploy directory automatically from a
+# solution directory using #ifdef DEPLOY #endif to specify deploy and solution
+# specific code
+#
+# the contents of code_header (in the same directory as the MP Specific
+# makefile) are prepended to every code file
+&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# TODO run an extraneous header removal tool
+# (http://include-what-you-use.org/)
+&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;FORMATTER&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;clang-format -style&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;llvm
+
+&lt;span class=&quot;c&quot;&gt;# recursively fetch all of the C and H files in the source directory
+&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;C_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;&#39;*.c&#39;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;H_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;&#39;*.h&#39;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;nv&quot;&gt;CODE_HEADER&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;code_header
+
+&lt;span class=&quot;nl&quot;&gt;.PHONY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;all&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;all&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;clean $(DEPLOY_DIR) code_files other_files $(REFERENCE_IMPL:%=$(DEPLOY_DIR)/%-reference)&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# these targets define which files we want to build in the deploy directory
+# they do not specify how to build them
+&lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;.PHONY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;code_files&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;code_files&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(C_SOURCES:$(SOURCE_DIR)/%=$(DEPLOY_DIR)/%) $(H_SOURCES:$(SOURCE_DIR)/%=$(DEPLOY_DIR)/%)&lt;/span&gt;
+
+&lt;span class=&quot;nl&quot;&gt;.PHONY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;other_files&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;other_files&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(OTHER_FILES:%=$(DEPLOY_DIR)/%)&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# these targets specify how to build the files that get deployed
+# for example, a deploy_dir/%.c file is processed with unifdef then formatted,
+# and emitted to the deploy directory
+&lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;mkdir -p &lt;span class=&quot;nv&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# process each of the c and header files with unifdef and a formatter
+&lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;$(DEPLOY_DIR)/%.c&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;creating&quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;mkdir -p &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; dirname &lt;span class=&quot;nv&quot;&gt;$@)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;unifdef -DDEPLOY &lt;span class=&quot;err&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;@:&lt;span class=&quot;nv&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; | &lt;span class=&quot;nv&quot;&gt;$(FORMATTER)&lt;/span&gt; &amp;gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;-temp
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;cat &lt;span class=&quot;nv&quot;&gt;$(CODE_HEADER)&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;-temp | dos2unix &amp;gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;rm &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;-temp
+
+&lt;span class=&quot;nl&quot;&gt;$(DEPLOY_DIR)/%.h&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;creating&quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;mkdir -p &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; dirname &lt;span class=&quot;nv&quot;&gt;$@)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;unifdef -DDEPLOY &lt;span class=&quot;err&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;@:&lt;span class=&quot;nv&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; | &lt;span class=&quot;nv&quot;&gt;$(FORMATTER)&lt;/span&gt; &amp;gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;-temp
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;cat &lt;span class=&quot;nv&quot;&gt;$(CODE_HEADER)&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;-temp | dos2unix &amp;gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;rm &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;-temp
+
+&lt;span class=&quot;nl&quot;&gt;$(DEPLOY_DIR)/%-reference&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;making reference for&quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;make -s -C &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;cp &lt;span class=&quot;err&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;@:&lt;span class=&quot;nv&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;/%-reference&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;strip -s &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;make clean -s -C &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# if we didn&#39;t catch it yet, just copy the file
+&lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;$(DEPLOY_DIR)/%&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;copying&quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;mkdir -p &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; dirname &lt;span class=&quot;nv&quot;&gt;$@)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;-cp &lt;span class=&quot;err&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;@:&lt;span class=&quot;nv&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;/%&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
+
+&lt;span class=&quot;nl&quot;&gt;.PHONY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;clean&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;clean&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;cleaning up old deploy directory&quot;&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;rm -rf &lt;span class=&quot;nv&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+</description>
+        <pubDate>Fri, 05 Feb 2016 00:00:00 -0600</pubDate>
+        <link>http://dpzmick.com/2016/02/05/deploy-gen/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2016/02/05/deploy-gen/</guid>
+      </item>
+    
+      <item>
         <title>Ants</title>
         <description>&lt;p&gt;For my CS242 final project, I simulated ants with Erlang.&lt;/p&gt;
 
@@ -227,7 +494,7 @@ introduce other ones).&lt;/p&gt;
   &lt;/ol&gt;
 &lt;/div&gt;
 </description>
-        <pubDate>Tue, 09 Jun 2015 00:00:00 -0400</pubDate>
+        <pubDate>Tue, 09 Jun 2015 00:00:00 -0500</pubDate>
         <link>http://dpzmick.com/2015/06/09/ants/</link>
         <guid isPermaLink="true">http://dpzmick.com/2015/06/09/ants/</guid>
       </item>
@@ -248,10 +515,10 @@ or something?), and that takes a little bit of tweaking but it works nicely.&lt;
 
 &lt;p&gt;~/dotfiles/bin/423make:&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/bash&lt;/span&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/bash&lt;/span&gt;
 &lt;span class=&quot;nv&quot;&gt;oldpath&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/home/cs423/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;
 &lt;span class=&quot;nv&quot;&gt;newpath&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/Users/dz0004455/programming/cs423/remote/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;
-ssh cs423@&lt;span class=&quot;nv&quot;&gt;$REMOTE_HOST&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;cd ~/$1 &amp;amp;&amp;amp; make&amp;quot;&lt;/span&gt;  2&amp;gt;&lt;span class=&quot;p&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; sed -e &lt;span class=&quot;s2&quot;&gt;&amp;quot;s|$oldpath|$newpath|g&amp;quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+ssh cs423@&lt;span class=&quot;nv&quot;&gt;$REMOTE_HOST&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;cd ~/&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; &amp;amp;&amp;amp; make&quot;&lt;/span&gt;  2&amp;gt;&amp;amp;1 | sed -e &lt;span class=&quot;s2&quot;&gt;&quot;s|&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$oldpath&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$newpath&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;|g&quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;This script runs the make program remotely (makes lots of assumptions about
 directory structure, but that’s totally fine). Then it pipes the output through
@@ -278,22 +545,22 @@ to this mix.&lt;/p&gt;
 
 &lt;p&gt;423get&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;rsync -a cs423@&lt;span class=&quot;nv&quot;&gt;$REMOTE_HOST&lt;/span&gt;:/home/cs423/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/ ~/programming/cs423/sync/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;rsync -a cs423@&lt;span class=&quot;nv&quot;&gt;$REMOTE_HOST&lt;/span&gt;:/home/cs423/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/ ~/programming/cs423/sync/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;423push&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;rsync -a ~/programming/cs423/sync/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/ cs423@&lt;span class=&quot;nv&quot;&gt;$REMOTE_HOST&lt;/span&gt;:/home/cs423/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;rsync -a ~/programming/cs423/sync/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/ cs423@&lt;span class=&quot;nv&quot;&gt;$REMOTE_HOST&lt;/span&gt;:/home/cs423/&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;/&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;Then, in vim:&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-vim&quot; data-lang=&quot;vim&quot;&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;autocmd&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;BufWrite&lt;/span&gt; * :Dispatch&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;423&lt;/span&gt;push MP2&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-vim&quot; data-lang=&quot;vim&quot;&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;autocmd &lt;span class=&quot;nb&quot;&gt;BufWrite&lt;/span&gt; * &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;Dispatch&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;423&lt;/span&gt;push MP2&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;so files get pushed back (via rsync) anytime I write. Again, could have used
 neomake for the asynchronous behavior (instead of dispatch), but the dispatch
 solution is slightly easier to type.&lt;/p&gt;
 
 </description>
-        <pubDate>Wed, 25 Feb 2015 00:00:00 -0500</pubDate>
+        <pubDate>Wed, 25 Feb 2015 00:00:00 -0600</pubDate>
         <link>http://dpzmick.com/2015/02/25/vim-remote-make/</link>
         <guid isPermaLink="true">http://dpzmick.com/2015/02/25/vim-remote-make/</guid>
       </item>
@@ -336,7 +603,7 @@ member that has left the group)&lt;/li&gt;
 &lt;p&gt;Just to recap, fitness is determined based on group size, using this
 differential equation:&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \frac{dF}{dn} = \alpha - \beta n &lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\frac{dF}{dn} = \alpha - \beta n&lt;/script&gt;
 
 &lt;p&gt;where $ \alpha $ is an individual member’s contribution (every member is
 assumed to have the same contribution) and $ \beta $ is the amount the member
@@ -415,7 +682,7 @@ all the images, sorry!&lt;/p&gt;
 &lt;h2 id=&quot;results&quot;&gt;Results&lt;/h2&gt;
 &lt;p&gt;First test we are going to look at.&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;
 member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=5
@@ -468,7 +735,7 @@ grabbed my attention.&lt;/p&gt;
 
 &lt;p&gt;I ran only a few more tests, here are the parameters and links to my results.&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;
 member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=10
@@ -480,7 +747,7 @@ trials=1000
 &lt;a href=&quot;/img/study_groups/2/10_below_optimal.png&quot;&gt;below optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/10_avg_fit.png&quot;&gt;average fitness&lt;/a&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;
 member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=15
@@ -492,7 +759,7 @@ trials=1000
 &lt;a href=&quot;/img/study_groups/2/15_below_optimal.png&quot;&gt;below optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/15_avg_fit.png&quot;&gt;average fitness&lt;/a&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;
 member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=20
@@ -542,7 +809,7 @@ the rather unpolished graphics I used.&lt;/p&gt;
 &lt;a href=&quot;https://github.com/dpzmick/study_groups/tree/8731b5285997c88f0b3e889e57d60cbd9dbab3f3&quot;&gt;link&lt;/a&gt;
 to the commit used to write this post.&lt;/p&gt;
 </description>
-        <pubDate>Mon, 07 Jul 2014 02:15:14 -0400</pubDate>
+        <pubDate>Mon, 07 Jul 2014 01:15:14 -0500</pubDate>
         <link>http://dpzmick.com/2014/07/07/study-groups-pt-2/</link>
         <guid isPermaLink="true">http://dpzmick.com/2014/07/07/study-groups-pt-2/</guid>
       </item>
@@ -584,7 +851,7 @@ simplify this a bit more, add the following assumptions:&lt;/p&gt;
 
 &lt;p&gt;Using these assumptions we can write the following equation:&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \frac{dF}{dn} = \alpha - \beta n &lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\frac{dF}{dn} = \alpha - \beta n&lt;/script&gt;
 
 &lt;p&gt;where:&lt;/p&gt;
 
@@ -606,7 +873,7 @@ group decreases, so subtract something that grows as the population grows: $ \be
 $ F(0) = 0 $, as a group with zero members has 0 fitness. The solutions then
 are:&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; F(n) = \alpha n - \frac{\beta}{2} n^2 &lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;F(n) = \alpha n - \frac{\beta}{2} n^2&lt;/script&gt;
 
 &lt;p&gt;Additionally, we probably want to know what the optimal study group size is.
 We can easily find (by setting $ \frac{dF}{dn} = 0 $) that the optimal size is
@@ -655,7 +922,7 @@ is interesting to you, we could discuss more ideas!&lt;/p&gt;
 
 &lt;h2 id=&quot;simulation-code-not-pythonic&quot;&gt;Simulation Code (not pythonic!)&lt;/h2&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-python&quot; data-lang=&quot;python&quot;&gt;&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;math&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;pow&lt;/span&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-python&quot; data-lang=&quot;python&quot;&gt;&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;math&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;pow&lt;/span&gt;
 &lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;random&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;
 &lt;span class=&quot;c&quot;&gt;###### Parameters&lt;/span&gt;
 &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;1.0&lt;/span&gt; &lt;span class=&quot;c&quot;&gt;# alpha define above&lt;/span&gt;
@@ -671,8 +938,8 @@ is interesting to you, we could discuss more ideas!&lt;/p&gt;
     &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;pow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 
 &lt;span class=&quot;c&quot;&gt;##### Simulation&lt;/span&gt;
-&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__name__&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;__main__&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;Starting the simulation&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__name__&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;__main__&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Starting the simulation&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
     &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;xrange&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;numjoiners&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
         &lt;span class=&quot;n&quot;&gt;best&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
         &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fits&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;enumerate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;map&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fitness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)):&lt;/span&gt;
@@ -683,17 +950,17 @@ is interesting to you, we could discuss more ideas!&lt;/p&gt;
         &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;best&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
             &lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
         &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
-            &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;I refuse to join these groups&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;I refuse to join these groups&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
             &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt;
     &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
     &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;map&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fitness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
 
-    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;optimal group size &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;%d&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;average non_empty group size &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;%d&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;
-            &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;filter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;lambda&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))))&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;optimal group size &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;d&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;average non_empty group size &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;d&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;
+            &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;filter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;lambda&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))))&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 </description>
-        <pubDate>Sat, 31 May 2014 00:00:00 -0400</pubDate>
+        <pubDate>Sat, 31 May 2014 00:00:00 -0500</pubDate>
         <link>http://dpzmick.com/2014/05/31/study-groups-pt-1/</link>
         <guid isPermaLink="true">http://dpzmick.com/2014/05/31/study-groups-pt-1/</guid>
       </item>
@@ -766,32 +1033,31 @@ a pay cut am I willing to take to continue living in Houston?”&lt;/p&gt;
 
 &lt;p&gt;The objectives vector:&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} =
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathbf{o} =
     \begin{pmatrix}
         w_1 \\
         w_2 \\
         \vdots  \\
         w_n
-    \end{pmatrix}
-&lt;/script&gt;
+    \end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;where:&lt;/p&gt;
 
 &lt;p&gt;$ w_i $ = the weight given to the ith objective.&lt;/p&gt;
 
 &lt;p&gt;The vector &lt;script type=&quot;math/tex&quot;&gt;% &lt;![CDATA[
- \mathbf{a_i} = \begin{pmatrix} r_1 &amp; r_2 &amp; \cdots &amp; r_m \end{pmatrix}  %]]&gt;&lt;/script&gt;
+\mathbf{a_i} = \begin{pmatrix} r_1 &amp; r_2 &amp; \cdots &amp; r_m \end{pmatrix} %]]&gt;&lt;/script&gt;
 for the ith alternative, where $ r_k $ is the ith alternative’s rating for the
 kth objective.&lt;/p&gt;
 
 &lt;p&gt;The alternative matrix&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; A = \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;A = \begin{pmatrix}
     \mathbf{a_1} \\
     \mathbf{a_2} \\
     \vdots \\
     \mathbf{a_m}
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;The relative strengths of each alternative are given by $ A\mathbf{o} $.&lt;/p&gt;
 
@@ -802,11 +1068,11 @@ and importance of 2, and Comfort an importance of 4.&lt;/p&gt;
 
 &lt;p&gt;This means&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} = \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathbf{o} = \begin{pmatrix}
     5 \\
     2 \\
     4
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;Now, let us consider 3 options and evaluate them on a using a negative 3 to 3
 scale.&lt;/p&gt;
@@ -821,16 +1087,16 @@ style, and a 2 for comfort.&lt;/p&gt;
 &lt;p&gt;So, we build our alternatives matrix.&lt;/p&gt;
 
 &lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
- A = \begin{pmatrix}
+A = \begin{pmatrix}
     -3 &amp; 3 &amp; 3 \\
      1 &amp; 1 &amp; 2 \\
      3 &amp; 1 &amp; 2
-\end{pmatrix}  %]]&gt;&lt;/script&gt;
+\end{pmatrix} %]]&gt;&lt;/script&gt;
 
 &lt;p&gt;And get each alternative’s score:&lt;/p&gt;
 
 &lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
- A\mathbf{o} =
+A\mathbf{o} =
 \begin{pmatrix}
     -3 &amp; 3 &amp; 3 \\
      1 &amp; 1 &amp; 2 \\
@@ -850,8 +1116,7 @@ style, and a 2 for comfort.&lt;/p&gt;
     3 \\
     15 \\
     25
-\end{pmatrix}
- %]]&gt;&lt;/script&gt;
+\end{pmatrix} %]]&gt;&lt;/script&gt;
 
 &lt;p&gt;So, given our objectives, their importances, and our evaluation of our options
 using those objectives, a Civic is probably the best option for us.&lt;/p&gt;
@@ -895,12 +1160,12 @@ number multiplied by the associated weight.&lt;/p&gt;
 
 &lt;p&gt;Remember&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} =
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathbf{o} =
 \begin{pmatrix}
     5 \\
     2 \\
     4
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;In this example, $ gains = 1(2) + 1(4) = 6 $ and $ losses = 6(5) = 30 $. We
 can see this is not a valid trade because $ 6 - 30 = -24 $ is much less than
@@ -961,20 +1226,20 @@ structure.&lt;/li&gt;
 &lt;h2 id=&quot;objective-impact&quot;&gt;Objective Impact&lt;/h2&gt;
 &lt;p&gt;Say I give you&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} = \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathbf{o} = \begin{pmatrix}
     5 \\
     1 \\
     3
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;and&lt;/p&gt;
 
 &lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
- A = \begin{pmatrix}
+A = \begin{pmatrix}
     3 &amp; -1 &amp; 3 \\
     3 &amp; 3  &amp; 1 \\
     3 &amp; -1 &amp; -3
-\end{pmatrix}  %]]&gt;&lt;/script&gt;
+\end{pmatrix} %]]&gt;&lt;/script&gt;
 
 &lt;p&gt;Notice that the rankings for the first objective are all
 exactly the same! This means that the first objective has no impact on the
@@ -987,7 +1252,7 @@ First a bit more notation.&lt;/p&gt;
 
 &lt;p&gt;let&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o_k} = \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathbf{o_k} = \begin{pmatrix}
     0 \\
     \vdots \\
     0 \\
@@ -995,7 +1260,7 @@ First a bit more notation.&lt;/p&gt;
     0 \\
     \vdots \\
     0
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;be the vector containing the weight of the kth objective, in the
 appropriate space, with all other weights set to zero.&lt;/p&gt;
@@ -1007,7 +1272,7 @@ in this decision.&lt;/p&gt;
 &lt;p&gt;Using the above defined objectives vector and alternatives matrix we get the
 following impact vectors:&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; A \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;A \begin{pmatrix}
     5 \\
     0 \\
     0
@@ -1015,9 +1280,9 @@ following impact vectors:&lt;/p&gt;
     15 \\\\
     15 \\\\
     15
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; A \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;A \begin{pmatrix}
     0 \\
     1 \\
     0
@@ -1025,9 +1290,9 @@ following impact vectors:&lt;/p&gt;
     -1 \\
     3 \\
     -1
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; A \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;A \begin{pmatrix}
     0 \\
     0 \\
     3
@@ -1035,7 +1300,7 @@ following impact vectors:&lt;/p&gt;
     9 \\
     1 \\
     -9
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;Now, let the impact of the kth objective
 $ Impact(k) = PopulationVariance( A\mathbf{o_k} ) $, so in this example
@@ -1062,36 +1327,36 @@ toying with.&lt;/p&gt;
 &lt;p&gt;Lets make the problem a 2D problem, for the sake of visualization, by dropping
 the last alternative. This leaves us with&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} = \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathbf{o} = \begin{pmatrix}
     5 \\
     1 \\
     3
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;and&lt;/p&gt;
 
 &lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
- A = \begin{pmatrix}
+A = \begin{pmatrix}
     3 &amp; -1 &amp; 3 \\
     3 &amp; 3  &amp; 1 \\
-\end{pmatrix}  %]]&gt;&lt;/script&gt;
+\end{pmatrix} %]]&gt;&lt;/script&gt;
 
 &lt;p&gt;And, our impact vectors are&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\begin{pmatrix}
     15 \\
     15
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\begin{pmatrix}
     -1 \\
     3
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\begin{pmatrix}
     9 \\
     3
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;Let’s plot those along with the line $ y = x $&lt;/p&gt;
 
@@ -1102,10 +1367,10 @@ let’s walk through it. Our x and y axis represent alternative scores.&lt;/p&gt
 
 &lt;p&gt;Think about what would happen if an objective resulted in an impact vector of&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\begin{pmatrix}
     15 \\\
     0
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;This objective clearly favors the first alternative (it adds 15
 to $ a_1 $’s score, and 0 to $ a_2 $’s score. In this case that would be
@@ -1128,19 +1393,19 @@ But, I think this is a really cool, fun way to think about objectives.&lt;/p&gt;
 &lt;h4 id=&quot;maserati-and-camry-example&quot;&gt;Maserati and Camry example&lt;/h4&gt;
 &lt;p&gt;Let’s do this with the Maserati and Camry again. Same objectives.&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \mathbf{o} = \begin{pmatrix}
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathbf{o} = \begin{pmatrix}
     5 \\
     2 \\
     4
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;and only two alternatives (to avoid going into 3d space)&lt;/p&gt;
 
 &lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
- A = \begin{pmatrix}
+A = \begin{pmatrix}
     -3 &amp; 3 &amp; 3 \\
      3 &amp; 1 &amp; 2
-\end{pmatrix}  %]]&gt;&lt;/script&gt;
+\end{pmatrix} %]]&gt;&lt;/script&gt;
 
 &lt;p&gt;Impact Vectors:&lt;/p&gt;
 
@@ -1154,19 +1419,19 @@ But, I think this is a really cool, fun way to think about objectives.&lt;/p&gt;
 
 &lt;p&gt;For Comfort (in orange):&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; A \begin{pmatrix} 0 \\ 2 \\ 0 \end{pmatrix} =
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;A \begin{pmatrix} 0 \\ 2 \\ 0 \end{pmatrix} =
 \begin{pmatrix}
     6 \\
     2
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;For Style (in red):&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; A \begin{pmatrix} 0 \\ 0 \\ 4 \end{pmatrix} =
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;A \begin{pmatrix} 0 \\ 0 \\ 4 \end{pmatrix} =
 \begin{pmatrix}
     12 \\
     8
-\end{pmatrix} &lt;/script&gt;
+\end{pmatrix}&lt;/script&gt;
 
 &lt;p&gt;Here is a plot:&lt;/p&gt;
 
@@ -1188,7 +1453,7 @@ though may still hold some potential.&lt;/p&gt;
 
 &lt;p&gt;Thanks for reading! If you have any thoughts please drop them in the comments.&lt;/p&gt;
 </description>
-        <pubDate>Fri, 17 Jan 2014 00:00:00 -0500</pubDate>
+        <pubDate>Fri, 17 Jan 2014 00:00:00 -0600</pubDate>
         <link>http://dpzmick.com/2014/01/17/decision-matrix/</link>
         <guid isPermaLink="true">http://dpzmick.com/2014/01/17/decision-matrix/</guid>
       </item>
@@ -1231,7 +1496,7 @@ negligible.&lt;/p&gt;
 in our world, the only force that will exist is the force between $p_1$ and
 $p_2$. This force is attractive, and is computed using the following:&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \textbf{F} = G \frac{m_1m_2}{\mid\textbf{r}^2\mid} \hat{\textbf{r}} &lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\textbf{F} = G \frac{m_1m_2}{\mid\textbf{r}^2\mid} \hat{\textbf{r}}&lt;/script&gt;
 
 &lt;p&gt;Where $ G $ is the Gravitational Constant, $ m_1 $ and $ m_2 $ are the masses
 of $ p_1 $ and $ p_2 $ respectively, $ \textbf{r} $ is the vector between
@@ -1243,27 +1508,27 @@ that is what the litte hat means) describing the direction of the force
 &lt;p&gt;So, now we have the force. We need to find the acceleration. That is easy,
 because Newton made it easy:&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \textbf{F} = m\textbf{a} &lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\textbf{F} = m\textbf{a}&lt;/script&gt;
 
 &lt;p&gt;Substituting the derivative of velocity for acceleration, we can see that&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \textbf{F} = m \frac{d\textbf{v}}{dt} &lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\textbf{F} = m \frac{d\textbf{v}}{dt}&lt;/script&gt;
 
 &lt;p&gt;But, we aren’t really going to use calculus to solve this (at least I think I’m
 pretending we aren’t for now), so lets go ahead an use
 $\frac{\Delta v}{\Delta t}$ for acceleration for now:&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \textbf{F} = m \frac{\Delta \textbf{v}}{\Delta t} &lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\textbf{F} = m \frac{\Delta \textbf{v}}{\Delta t}&lt;/script&gt;
 
 &lt;p&gt;Do some algebra to get:&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \Delta \textbf{v} = \frac{\textbf{F}}{m} \Delta t &lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\Delta \textbf{v} = \frac{\textbf{F}}{m} \Delta t&lt;/script&gt;
 
 &lt;p&gt;So, we know $\textbf{F}$, let’s go ahead and substitute that in, then cancel
 unneeded masses:&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt; \Delta \textbf{v} = \frac{ G m\_2 \hat{\textbf{r}} } { | \textbf{r} |^2 }
-\Delta t &lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\Delta \textbf{v} = \frac{ G m\_2 \hat{\textbf{r}} } { | \textbf{r} |^2 }
+\Delta t&lt;/script&gt;
 
 &lt;p&gt;So, now we can easily figure out how much the velocity of a particle should
 change in $t$ seconds, given it only has a single force acting on it.&lt;/p&gt;
@@ -1287,10 +1552,10 @@ process my simulator used.&lt;/p&gt;
 
 &lt;h4 id=&quot;step-1-find-the-force&quot;&gt;Step 1: Find the force&lt;/h4&gt;
 &lt;p&gt;Find distance:
-&lt;script type=&quot;math/tex&quot;&gt; |\textbf{r}|^2 = \sqrt{ (5-0)^2 + (5-0)^2 } = \sqrt{50} = 5\sqrt{2} &lt;/script&gt;&lt;/p&gt;
+&lt;script type=&quot;math/tex&quot;&gt;|\textbf{r}|^2 = \sqrt{ (5-0)^2 + (5-0)^2 } = \sqrt{50} = 5\sqrt{2}&lt;/script&gt;&lt;/p&gt;
 
 &lt;p&gt;Find magnitude of $ \textbf{F} $:
-&lt;script type=&quot;math/tex&quot;&gt; \textbf{F} = G \frac{(100)(100)}{(5\sqrt{2})^2} = G \frac{1000}{50} = 20G &lt;/script&gt;&lt;/p&gt;
+&lt;script type=&quot;math/tex&quot;&gt;\textbf{F} = G \frac{(100)(100)}{(5\sqrt{2})^2} = G \frac{1000}{50} = 20G&lt;/script&gt;&lt;/p&gt;
 
 &lt;p&gt;To resolve components of $\textbf{F}$ we need an angle, since the triangle
 representing the force is and isosceles right triangle, the angle with respect
@@ -1299,8 +1564,8 @@ to the horizontal is $ \frac{\pi}{4} $&lt;/p&gt;
 &lt;p&gt;Since the sine and cosine of $ \frac{\pi}{4} $ are both $\frac{\sqrt{2}}{2}$,
 we can easily get the x and y components of the force.&lt;/p&gt;
 
-&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt; F\_x = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2} &lt;/script&gt;
-&lt;script type=&quot;math/tex&quot;&gt; F\_y = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2} &lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;F\_x = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2}&lt;/script&gt;
+&lt;script type=&quot;math/tex&quot;&gt;F\_y = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2}&lt;/script&gt;&lt;/p&gt;
 
 &lt;h4 id=&quot;step-2-find-delta-v&quot;&gt;Step 2: Find $\Delta v$&lt;/h4&gt;
 &lt;p&gt;We know that the velocity of the particle the instant $t=0$ is
@@ -1313,8 +1578,8 @@ it.&lt;/p&gt;
 
 &lt;p&gt;Because of our assumption, we can do this (In components):&lt;/p&gt;
 
-&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt; \Delta v\_x = \frac{F\_x}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10} &lt;/script&gt;
-&lt;script type=&quot;math/tex&quot;&gt; \Delta v\_y = \frac{F\_y}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10} &lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;\Delta v\_x = \frac{F\_x}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10}&lt;/script&gt;
+&lt;script type=&quot;math/tex&quot;&gt;\Delta v\_y = \frac{F\_y}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10}&lt;/script&gt;&lt;/p&gt;
 
 &lt;p&gt;So, the velocity of $p_2$ will need to change that much due to the force.&lt;/p&gt;
 
@@ -1323,28 +1588,29 @@ it.&lt;/p&gt;
 &lt;p&gt;The initial velocity was 5 up and 5 right. This force is pulling us down and
 left, so:&lt;/p&gt;
 
-&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt; V\_{x,new} = V\_x - \Delta V\_x = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999&lt;/script&gt;
-&lt;script type=&quot;math/tex&quot;&gt; V\_{y,new} = V\_y - \Delta V\_y = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;V\_{x,new} = V\_x - \Delta V\_x = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999&lt;/script&gt;
+&lt;script type=&quot;math/tex&quot;&gt;V\_{y,new} = V\_y - \Delta V\_y = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999&lt;/script&gt;&lt;/p&gt;
 
 &lt;h4 id=&quot;step-4-find-new-position&quot;&gt;Step 4: Find new position&lt;/h4&gt;
 &lt;p&gt;Now, since we have assumed zero acceleration in the entire time frame from $t=0$
 to $t=0.1$, we can use simple formulas to compute next locations.&lt;/p&gt;
 
-&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt; x\_{new} = x\_{old} + V\_{x,new} \Delta t = 5 + 9.99999(0.01) = 5.9999 &lt;/script&gt;
-&lt;script type=&quot;math/tex&quot;&gt; y\_{new} = y\_{old} + V\_{y,new} \Delta t = 5 + 9.99999(0.01) = 5.9999 &lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;x\_{new} = x\_{old} + V\_{x,new} \Delta t = 5 + 9.99999(0.01) = 5.9999&lt;/script&gt;
+&lt;script type=&quot;math/tex&quot;&gt;y\_{new} = y\_{old} + V\_{y,new} \Delta t = 5 + 9.99999(0.01) = 5.9999&lt;/script&gt;&lt;/p&gt;
 
 &lt;p&gt;So, the particle was at $(5,5)$, and it now is at $(5.9999,5.99999)$. Yay?&lt;/p&gt;
 
 &lt;p&gt;Each time-step in my simulation performed this calculation. So, it looks kind of
 like this:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;function Timestep:
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;function Timestep:
     calculate net force on each particle
     calclate change in velocity for each particle
     update each particle&#39;s velocity
     move each particle
     repeat
 &lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
 
 &lt;h3 id=&quot;the-assumption&quot;&gt;The assumption&lt;/h3&gt;
 &lt;p&gt;I am not sure if the technique I used to deal with the dynamic nature of the
@@ -1396,7 +1662,7 @@ this time documenting my incorrect work).&lt;/p&gt;
 &lt;p&gt;If you for some reason read this far, thank you for reading, maybe drop
 something in the comments?&lt;/p&gt;
 </description>
-        <pubDate>Thu, 27 Jun 2013 00:00:00 -0400</pubDate>
+        <pubDate>Thu, 27 Jun 2013 00:00:00 -0500</pubDate>
         <link>http://dpzmick.com/2013/06/27/particle-simulator/</link>
         <guid isPermaLink="true">http://dpzmick.com/2013/06/27/particle-simulator/</guid>
       </item>
@@ -1570,7 +1836,7 @@ satisfying.&lt;/li&gt;
 &lt;/ul&gt;
 
 </description>
-        <pubDate>Tue, 14 May 2013 00:00:00 -0400</pubDate>
+        <pubDate>Tue, 14 May 2013 00:00:00 -0500</pubDate>
         <link>http://dpzmick.com/2013/05/14/when-will-i-use-it-prime-factorization/</link>
         <guid isPermaLink="true">http://dpzmick.com/2013/05/14/when-will-i-use-it-prime-factorization/</guid>
       </item>

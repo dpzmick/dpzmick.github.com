@@ -95,7 +95,7 @@ strong, .bold {
   text-align: right; }
 
 .measure {
-  max-width: 48rem; }
+  max-width: 65rem; }
 
 .measure-narrow {
   max-width: 32rem; }
@@ -644,6 +644,9 @@ body {
 .gist,
 .gist .highlight .p {
   font-size: .75rem; }
+
+.highlight {
+  margin: 0px !important; }
 
 .gist .lines {
   width: 100%; }

@@ -87,7 +87,7 @@
     
     
     
-      <a class="fa fa-envelope" href="contact/"></a>
+    <a class="fa fa-envelope" href="/contact"></a>
     
     
       <a class="fa fa-linkedin" href="https://www.linkedin.com/in/dpzmick"></a>
@@ -134,10 +134,10 @@ or something?), and that takes a little bit of tweaking but it works nicely.</p>
 
 <p>~/dotfiles/bin/423make:</p>
 
-<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#!/bin/bash</span>
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#!/bin/bash</span>
 <span class="nv">oldpath</span><span class="o">=</span>/home/cs423/<span class="nv">$1</span>
 <span class="nv">newpath</span><span class="o">=</span>/Users/dz0004455/programming/cs423/remote/<span class="nv">$1</span>
-ssh cs423@<span class="nv">$REMOTE_HOST</span> <span class="s2">&quot;cd ~/$1 &amp;&amp; make&quot;</span>  2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">|</span> sed -e <span class="s2">&quot;s|$oldpath|$newpath|g&quot;</span></code></pre></div>
+ssh cs423@<span class="nv">$REMOTE_HOST</span> <span class="s2">"cd ~/</span><span class="nv">$1</span><span class="s2"> &amp;&amp; make"</span>  2&gt;&amp;1 | sed -e <span class="s2">"s|</span><span class="nv">$oldpath</span><span class="s2">|</span><span class="nv">$newpath</span><span class="s2">|g"</span></code></pre></figure>
 
 <p>This script runs the make program remotely (makes lots of assumptions about
 directory structure, but that’s totally fine). Then it pipes the output through
@@ -164,15 +164,15 @@ to this mix.</p>
 
 <p>423get</p>
 
-<div class="highlight"><pre><code class="language-bash" data-lang="bash">rsync -a cs423@<span class="nv">$REMOTE_HOST</span>:/home/cs423/<span class="nv">$1</span>/ ~/programming/cs423/sync/<span class="nv">$1</span>/</code></pre></div>
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">rsync -a cs423@<span class="nv">$REMOTE_HOST</span>:/home/cs423/<span class="nv">$1</span>/ ~/programming/cs423/sync/<span class="nv">$1</span>/</code></pre></figure>
 
 <p>423push</p>
 
-<div class="highlight"><pre><code class="language-bash" data-lang="bash">rsync -a ~/programming/cs423/sync/<span class="nv">$1</span>/ cs423@<span class="nv">$REMOTE_HOST</span>:/home/cs423/<span class="nv">$1</span>/</code></pre></div>
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">rsync -a ~/programming/cs423/sync/<span class="nv">$1</span>/ cs423@<span class="nv">$REMOTE_HOST</span>:/home/cs423/<span class="nv">$1</span>/</code></pre></figure>
 
 <p>Then, in vim:</p>
 
-<div class="highlight"><pre><code class="language-vim" data-lang="vim"><span class="p">:</span><span class="k">autocmd</span> <span class="nb">BufWrite</span> * :Dispatch<span class="p">!</span> <span class="m">423</span>push MP2</code></pre></div>
+<figure class="highlight"><pre><code class="language-vim" data-lang="vim"><span class="p">:</span>autocmd <span class="nb">BufWrite</span> * <span class="p">:</span>Dispatch<span class="p">!</span> <span class="m">423</span>push MP2</code></pre></figure>
 
 <p>so files get pushed back (via rsync) anytime I write. Again, could have used
 neomake for the asynchronous behavior (instead of dispatch), but the dispatch
