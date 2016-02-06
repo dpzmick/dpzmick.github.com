@@ -89,14 +89,14 @@ deploy directory. Then, we have to make sure the file’s directory actually
 exists (we might have code in &lt;code class=&quot;highlighter-rouge&quot;&gt;libs/weirdthing/cool_file.c&lt;/code&gt;). Then, the code
 runs through &lt;code class=&quot;highlighter-rouge&quot;&gt;unifdef&lt;/code&gt; and a formatter, we stick the header on it, and pipe it
 through &lt;code class=&quot;highlighter-rouge&quot;&gt;dos2unix&lt;/code&gt;. That was easy! Well, not quite. If you aren’t familiar with
-GNU make, this line might throw you off a bit:&lt;/p&gt;
+GNU make, this bit might throw you off a bit:&lt;/p&gt;
 
 &lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-make&quot; data-lang=&quot;make&quot;&gt;&lt;span class=&quot;nl&quot;&gt;$(@&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;$(DEPLOY_DIR)/%=$(SOURCE_DIR)/%)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;This is a patterned replacement (&lt;a href=&quot;https://www.gnu.org/software/make/manual/html_node/Text-Functions.html&quot;&gt;Text
 Function&lt;/a&gt;
 in make terminology). It basically says, take the string &lt;code class=&quot;highlighter-rouge&quot;&gt;$@&lt;/code&gt; (the target of the
-rule), and replace the pattern &lt;code class=&quot;highlighter-rouge&quot;&gt;$(DEPLOY_DIR)&lt;/code&gt; with &lt;code class=&quot;highlighter-rouge&quot;&gt;$(SOURCE_DIR)&lt;/code&gt;. In other
+rule), and replace the text &lt;code class=&quot;highlighter-rouge&quot;&gt;$(DEPLOY_DIR)&lt;/code&gt; with &lt;code class=&quot;highlighter-rouge&quot;&gt;$(SOURCE_DIR)&lt;/code&gt;. In other
 words, to generate a file &lt;code class=&quot;highlighter-rouge&quot;&gt;deploy/test.c&lt;/code&gt; we would start with the file
 &lt;code class=&quot;highlighter-rouge&quot;&gt;solution/test.c&lt;/code&gt;&lt;/p&gt;
 
