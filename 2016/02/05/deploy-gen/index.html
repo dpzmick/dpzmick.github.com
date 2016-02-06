@@ -299,7 +299,10 @@ Makefile needs to function, and includes the full Makefile. For example:</p>
 
 <span class="nv">REFERENCE_IMPL</span><span class="o">=</span>mp1
 
-<span class="err">-include</span> <span class="err">../deploy.make.common</span></code></pre></figure>
+<span class="err">-include</span> <span class="err">../Deploy.mk</span></code></pre></figure>
+
+<p>Finally, stick a file in <code class="highlighter-rouge">/mp1</code> called <code class="highlighter-rouge">code_header</code> that defines the header to
+stick on each code file.</p>
 
 <p>Now, running <code class="highlighter-rouge">make</code> in the <code class="highlighter-rouge">/mp1</code> directory creates the folder <code class="highlighter-rouge">deploy</code>
 containing the deployable code, and a reference implementation for the

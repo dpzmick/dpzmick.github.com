@@ -187,7 +187,10 @@ Makefile needs to function, and includes the full Makefile. For example:&lt;/p&g
 
 &lt;span class=&quot;nv&quot;&gt;REFERENCE_IMPL&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;mp1
 
-&lt;span class=&quot;err&quot;&gt;-include&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;../deploy.make.common&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+&lt;span class=&quot;err&quot;&gt;-include&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;../Deploy.mk&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Finally, stick a file in &lt;code class=&quot;highlighter-rouge&quot;&gt;/mp1&lt;/code&gt; called &lt;code class=&quot;highlighter-rouge&quot;&gt;code_header&lt;/code&gt; that defines the header to
+stick on each code file.&lt;/p&gt;
 
 &lt;p&gt;Now, running &lt;code class=&quot;highlighter-rouge&quot;&gt;make&lt;/code&gt; in the &lt;code class=&quot;highlighter-rouge&quot;&gt;/mp1&lt;/code&gt; directory creates the folder &lt;code class=&quot;highlighter-rouge&quot;&gt;deploy&lt;/code&gt;
 containing the deployable code, and a reference implementation for the
