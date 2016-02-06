@@ -214,7 +214,7 @@ words, to generate a file <code class="highlighter-rouge">deploy/test.c</code> w
 
 <p>We do the same thing for <code class="highlighter-rouge">*.h</code> files.</p>
 
-<p>Generating a reference implementaton is also pretty straightforward:</p>
+<p>Generating a reference implementation is also pretty straightforward:</p>
 
 <figure class="highlight"><pre><code class="language-make" data-lang="make"><span class="nl">$(DEPLOY_DIR)/%-reference</span><span class="o">:</span>
 	<span class="p">@</span><span class="nb">echo</span> <span class="s2">"making reference for"</span> <span class="nv">$@</span>
