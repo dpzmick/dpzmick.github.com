@@ -116,7 +116,7 @@
   <h1>Rust Image Processing DSL</h1>
   <span class="post-meta">Aug 11, 2016</span><br>
   
-  <span class="post-meta small">15 minute read</span>
+  <span class="post-meta small">16 minute read</span>
 </div>
 
 <article class="post-content">
@@ -291,7 +291,7 @@ There’s lots of other interesting little idiosyncrasies in this code but I don
 
 <h2 id="performance">Performance</h2>
 <p>Anyone who knows a little bit about computers and performance is probably hurting a little bit thinking about how this might perform.
-Anyone who knows a lot about computers and performance noticed that <code class="highlighter-rouge">inline</code> keyword and is wondering if I’m somehow relying on function inlining to extract performance from this technique.
+Anyone who knows a fair amount about computers and performance noticed that <code class="highlighter-rouge">inline</code> keyword and is wondering if I’m somehow relying on function inlining to extract performance from this technique.
 The answer is yes.
 Every generated function is marked with an LLVM attribute <code class="highlighter-rouge">AlwaysInline</code> which, when the appropriate LLVM optimization passes are run, guarantees that calls to these functions will always be inlined into the caller.</p>
 
@@ -363,10 +363,20 @@ This means that my JIT compiled code runs at basically the same speed (subject t
 <p>There are many more plots, but the overall conclusion is pretty clear: compared to rust, I’m not performing very poorly.
 Is this a win? I am not sure. It isn’t a loss, so I’m happy with these results.</p>
 
+<h4 id="final-performance-notes">Final performance notes</h4>
 <p>It should be noted that these results are not entirely suprising.
 Rust is also using LLVM as a backed and it is probably reasonable to assume that the code rust is generating looks pretty similar to the code I am generating, although I have not verified this.</p>
 
+<p>Anyone who knows a ton about computers and performance knows that what I’ve done here will by no means ever get truly impressive performance.
+To get impressive performance, we need to pay attention to caching and quite a few other things which I have totally ignored (and casually pushed off to LLVM).
+LLVM is doing an okay job, but I’m certainly missing out on lots of performance opportunities here.
+If you want something that gives you an awesome DSL with quite a bit of control over cache scheduling and whatnot, take a look at Halide.
+If you have no idea what I’m talking about, take a look at Halide anyway.
+The Halide talks give fantastic descriptions of many of the problems it aims to solve.</p>
+
 <h2 id="conclusions">Conclusions</h2>
+<p>Overall, this project was extremely enjoyable, and I’m glad to have gotten the tips of my fingers a little dirty with image processing.
+I learned a fair amount of Rust and I have only one thing to say about it: Rust is an amazing language.</p>
 
 </article>
 
