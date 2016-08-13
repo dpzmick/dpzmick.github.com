@@ -319,7 +319,7 @@ For example, because the call to <code class="highlighter-rouge">foo</code> has 
 I can generate code which is totally inefficient, then inline everything and let the compiler do some of its magic.
 Of course, this isn’t a general rule, but for this problem the generated code is highly uniform, doesn’t do much with memory (other than reading from <code class="highlighter-rouge">readonly</code> images), and has a few other compiler freindly properties.
 At the end of the day, LLVM is doing a pretty good job turning my functional style code into a big fat loop and eliminating redundant computations.
-If you interested in looking at the optimized sobel LLVM module, here it is: <a href="https://gist.github.com/dpzmick/95587dbb2972e256e51b888add3364a6">gist</a>.</p>
+If you’re interested in looking at the optimized sobel LLVM module, here it is: <a href="https://gist.github.com/dpzmick/95587dbb2972e256e51b888add3364a6">gist</a>.</p>
 
 <h3 id="numbers">Numbers</h3>
 <p>To benchmark this code, I compared the JITed code with an implementation of the exact same thing written directly in Rust.
