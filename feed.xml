@@ -19,7 +19,7 @@ As new posts get written, I will update my &lt;a href=&quot;/series/&quot;&gt;Bl
 Digital audio signals are just lists of floating point (decimal) numbers.
 Think of these numbers as “sound pressure” over time (see &lt;a href=&quot;https://docs.cycling74.com/max5/tutorials/msp-tut/mspdigitalaudio.html&quot;&gt;this page&lt;/a&gt; for more)&lt;/p&gt;
 
-&lt;p&gt;Because sound is continuous, we can’t record every possibly value.
+&lt;p&gt;Because sound is continuous, we can’t record every possible value.
 Instead, we take measurements of the sound pressure values at some evenly spaced interval.
 For CD quality audio, we take 44100 samples per second, or, one sample every 23ish microseconds.
 We might sample a sine wave like this (from Wikipedia):&lt;/p&gt;
@@ -128,7 +128,7 @@ Here’s a table comparing batch size to the time between callback function call
 You can read &lt;a href=&quot;http://www.penguinproducer.com/Blog/2011/10/balancing-performance-and-reliability-in-jack/&quot;&gt;this&lt;/a&gt; for a bit more information.
 Long story short, use the smallest batch size your computer can handle.&lt;/p&gt;
 
-&lt;p&gt;As an audio application developer, we should make sure that our code runs as quickly as possible no matter what the batch size is.
+&lt;p&gt;As audio application developers, we should make sure that our code runs as quickly as possible no matter what the batch size is.
 The time we spend is time other audio applications cannot use.
 Even if we theoretically have 5 milliseconds to run, using the entire 5 milliseconds can slow everyone else down.&lt;/p&gt;
 
