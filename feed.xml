@@ -183,7 +183,7 @@ On linux, we can use the system call &lt;code class=&quot;highlighter-rouge&quot
 &lt;p&gt;Next, we want to avoid operations which have a high worst case runtime.
 This can be tricky because some things with bad worst case runtime things have a reasonable &lt;a href=&quot;https://en.wikipedia.org/wiki/Amortized_analysis&quot;&gt;amortized&lt;/a&gt; runtime.
 The canonical example of this is a &lt;a href=&quot;https://en.wikipedia.org/wiki/Dynamic_array&quot;&gt;dynamic array&lt;/a&gt;.
-A dynamic array can be inserted into very quickly most of the time, but every so often if must reallocate itself and copy all of its data somewhere else.
+A dynamic array can be inserted into very quickly most of the time, but every so often it must reallocate itself and copy all of its data somewhere else.
 For a large array, this expensive copy might cause us to miss our deadline every once and a while.
 Fortunately, for some data structures, we can push these worst case costs around and make the operations realtime safe (see &lt;a href=&quot;https://en.wikipedia.org/wiki/Hash_table#Dynamic_resizing&quot;&gt;Incremental resizing&lt;/a&gt;).&lt;/p&gt;
 
