@@ -194,10 +194,10 @@ Standard library allocators break both of our other rules!
 Luckily, we can still perform dynamic memory allocation if we use &lt;a href=&quot;http://www.gii.upv.es/tlsf/&quot;&gt;specially designed allocators&lt;/a&gt; or &lt;a href=&quot;https://github.com/supercollider/supercollider/blob/master/common/SC_AllocPool.h&quot;&gt;pool allocators&lt;/a&gt; which do not violate our realtime constraints.&lt;/p&gt;
 
 &lt;h1 id=&quot;what-do-we-do&quot;&gt;What do we do?&lt;/h1&gt;
-&lt;p&gt;In general, there are a few cool tricks we can use to design around these problems, but I’m not going to discuss any of them in this post!
+&lt;p&gt;In general, there are a few cool tricks we can use to design around these problems, but I’m not going to discuss any of them in this post.
 Future posts will discuss possible solutions and many of their tradeoffs, eventually.&lt;/p&gt;
 
-&lt;p&gt;If you can’t wait, here’s some interesting things you can read to learn more:&lt;/p&gt;
+&lt;p&gt;If you can’t wait, here are some interesting things you can read to learn more:&lt;/p&gt;
 &lt;ul&gt;
   &lt;li&gt;&lt;a href=&quot;http://www.cs.cmu.edu/~rbd/doc/icmc2005workshop/real-time-systems-concepts-design-patterns.pdf&quot;&gt;Overview of Design Patterns for Real-Time Computer Music Systems&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;http://supercolliderbook.net/rossbencinach26.pdf&quot;&gt;SuperCollider implementation details&lt;/a&gt; from the &lt;a href=&quot;http://supercolliderbook.net/&quot;&gt;SuperCollider book&lt;/a&gt;&lt;/li&gt;
