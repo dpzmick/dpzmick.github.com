@@ -2,35 +2,239 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>dpzmick.com</title>
-    <description>Just some dude&#39;s blog</description>
+    <description>Just some dude's blog</description>
     <link>http://dpzmick.com/</link>
     <atom:link href="http://dpzmick.com/feed.xml" rel="self" type="application/rss+xml" />
     
       <item>
+        <title>Audio programming 101</title>
+        <description>&lt;p&gt;Recently, I’ve been working on a synthesizer (the kind that makes sounds) in Rust.
+I am hoping to write a large number of little articles about the things I learn as I work on this project.
+As new posts get written, I will update my &lt;a href=&quot;/series/&quot;&gt;Blog Series&lt;/a&gt; page.&lt;/p&gt;
+
+&lt;p&gt;To start off this series, here’s a short article about audio programming.&lt;/p&gt;
+
+&lt;h1 id=&quot;digital-audio&quot;&gt;Digital audio&lt;/h1&gt;
+&lt;p&gt;To generate audio, audio software sends some digital audio signals to the audio card.
+Digital audio signals are just lists of floating point (decimal) numbers.
+Think of these numbers as “sound pressure” over time (see &lt;a href=&quot;https://docs.cycling74.com/max5/tutorials/msp-tut/mspdigitalaudio.html&quot;&gt;this page&lt;/a&gt; for more)&lt;/p&gt;
+
+&lt;p&gt;Because sound is continuous, we can’t record every possibly value.
+Instead, we take measurements of the sound pressure values at some evenly spaced interval.
+For CD quality audio, we take 44100 samples per second, or, one sample every 23ish microseconds.
+We might sample a sine wave like this (from Wikipedia):&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sound/sine_samples.png&quot; alt=&quot;Samples&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The audio card turns these lists of samples into some “real-world” audio, which is then played through the speakers.&lt;/p&gt;
+
+&lt;h2 id=&quot;types-of-audio-software&quot;&gt;Types of audio software&lt;/h2&gt;
+&lt;p&gt;Next let’s think about a few different kinds of audio software (this list is by no means complete):&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Media players (your browser, whatever you listen to music with, a game, etc)&lt;/li&gt;
+  &lt;li&gt;Software instruments (think of a virtual piano)&lt;/li&gt;
+  &lt;li&gt;Audio plugins (an equalizer in a music player, effects like distortion and compression)&lt;/li&gt;
+  &lt;li&gt;Software audio systems&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Media players are pretty self explanatory, but the others might need some explanation.
+Next on the list is “Software instruments.”
+These are just pieces of software that can be used to generate sounds.
+They are played with external keyboards, or “programmed” with cool user interfaces.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sound/reason_drums.jpg&quot; alt=&quot;Drum machine&quot; /&gt;
+&lt;em&gt;Drum machine in some audio software&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Next up are audio plugins.
+These are pieces of software which take audio as input, transform it in some way, then output the transformed audio.
+For example, a graphical equalizer can adjust the volume of different frequency ranges (make the bass louder, make the treble quieter):&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sound/itunes_eq.jpg&quot; alt=&quot;equalizer&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Finally, we come to what I’m calling a software audio system.
+Because there is only one sound card on your system, any audio you are playing on your computer must be mixed together, then sent to the audio card.
+On windows, using the default audio system, I can mix audio with this little mixer thing:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sound/win_mixer.png&quot; alt=&quot;windows mixer&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://www.jackaudio.org/&quot;&gt;Some audio systems&lt;/a&gt; may also be able to send audio between applications, send &lt;a href=&quot;https://en.wikipedia.org/wiki/MIDI&quot;&gt;MIDI&lt;/a&gt; signals, keep audio applications in sync, and perform many other tasks.&lt;/p&gt;
+
+&lt;p&gt;The software audio system provides a library which application developers use to develop audio applications.&lt;/p&gt;
+
+&lt;h1 id=&quot;software-audio-systems&quot;&gt;Software audio systems&lt;/h1&gt;
+&lt;p&gt;Most software audio systems (as far as I know) tend to work the same way.
+There is a realtime thread that generates samples and a bunch of other threads that deal with everything else.
+The audio thread is usually set up by the audio system’s library.
+The library calls a user provided callback function to get the samples it needs to deliver to the audio card.&lt;/p&gt;
+
+&lt;h2 id=&quot;how-fast-is-realtime&quot;&gt;How fast is realtime?&lt;/h2&gt;
+&lt;p&gt;In the previous section, I claimed that, at 44.1 kHz (the standard CD sample rate), we need to take one audio sample approximately every 23 microseconds.
+23 microseconds seems pretty quick, but 192 kHz, a sample must be taken about every 5 microseconds (192 kHz is becoming a bit of an industry standard)!&lt;/p&gt;
+
+&lt;p&gt;At these speeds, it would not be possible for the audio system to call our callback function to get every individual sample.
+Instead, the audio library system ask us for larger batches of samples.
+If we simplify the real world a bit, we can approximate how often our callback function will be called.
+Here’s a table comparing batch size to the time between callback function calls (all times in milliseconds):&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Batch Size&lt;/th&gt;
+      &lt;th&gt;Time between calls @ 44.1 kHz (millis)&lt;/th&gt;
+      &lt;th&gt;Time between calls @ 192 kHz (millis)&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;64&lt;/td&gt;
+      &lt;td&gt;1.45&lt;/td&gt;
+      &lt;td&gt;0.33&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;128&lt;/td&gt;
+      &lt;td&gt;2.90&lt;/td&gt;
+      &lt;td&gt;0.67&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;256&lt;/td&gt;
+      &lt;td&gt;5.80&lt;/td&gt;
+      &lt;td&gt;1.33&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;512&lt;/td&gt;
+      &lt;td&gt;11.61&lt;/td&gt;
+      &lt;td&gt;2.67&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;1024&lt;/td&gt;
+      &lt;td&gt;23.22&lt;/td&gt;
+      &lt;td&gt;5.33&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2048&lt;/td&gt;
+      &lt;td&gt;46.44&lt;/td&gt;
+      &lt;td&gt;10.67&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;4096&lt;/td&gt;
+      &lt;td&gt;92.88&lt;/td&gt;
+      &lt;td&gt;21.33&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;There are many complicated trade offs between sample rate/and batch size, so I don’t want to get into them now.
+You can read &lt;a href=&quot;http://www.penguinproducer.com/Blog/2011/10/balancing-performance-and-reliability-in-jack/&quot;&gt;this&lt;/a&gt; for a bit more information.
+Long story short, use the smallest batch size your computer can handle.&lt;/p&gt;
+
+&lt;p&gt;As an audio application developer, we should make sure that our code runs as quickly as possible no matter what the batch size is.
+The time we spend is time other audio applications cannot use.
+Even if we theoretically have 5 milliseconds to run, using the entire 5 milliseconds can slow everyone else down.&lt;/p&gt;
+
+&lt;h2 id=&quot;time-keeps-on-ticking&quot;&gt;Time keeps on ticking&lt;/h2&gt;
+&lt;p&gt;If our callback function fails to generate samples quickly enough (or uses up all of the CPU time), the audio system will produce crackles, pops, and bad sounds.
+We call these buffer underruns (or xruns).
+&lt;strong&gt;Avoiding buffer underruns must be our top priority!&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Everything we do in our callback function must &lt;em&gt;always&lt;/em&gt; complete quickly and in a very predictable amount of time.
+Unfortunately, this constraint eliminates many things of things we often take for granted, including:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Synchronization with locks&lt;/li&gt;
+  &lt;li&gt;Blocking operations&lt;/li&gt;
+  &lt;li&gt;Operations with high worst case runtime&lt;/li&gt;
+  &lt;li&gt;Memory allocation with standard allocators&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;First, we can’t use locks or semaphores or conditional variables or any of those kinds of things inside of our realtime callback function.
+If one of our other threads is holding the lock, it might not let go soon enough for us to generate our samples on time!
+If you try to make sure you locks will always be released quickly, the scheduler might step in and ruin your plans (this is called &lt;a href=&quot;https://en.wikipedia.org/wiki/Priority_inversion&quot;&gt;Priority Inversion&lt;/a&gt;).
+There are some cases in which it &lt;em&gt;might&lt;/em&gt; be okay to use locks, but, in general, it is a good idea to avoid them.&lt;/p&gt;
+
+&lt;p&gt;Second, we cannot perform blocking operations in the realtime callback function.
+Things that might block include access to the network, access to a disk, and other system calls which might block while performing a task.
+In general, if I/O needs to be performed, it is best to perform the I/O on another thread and communicate the results to the realtime thread.
+There are some interesting subtleties to this, for example, can the following code perform I/O?&lt;/p&gt;
+
+&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;callback&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;cm&quot;&gt;/* args */&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;samples&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// get a contiguous array of samples in a nonblocking way
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;size_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;output_sample&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;samples&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Unfortunately, it can.
+If the array of samples is &lt;em&gt;extremely&lt;/em&gt; large, the samples might not all actually be in physical memory.
+When the operating system must contend with increasing memory pressure, it may move some of the &lt;a href=&quot;https://en.wikipedia.org/wiki/Page_(computer_memory)&quot;&gt;virtual memory pages&lt;/a&gt; it manages out of physical memory.
+If the page isn’t in main memory, the operating system has to go get it from somewhere.
+These pages are often moved to a hard disk, so getting them will require blocking I/O.&lt;/p&gt;
+
+&lt;p&gt;Luckily, this sort of thing is only an issue if your program uses extremely large amounts of memory.
+Audio applications usually do not have high memory requirements, but, if yours does, you operating system may provide you with a workaround.
+On linux, we can use the system call &lt;code class=&quot;highlighter-rouge&quot;&gt;mlockall&lt;/code&gt; to make sure certain pages never leave physical memory:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;mlock(), mlock2(), and mlockall() lock part or all of the calling process’s virtual address space into RAM, preventing that memory from being paged to the swap area.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Next, we want to avoid operations which have a high worst case runtime.
+This can be tricky because some things with bad worst case runtime things have a reasonable &lt;a href=&quot;https://en.wikipedia.org/wiki/Amortized_analysis&quot;&gt;amortized&lt;/a&gt; runtime.
+The canonical example of this is a &lt;a href=&quot;https://en.wikipedia.org/wiki/Dynamic_array&quot;&gt;dynamic array&lt;/a&gt;.
+A dynamic array can be inserted into very quickly most of the time, but every so often if must reallocate itself and copy all of its data somewhere else.
+For a large array, this expensive copy might cause us to miss our deadline every once and a while.
+Fortunately, for some data structures, we can push these worst case costs around and make the operations realtime safe (see &lt;a href=&quot;https://en.wikipedia.org/wiki/Hash_table#Dynamic_resizing&quot;&gt;Incremental resizing&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;Finally, memory allocation with standard library allocators can cause problems.
+Memory allocators are usually thread safe, which usually means that the are locking something.
+Additionally, allocation algorithms rarely make any time guarantees; the algorithms they use can have very poor worst case runtimes.
+Standard library allocators break both of our other rules!
+Luckily, we can still perform dynamic memory allocation if we use &lt;a href=&quot;http://www.gii.upv.es/tlsf/&quot;&gt;specially designed allocators&lt;/a&gt; or &lt;a href=&quot;https://github.com/supercollider/supercollider/blob/master/common/SC_AllocPool.h&quot;&gt;pool allocators&lt;/a&gt; which do not violate our realtime constraints.&lt;/p&gt;
+
+&lt;h1 id=&quot;what-do-we-do&quot;&gt;What do we do?&lt;/h1&gt;
+&lt;p&gt;In general, there are a few cool tricks we can use to design around these problems, but I’m not going to discuss any of them in this post!
+Future posts will discuss possible solutions and many of their tradeoffs, eventually.&lt;/p&gt;
+
+&lt;p&gt;If you can’t wait, here’s some interesting things you can read to learn more:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;http://www.cs.cmu.edu/~rbd/doc/icmc2005workshop/real-time-systems-concepts-design-patterns.pdf&quot;&gt;Overview of Design Patterns for Real-Time Computer Music Systems&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://supercolliderbook.net/rossbencinach26.pdf&quot;&gt;SuperCollider implementation details&lt;/a&gt; from the &lt;a href=&quot;http://supercolliderbook.net/&quot;&gt;SuperCollider book&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://tim.klingt.org/publications/tim_blechmann_supernova.pdf&quot;&gt;Supernova for SuperCollider&lt;/a&gt; a Masters thesis discussing some of these issues&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://www.rossbencina.com/code/real-time-audio-programming-101-time-waits-for-nothing&quot;&gt;this excellent blog post&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;See you next time!&lt;/p&gt;
+</description>
+        <pubDate>Sun, 11 Dec 2016 00:00:00 -0600</pubDate>
+        <link>http://dpzmick.com/2016/12/11/audio-basics/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2016/12/11/audio-basics/</guid>
+      </item>
+    
+      <item>
         <title>Rust Image Processing DSL</title>
-        <description>&lt;p&gt;This project is essentially an attempt to recreate some of the &lt;a href=&quot;http://halide-lang.org/&quot;&gt;Halide&lt;/a&gt; project in Rust as a means of learning that Rust language.
-For those who do not want to click on the link, let me explain briefly what Halide is.
-Halide is a really clever C++ library which allows programmers to define image processing algorithms in a functional, domain specific language embedded in C++.
-The programmers also define a strategy for compiling their code.
+        <description>&lt;p&gt;&lt;a href=&quot;https://github.com/dpzmick/rust_img_dsl&quot;&gt;This project&lt;/a&gt; is essentially an attempt to recreate some of the &lt;a href=&quot;http://halide-lang.org/&quot;&gt;Halide&lt;/a&gt; project in Rust as a means of learning that Rust language.
+Halide is a really clever C++ library that allows programmers to define image processing algorithms in domain specific language which are compiled according to some sort of execution strategy.
 These strategies might be “tile for cache efficiency” or “optimize for execution on a GPU.”
-Then, the halide compiler emits highly optimized code for the chosen architecture and execution strategy.
-If you want to learn more about Halide, check out &lt;a href=&quot;http://halide-lang.org/&quot;&gt;the project website&lt;/a&gt; and watch some of the talks about the language, they are quite good.&lt;/p&gt;
+The project is definitely worth poking at for a few minutes.&lt;/p&gt;
 
 &lt;p&gt;The project I will be discussing in this blog post is an implementation of the first “half” of Halide, using &lt;a href=&quot;https://www.rust-lang.org&quot;&gt;Rust&lt;/a&gt;.
-I did this project primarily to learn the rust language, so my result is certainly not production code by any means, but it may still be interesting to read a bit about.&lt;/p&gt;
+Specifically, I’ve implemented a simple DSL for image processing which is JIT compiled with LLVM.
+I picked this project mostly to learn rust, so my result is certainly not production code but it may still be interesting to read a bit about.&lt;/p&gt;
 
 &lt;h2 id=&quot;annotated-example&quot;&gt;Annotated example&lt;/h2&gt;
-&lt;p&gt;Before jumping into a discussion about how all of this works, I would like to walk though an example of the end result first.
-In this example, we will define the sobel operator in the embedded DSL, then processes a directory full of images with the JIT compiled sobel operator (for a great overview of the sobel operator, check out &lt;a href=&quot;https://blog.saush.com/2011/04/20/edge-detection-with-the-sobel-operator-in-ruby/&quot;&gt;this article&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;Before jumping into a discussion about how all of this works, lets look at an example of the DSL.
+In this example, we will define the sobel operator, then process an images with it.
+For a great overview of the sobel operator, check out &lt;a href=&quot;https://blog.saush.com/2011/04/20/edge-detection-with-the-sobel-operator-in-ruby/&quot;&gt;this article&lt;/a&gt;.&lt;/p&gt;
 
-&lt;p&gt;In the DSL, there are two types of “objects” to worry about: Functions and Chains.
-A function is a single unit of work which takes an $(x,y)$ coordinate and an arbitrary number of inputs.
-For example, suppose we have a function $Grad(x,y)$ which returns the magnitude of the gradient of two images $I_1$ and $I_2$ at the point $(x,y)$.
+&lt;p&gt;In the DSL, there are things to worry about: Functions and Chains.
+A function is a single unit of work that takes an $(x,y)$ coordinate and an arbitrary number of inputs.
+For example, suppose we have a function $Grad(x,y)$ that returns the magnitude of the gradient of two images $I_1$ and $I_2$ at the point $(x,y)$.
 We might denote this function with mathematical notation as:&lt;/p&gt;
 
 &lt;script type=&quot;math/tex; mode=display&quot;&gt;Grad(x,y) = \sqrt{I_1(x,y)^2 + I_2(x,y)^2}&lt;/script&gt;
 
-&lt;h3 id=&quot;defining-functions&quot;&gt;Defining functions&lt;/h3&gt;
 &lt;p&gt;In the DSL I have defined, we would denote this operation in a similar manner, sans syntactic differences:&lt;/p&gt;
 
 &lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span class=&quot;c&quot;&gt;// create a new function named grad&lt;/span&gt;
@@ -45,26 +249,24 @@ We might denote this function with mathematical notation as:&lt;/p&gt;
 
     &lt;span class=&quot;c&quot;&gt;// compute the squares using the input expressions&lt;/span&gt;
     &lt;span class=&quot;c&quot;&gt;// Notice that x and y are both treated like functions.&lt;/span&gt;
-    &lt;span class=&quot;c&quot;&gt;// This is essentially a hack to get around the way I&#39;ve stored the AST&lt;/span&gt;
+    &lt;span class=&quot;c&quot;&gt;// This is essentially a hack to get around the way I've stored the AST&lt;/span&gt;
     &lt;span class=&quot;k&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;input0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;input0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
     &lt;span class=&quot;k&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;input1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;input1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
 
     &lt;span class=&quot;c&quot;&gt;// Compute the sum and the square root of the sum&lt;/span&gt;
     &lt;span class=&quot;c&quot;&gt;// The last expression generated by this lambda is result of the function we are defining&lt;/span&gt;
-    &lt;span class=&quot;c&quot;&gt;// The Box::new trick is needed, again, because of the way I&#39;ve store the AST&lt;/span&gt;
+    &lt;span class=&quot;c&quot;&gt;// The Box::new trick is needed, again, because of the way I've store the AST&lt;/span&gt;
     &lt;span class=&quot;nn&quot;&gt;Box&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nn&quot;&gt;SqrtExpr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;t1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
 &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
-&lt;p&gt;This might not be the most beautiful way to build a representation of our function, but it works and I’m fairly proud of it.
-There’s lots of function overloading magic going on behind the scenes here, so I learned quite a bit about rust getting this interface to cooperate with me.&lt;/p&gt;
-
-&lt;p&gt;What is actually stored in the function is a syntax tree representing the expression that the function computes.
+&lt;p&gt;This isn’t the most beautiful way to build a representation of our function, but it works and I learned a lot implementing the magic that makes it work.
+Each function stores is a syntax tree representing the expression that the function computes.
 The syntax tree defined by the &lt;code class=&quot;highlighter-rouge&quot;&gt;grad&lt;/code&gt; function looks something like this:&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&quot;/img/rust_img/ast.svg&quot; alt=&quot;AST&quot; /&gt;&lt;/p&gt;
 
-&lt;p&gt;I’ve also provided a helper function that can be used to generate functions which perform a convolution on a single image with a kernel matrix
-For example, to generate a function which takes a single image as input and returns the convolution with the horizontal sobel matrix, use the following code:&lt;/p&gt;
+&lt;p&gt;There is also helper function that can be used to generate functions which perform a convolution on a single image with a kernel matrix
+For example, to generate a function that takes a single image as input and returns the convolution with the horizontal sobel matrix, use the following code:&lt;/p&gt;
 
 &lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span class=&quot;k&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sobel_x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[[&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
                &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
@@ -78,12 +280,10 @@ They do not mutate their inputs, nor do they store any state, nor are they coupl
 &lt;h3 id=&quot;connecting-functions&quot;&gt;Connecting functions&lt;/h3&gt;
 &lt;p&gt;Now that we have some abstract functions, we need to compose functions to create something meaningful.
 The composition of functions in my DSL is called a function chain.
-Function chains always start with a numbered image source.
-These image sources define the starting inputs for the entire chain.
+Chains may be thought of as a stream of pixels, starting from &lt;code class=&quot;highlighter-rouge&quot;&gt;ImageSource&lt;/code&gt;s, flowing through a number of transformation functions, and finally, resulting in a new image.
+ImageSources define the starting inputs for the entire chain.
 Then, any number of functions may be chained together.
-Chains may be thought of as a definition of a pixel stream.
-The image sources define the sources of pixels in the chain and all of the steps along the way perform some transformation on the stream.
-For example, an entire sobel image processing chain looks something like this:&lt;/p&gt;
+For example, the entire sobel image processing chain looks something like this:&lt;/p&gt;
 
 &lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span class=&quot;k&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sobel_x_fun&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;c&quot;&gt;// define the sobel_x function as shown above&lt;/span&gt;
 &lt;span class=&quot;k&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sobel_y_fun&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;c&quot;&gt;// define the sobel_y function similar to the sobel_x function given above&lt;/span&gt;
@@ -111,25 +311,28 @@ For example, an entire sobel image processing chain looks something like this:&l
 &lt;p&gt;Invoking &lt;code class=&quot;highlighter-rouge&quot;&gt;.compile()&lt;/code&gt; on an image chain compiles each function in the chain provided into an LLVM module, optimizes the module with LLVM’s optimizer, and uses LLVM’s MCJIT to compile to machine code.
 A compiled chain essentially just holds a function pointer to a function which will be called when the chain is executed (and some things used for bookkeeping).
 The only work I had to do to go from AST to function pointer is code generation.
-For this reason, llvm is decidedly &lt;em&gt;awesome&lt;/em&gt;.&lt;/p&gt;
+For this reason, LLVM is decidedly &lt;em&gt;awesome&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Note: For the full sobel code, see &lt;a href=&quot;https://github.com/dpzmick/rust_img_dsl/blob/master/examples/sobel.rs&quot;&gt;sobel.rs&lt;/a&gt;.&lt;/p&gt;
 
 &lt;h2 id=&quot;details-details-details&quot;&gt;Details, Details, Details&lt;/h2&gt;
-&lt;p&gt;There’s lots of little details which may be interesting to discuss, but I’m only going to discuss the compilation process for the DSL loosely defined here.
+&lt;p&gt;There’s lots of little details which may be interesting to discuss, but I’m only going to discuss the compilation method.
 First, we need some slightly more rigorous definitions of things:&lt;/p&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;All of the user defined functions take to 64 bit integer values, and a list of inputs. They return a 64 bit integer value.
-Images are not 64 bit, so these values are clamped to the appropriate range when they are finally written into a resulting image (but no sooner).&lt;/li&gt;
-  &lt;li&gt;Because functions themselves have no concept of chaining (the gradient function doesn’t call &lt;code class=&quot;highlighter-rouge&quot;&gt;sobel_x&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;sobel_y&lt;/code&gt;), the inputs are to a user defined function can be thought of as function-pointers which will eventually be resolved to real functions, although this is not how they are implemented.&lt;/li&gt;
+  &lt;li&gt;All of the user defined functions take two 64 bit integer values and a list of inputs. They return a 64 bit integer value.&lt;/li&gt;
+  &lt;li&gt;Because functions themselves have no concept of chaining (the gradient function doesn’t call &lt;code class=&quot;highlighter-rouge&quot;&gt;sobel_x&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;sobel_y&lt;/code&gt;), the “inputs” to a user defined function can be thought of as function-pointers which will eventually be resolved to real functions, although this is not how they are implemented.&lt;/li&gt;
   &lt;li&gt;All of the system-defined expressions (eg. &lt;code class=&quot;highlighter-rouge&quot;&gt;SqrtExpr&lt;/code&gt;) take a 64 bit integer and return a 64 bit integer.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;p&gt;The compilation strategy for the DSL is very simple: Every function is compiled into a function with a signature that would look something like this in C:&lt;/p&gt;
+&lt;p&gt;The compilation strategy for the DSL is very simple: Every DSL function is compiled into a function with a signature that would look something like this in C:&lt;/p&gt;
 
 &lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span class=&quot;kr&quot;&gt;inline&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;function&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;image&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;inputs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[],&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;size_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;num_inputs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;The array of image inputs provided here is &lt;strong&gt;not&lt;/strong&gt; equivalent to the list of the inputs given to the DSL function.
-The inputs given to the DSL function are resolved to other compiled function during code generation, so our generated grad function will actually call the &lt;code class=&quot;highlighter-rouge&quot;&gt;sobel_x&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;sobel_y&lt;/code&gt; functions.
+The inputs given to the DSL function are resolved to other compiled functions (using the chain) during code generation, so our generated &lt;code class=&quot;highlighter-rouge&quot;&gt;grad&lt;/code&gt; function will directly call the &lt;code class=&quot;highlighter-rouge&quot;&gt;sobel_x&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;sobel_y&lt;/code&gt; functions.&lt;/p&gt;
+
+&lt;p&gt;Since every value is a 64 bit integer, the code generation for an expression essentially just involves spitting out adds and multiplies for integers.
 The generated &lt;code class=&quot;highlighter-rouge&quot;&gt;grad&lt;/code&gt; code roughly corresponds to:&lt;/p&gt;
 
 &lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span class=&quot;kr&quot;&gt;inline&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;grad&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;image&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;inputs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[],&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;size_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;num_inputs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
@@ -153,24 +356,7 @@ This function performs some bookkeeping tasks, then just loops over the pixels i
 &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;Image inputs (the actual images we are processing), are passed to each function.
-When the compiler reaches an ImageSource in the function chain, it emits a call to the following function with the appropriate input argument:&lt;/p&gt;
-
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span class=&quot;kr&quot;&gt;inline&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;core_input_at&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;image&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;inputs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[],&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;size_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;num_inputs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;size_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;input&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-  &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;num_inputs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-
-  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;inputs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;input&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;width&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-
-  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;inputs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;input&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;height&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-
-  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;inputs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;input&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;width&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+When the compiler reaches an &lt;code class=&quot;highlighter-rouge&quot;&gt;ImageSource&lt;/code&gt; in the function chain, it emits a call to a function which returns the pixel in the image at a given $(x,y)$ coordinate.&lt;/p&gt;
 
 &lt;p&gt;For anyone interested, I’ve dumped the entire LLVM IR module for an unoptimized sobel chain &lt;a href=&quot;https://gist.github.com/dpzmick/a55851a9dd5ef87dd925c7f69151c0d0&quot;&gt;here&lt;/a&gt;.
 Some of the code is generated from the file &lt;a href=&quot;https://github.com/dpzmick/rust_img_dsl/blob/master/src/core.c&quot;&gt;core.c&lt;/a&gt; in the github repo for the project, if you need some hints to figure out what’s going on here.
@@ -179,9 +365,13 @@ There’s lots of other interesting little idiosyncrasies in this code but I don
 
 &lt;h2 id=&quot;performance&quot;&gt;Performance&lt;/h2&gt;
 &lt;p&gt;Anyone who knows a little bit about computers and performance is probably hurting a little bit thinking about how this might perform.
-Anyone who knows a lot about computers and performance noticed that &lt;code class=&quot;highlighter-rouge&quot;&gt;inline&lt;/code&gt; keyword and is wondering if I’m somehow relying on function inlining to extract performance from this technique.
+You’ve noticed all of the function calls, don’t these have lots of overhead?
+You’ve noticed that I’m computing the &lt;code class=&quot;highlighter-rouge&quot;&gt;sobel_x&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;sobel_y&lt;/code&gt; values twice in the gradient function.
+Don’t worry, it isn’t quite so bad.&lt;/p&gt;
+
+&lt;p&gt;Anyone who knows a fair amount about computers and performance noticed that &lt;code class=&quot;highlighter-rouge&quot;&gt;inline&lt;/code&gt; keyword and is wondering if I’m somehow relying on function inlining to extract performance from this technique.
 The answer is yes.
-Every generated function is marked with an LLVM attribute &lt;code class=&quot;highlighter-rouge&quot;&gt;AlwaysInline&lt;/code&gt; which, when the appropriate LLVM optimization passes are run, guarantees that calls to these functions will always be inlined into the caller.&lt;/p&gt;
+Every generated function is marked with an LLVM attribute &lt;code class=&quot;highlighter-rouge&quot;&gt;AlwaysInline&lt;/code&gt; which, when combined with the appropriate LLVM optimization passes, guarantees that these functions will always be inlined into their caller.&lt;/p&gt;
 
 &lt;h3 id=&quot;aside-function-inlining&quot;&gt;Aside: Function inlining&lt;/h3&gt;
 &lt;p&gt;For those who are not totally familiar with the concept of function ininling, here’s a quick example (note that the &lt;code class=&quot;highlighter-rouge&quot;&gt;inline&lt;/code&gt; keyword in C doesn’t guarantee this behavior, it is just a hint to the compiler):&lt;/p&gt;
@@ -207,11 +397,12 @@ Every generated function is marked with an LLVM attribute &lt;code class=&quot;h
 &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;It may seem that this optimization is useful because it removes function call overhead.
-This is true, but it isn’t the only reason that the optimization is useful.
+This is true, but it isn’t the only critical reason that the optimization is useful.
 Many compiler optimizations cannot (or do not) cross function boundaries.
-This often makes sense, because functions may be defined in different compilations units or in shared libraries, where the compiler cannot access their source, so it must view them as black boxes.
-Function inlining allows the compiler to “see” what these functions do, then perform additional optimizations which would not have been possible otherwise.
-For example, because the function has been inlined, the compiler can now (easily) optimize the function &lt;code class=&quot;highlighter-rouge&quot;&gt;bar&lt;/code&gt; to:&lt;/p&gt;
+Instead, they often view functions as black boxes about which nothing can be known (this is obviously an oversimplification).
+This often makes sense because functions may be defined in different compilations units or in shared libraries, where the compiler cannot access their source.
+Function inlining allows the compiler to “see” inside functions, then perform additional optimizations which would not have been possible otherwise.
+For example, because the call to &lt;code class=&quot;highlighter-rouge&quot;&gt;foo&lt;/code&gt; has been inlined, the compiler can now (easily) optimize the function &lt;code class=&quot;highlighter-rouge&quot;&gt;bar&lt;/code&gt; to:&lt;/p&gt;
 
 &lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;bar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
     &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
@@ -220,41 +411,60 @@ For example, because the function has been inlined, the compiler can now (easily
 &lt;h3 id=&quot;impact&quot;&gt;Impact&lt;/h3&gt;
 &lt;p&gt;Aggressive function inlining gives me lots of freedom in my code generation.
 I can generate code which is totally inefficient, then inline everything and let the compiler do some of its magic.
-This isn’t always the case of course, but for this problem, the generated code is highly uniform, doesn’t do much with memory (other than reading from &lt;code class=&quot;highlighter-rouge&quot;&gt;readonly&lt;/code&gt; images), or many other things that tend to cause problems for compilers.
-At the end of the day, LLVM is doing a pretty good job turning my functional style code into a big fat loop, and eliminating redundant computations.
-If you interested in looking at the LLVM module, here it is: &lt;a href=&quot;https://gist.github.com/dpzmick/95587dbb2972e256e51b888add3364a6&quot;&gt;gist&lt;/a&gt;.&lt;/p&gt;
+Of course, this isn’t a general rule, but for this problem the generated code is highly uniform, doesn’t do much with memory (other than reading from &lt;code class=&quot;highlighter-rouge&quot;&gt;readonly&lt;/code&gt; images), and has a few other compiler freindly properties.
+At the end of the day, LLVM is doing a pretty good job turning my functional style code into a big fat loop and eliminating redundant computations.
+If you’re interested in looking at the optimized sobel LLVM module, here it is: &lt;a href=&quot;https://gist.github.com/dpzmick/95587dbb2972e256e51b888add3364a6&quot;&gt;gist&lt;/a&gt;.&lt;/p&gt;
 
 &lt;h3 id=&quot;numbers&quot;&gt;Numbers&lt;/h3&gt;
-&lt;p&gt;To benchmark this code, I compared the JITed code with an implementation of the exact same thing written in rust.
+&lt;p&gt;To benchmark this code, I compared the JITed code with an implementation of the exact same thing written directly in Rust.
 My benchmarking is not extremely rigorous, but I’ve taken steps to try to create an honest benchmark.&lt;/p&gt;
 
 &lt;p&gt;Benchmarking environment:&lt;/p&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;single core, 3.75GB google cloud compute virtual machine&lt;/li&gt;
+  &lt;li&gt;single core, 3.75GB RAM Google cloud compute virtual machine&lt;/li&gt;
   &lt;li&gt;Ubuntu 16.04&lt;/li&gt;
-  &lt;li&gt;rust stable (1.10.0)&lt;/li&gt;
+  &lt;li&gt;Rust stable (1.10.0)&lt;/li&gt;
   &lt;li&gt;LLVM 3.9, built from source. Release build with assertions disabled&lt;/li&gt;
-  &lt;li&gt;Sobel code similar to the code presented above&lt;/li&gt;
+  &lt;li&gt;Sobel code presented above&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;The benchmark input was a 1.2 gig collection of 3255 images of various sizes, ranging from 160x120 to 6922x6922 pixels.
-The image sizes were mixed to try to stave off cache effects and other size-related effects, and allow me to use averages to compare performance.&lt;/p&gt;
+The image sizes were mixed to try to stave off cache effects and other size-related effects so that I could hopefully just use averages to compare performance.&lt;/p&gt;
 
-&lt;p&gt;Long story short, the average JIT/native speedup is 1.05 (including AST construction and compile time).
-This means that my JIT compiled code runs at basically the same speed (subject to some jitter) as the native rust code.&lt;/p&gt;
+&lt;p&gt;Long story short, the average JIT/native speedup is 1.05x, so the LLVM JITed code is 1.05x faster than the direct Rust implementation (this AST construction time and compile time).
+This means that my JIT compiled code runs at the same speed (subject to some jitter) as the native rust code.&lt;/p&gt;
 
 &lt;p&gt;Here is a plot of image vs average speedup (the images are sorted by the total number of pixels in the image):&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&quot;/img/rust_img/img_vs_speedup.png&quot; alt=&quot;image vs speedup&quot; /&gt;&lt;/p&gt;
 
-&lt;p&gt;There are many more plots, but the overall conclusion is pretty clear: compared to rust, I’m not performing very poorly.
-Is this a win? I am not sure. It isn’t a loss, so I’m happy with these results.&lt;/p&gt;
+&lt;p&gt;There are many more plots, but the overall conclusion is pretty clear: compared to the Rust, I’m not performing very poorly.
+Is this a win? I am not sure, I would need to do many more comparisons.
+These results do indicate to me that I have at least achieved reasonable performance, with a dramatically different programming style.&lt;/p&gt;
 
-&lt;p&gt;It should be noted that these results are not entirely suprising.
-Rust is also using LLVM as a backed and it is probably reasonable to assume that the code rust is generating looks pretty similar to the code I am generating, although I have not verified this.&lt;/p&gt;
+&lt;h4 id=&quot;final-performance-notes&quot;&gt;Final performance notes&lt;/h4&gt;
+&lt;p&gt;It should be noted that these results are not entirely surprising.
+Rust is also using LLVM as a backend.
+It is probably reasonable to assume that the code Rust is generating looks pretty similar to the code I am generating, although I have not verified this.&lt;/p&gt;
+
+&lt;p&gt;If you’ve been nodding your head along with me, I have a confession to make: I’ve tricked you a little bit.
+LLVM is doing an awesome job (considering the code I’ve generated), but I’m certainly missing out on lots of opportunities for performance because of my code generation technique.
+Also, LLVM (or any compiler) should never be expected to be able to totally understand the problem a piece of code is trying to solve and optimize it perfectly.
+To really get good performance, I would need to pay attention to caching and quite a few other things which I have totally ignored.
+Hand tuned code should (and certainly would) run in circles around the code JIT compiled algorithm I’ve generated here.&lt;/p&gt;
+
+&lt;p&gt;If you want something that gives you an awesome DSL AND all sorts of control over cache scheduling and whatnot, take a look at Halide.
+If you have no idea what I’m talking about or why any of this matters, take a look at Halide anyway.
+The Halide talks give fantastic descriptions of many of the problems it aims to solve.&lt;/p&gt;
 
 &lt;h2 id=&quot;conclusions&quot;&gt;Conclusions&lt;/h2&gt;
+&lt;p&gt;Overall, this project was extremely enjoyable.
+I had yet another opportunity to fiddle with LLVM, which is always lots of fun (but sometimes very painful).
+I learned a little bit about image processing and some of the challenges that arise when shuffling pixels around.
+Finally, I learned a little bit of Rust.
+I have only one thing to say about Rust: Rust is an amazing language.
+Go learn Rust.&lt;/p&gt;
 </description>
         <pubDate>Thu, 11 Aug 2016 00:00:00 -0500</pubDate>
         <link>http://dpzmick.com/2016/08/11/rust-jit-image-processing/</link>
@@ -390,8 +600,8 @@ that’s the Makefile model).&lt;/p&gt;
 &lt;p&gt;Here’s what I mean:&lt;/p&gt;
 
 &lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-make&quot; data-lang=&quot;make&quot;&gt;&lt;span class=&quot;c&quot;&gt;# recursively fetch all of the C and H files in the source directory
-&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;C_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;&#39;*.c&#39;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;nv&quot;&gt;H_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;&#39;*.h&#39;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;C_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;'*.c'&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;H_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;'*.h'&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
 
 &lt;span class=&quot;nl&quot;&gt;.PHONY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;all&lt;/span&gt;
 &lt;span class=&quot;nl&quot;&gt;all&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;clean $(DEPLOY_DIR) code_files other_files $(REFERENCE_IMPL:%=$(DEPLOY_DIR)/%-reference)&lt;/span&gt;
@@ -470,8 +680,8 @@ assignment.&lt;/p&gt;
 &lt;span class=&quot;nv&quot;&gt;FORMATTER&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;clang-format -style&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;llvm
 
 &lt;span class=&quot;c&quot;&gt;# recursively fetch all of the C and H files in the source directory
-&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;C_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;&#39;*.c&#39;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;nv&quot;&gt;H_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;&#39;*.h&#39;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;C_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;'*.c'&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;H_SOURCES&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; find &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;'*.h'&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;)&lt;/span&gt;
 
 &lt;span class=&quot;nv&quot;&gt;CODE_HEADER&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;code_header
 
@@ -514,7 +724,7 @@ assignment.&lt;/p&gt;
 	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;strip -s &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
 	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;make clean -s -C &lt;span class=&quot;nv&quot;&gt;$(SOURCE_DIR)&lt;/span&gt;
 
-&lt;span class=&quot;c&quot;&gt;# if we didn&#39;t catch it yet, just copy the file
+&lt;span class=&quot;c&quot;&gt;# if we didn't catch it yet, just copy the file
 &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;$(DEPLOY_DIR)/%&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;$(DEPLOY_DIR)&lt;/span&gt;
 	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;copying&quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$@&lt;/span&gt;
 	&lt;span class=&quot;p&quot;&gt;@&lt;/span&gt;mkdir -p &lt;span class=&quot;nf&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;shell&lt;/span&gt; dirname &lt;span class=&quot;nv&quot;&gt;$@)&lt;/span&gt;
@@ -621,16 +831,16 @@ neighbors are&lt;/li&gt;
   &lt;li&gt;move_failed - tells an ant that its move failed&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&quot;simulation&quot;&gt;Simulation&lt;/h3&gt;
-&lt;p&gt;When the simulator starts, it loads a config file specifying things like the
+&lt;p&gt;###Simulation
+When the simulator starts, it loads a config file specifying things like the
 size of the grid and the location of food, builds the grid of cells, puts ants
 on the upper edge of the board, then starts a wakeup_and_move_loop for each ant.&lt;/p&gt;
 
 &lt;p&gt;These loops tell their respective ants to wake up and perform their move over
 and over again until the simulation is shut down.&lt;/p&gt;
 
-&lt;h3 id=&quot;wakeupandmove&quot;&gt;Wakeup_and_move&lt;/h3&gt;
-&lt;p&gt;When an ant receives a wakeup_and_move message, it has to figure where it wants
+&lt;p&gt;###Wakeup_and_move
+When an ant receives a wakeup_and_move message, it has to figure where it wants
 to move, if it can move there, and it needs to perform the pheromone propagation
 step. I don’t want to let two ants occupy the same cell at once, but it isn’t so
 bad if one ant is sort of in two places at once (I think). Those rules motivate
@@ -663,7 +873,7 @@ to sleep&lt;/li&gt;
   &lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h5 id=&quot;sequence-diagram&quot;&gt;Sequence Diagram:&lt;/h5&gt;
+&lt;p&gt;#####Sequence Diagram:&lt;/p&gt;
 
 &lt;p&gt;&lt;a href=&quot;/img/ants/sequence.png&quot;&gt;&lt;img src=&quot;/img/ants/sequence.png&quot; alt=&quot;sequence diagram&quot; /&gt;&lt;/a&gt;&lt;/p&gt;
 
@@ -940,13 +1150,13 @@ all the images, sorry!&lt;/p&gt;
 &lt;h2 id=&quot;results&quot;&gt;Results&lt;/h2&gt;
 &lt;p&gt;First test we are going to look at.&lt;/p&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;
-member_contrib=1.000000
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=5
 max_groups=50
 trials=1000
-&lt;/code&gt;&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
 
 &lt;p&gt;Here are the images for all the results:&lt;/p&gt;
 
@@ -993,38 +1203,38 @@ grabbed my attention.&lt;/p&gt;
 
 &lt;p&gt;I ran only a few more tests, here are the parameters and links to my results.&lt;/p&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;
-member_contrib=1.000000
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=10
 max_groups=50
 trials=1000
-&lt;/code&gt;
-&lt;a href=&quot;/img/study_groups/2/10_optimal.png&quot;&gt;at optimal&lt;/a&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;&lt;a href=&quot;/img/study_groups/2/10_optimal.png&quot;&gt;at optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/10_above_optimal.png&quot;&gt;above optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/10_below_optimal.png&quot;&gt;below optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/10_avg_fit.png&quot;&gt;average fitness&lt;/a&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;
-member_contrib=1.000000
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=15
 max_groups=50
 trials=1000
-&lt;/code&gt;
-&lt;a href=&quot;/img/study_groups/2/15_optimal.png&quot;&gt;at optimal&lt;/a&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;&lt;a href=&quot;/img/study_groups/2/15_optimal.png&quot;&gt;at optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/15_above_optimal.png&quot;&gt;above optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/15_below_optimal.png&quot;&gt;below optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/15_avg_fit.png&quot;&gt;average fitness&lt;/a&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;
-member_contrib=1.000000
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=20
 max_groups=50
 trials=1000
-&lt;/code&gt;
-&lt;a href=&quot;/img/study_groups/2/20_optimal.png&quot;&gt;at optimal&lt;/a&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;&lt;a href=&quot;/img/study_groups/2/20_optimal.png&quot;&gt;at optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/20_above_optimal.png&quot;&gt;above optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/20_below_optimal.png&quot;&gt;below optimal&lt;/a&gt;
 &lt;a href=&quot;/img/study_groups/2/20_avg_fit.png&quot;&gt;average fitness&lt;/a&gt;&lt;/p&gt;
@@ -1794,8 +2004,8 @@ change in $t$ seconds, given it only has a single force acting on it.&lt;/p&gt;
 &lt;p&gt;So, now we can compute the particles new velocity. Since we have assumed that no
 acceleration happens during the time period.&lt;/p&gt;
 
-&lt;h3 id=&quot;quick-numeric-example-of-something-kind-of-like-the-above&quot;&gt;Quick Numeric Example of Something Kind of like the Above&lt;/h3&gt;
-&lt;p&gt;Let $p_1$ and $p_2$ both be particles with mass 100 kg.&lt;/p&gt;
+&lt;p&gt;###Quick Numeric Example of Something Kind of like the Above
+Let $p_1$ and $p_2$ both be particles with mass 100 kg.&lt;/p&gt;
 
 &lt;p&gt;$p_1$ is located at $(0,0)$, and $p_2$ is at $(5,5)$.&lt;/p&gt;
 
@@ -1808,8 +2018,8 @@ in x-direction.&lt;/p&gt;
 dealing too much with vectors, but I will use the same process. This is the
 process my simulator used.&lt;/p&gt;
 
-&lt;h4 id=&quot;step-1-find-the-force&quot;&gt;Step 1: Find the force&lt;/h4&gt;
-&lt;p&gt;Find distance:
+&lt;p&gt;####Step 1: Find the force
+Find distance:
 &lt;script type=&quot;math/tex&quot;&gt;|\textbf{r}|^2 = \sqrt{ (5-0)^2 + (5-0)^2 } = \sqrt{50} = 5\sqrt{2}&lt;/script&gt;&lt;/p&gt;
 
 &lt;p&gt;Find magnitude of $ \textbf{F} $:
@@ -1825,8 +2035,8 @@ we can easily get the x and y components of the force.&lt;/p&gt;
 &lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;F\_x = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2}&lt;/script&gt;
 &lt;script type=&quot;math/tex&quot;&gt;F\_y = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2}&lt;/script&gt;&lt;/p&gt;
 
-&lt;h4 id=&quot;step-2-find-delta-v&quot;&gt;Step 2: Find $\Delta v$&lt;/h4&gt;
-&lt;p&gt;We know that the velocity of the particle the instant $t=0$ is
+&lt;p&gt;####Step 2: Find $\Delta v$
+We know that the velocity of the particle the instant $t=0$ is
 $\langle 5,5 \rangle$. At $t=0.00001$ the velocity will be different, at
 $t=0.000001$ the velocity will be different, because our particles are always 
 accelerating. This is where we will use our (possibly foolish) assumption.
@@ -1841,7 +2051,7 @@ it.&lt;/p&gt;
 
 &lt;p&gt;So, the velocity of $p_2$ will need to change that much due to the force.&lt;/p&gt;
 
-&lt;h4 id=&quot;step-3-find-a-new-velocity-for-p2&quot;&gt;Step 3: Find a new velocity for $p_2$&lt;/h4&gt;
+&lt;p&gt;####Step 3: Find a new velocity for $p_2$&lt;/p&gt;
 
 &lt;p&gt;The initial velocity was 5 up and 5 right. This force is pulling us down and
 left, so:&lt;/p&gt;
@@ -1849,8 +2059,8 @@ left, so:&lt;/p&gt;
 &lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;V\_{x,new} = V\_x - \Delta V\_x = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999&lt;/script&gt;
 &lt;script type=&quot;math/tex&quot;&gt;V\_{y,new} = V\_y - \Delta V\_y = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999&lt;/script&gt;&lt;/p&gt;
 
-&lt;h4 id=&quot;step-4-find-new-position&quot;&gt;Step 4: Find new position&lt;/h4&gt;
-&lt;p&gt;Now, since we have assumed zero acceleration in the entire time frame from $t=0$
+&lt;p&gt;####Step 4: Find new position
+Now, since we have assumed zero acceleration in the entire time frame from $t=0$
 to $t=0.1$, we can use simple formulas to compute next locations.&lt;/p&gt;
 
 &lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;x\_{new} = x\_{old} + V\_{x,new} \Delta t = 5 + 9.99999(0.01) = 5.9999&lt;/script&gt;
@@ -1864,14 +2074,14 @@ like this:&lt;/p&gt;
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;function Timestep:
     calculate net force on each particle
     calclate change in velocity for each particle
-    update each particle&#39;s velocity
+    update each particle's velocity
     move each particle
     repeat
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 
-&lt;h3 id=&quot;the-assumption&quot;&gt;The assumption&lt;/h3&gt;
-&lt;p&gt;I am not sure if the technique I used to deal with the dynamic nature of the
+&lt;p&gt;###The assumption
+I am not sure if the technique I used to deal with the dynamic nature of the
 system is a good or bad technique. On one hand, I can see bad behavior arising
 very easily. Lets think about a correct solution for a moment.&lt;/p&gt;
 
@@ -1882,8 +2092,8 @@ be decent. I am not sure, and have not actually worked much of this out with pen
 and paper, so everything I just said, and all of my physics may be completely
 wrong.&lt;/p&gt;
 
-&lt;h3 id=&quot;more-implementation-notes&quot;&gt;More implementation notes&lt;/h3&gt;
-&lt;p&gt;Other than not really doing the physics correctly, my simulation had some other
+&lt;p&gt;###More implementation notes
+Other than not really doing the physics correctly, my simulation had some other
 issues.&lt;/p&gt;
 
 &lt;ul&gt;
@@ -1901,8 +2111,8 @@ particles get really close, the force increases substantially, then they fly
 through each other and continue on their marry way.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h3&gt;
-&lt;p&gt;If I were to do this project again, I would certainly go about it differently. I
+&lt;p&gt;###Conclusion
+If I were to do this project again, I would certainly go about it differently. I
 did not do a good job actually representing any real physics with my little toy,
 but the goals of a short “day project” are fun and learning, both of which have
 happened here. Most interesting to me is my apparent incompetence with physics.

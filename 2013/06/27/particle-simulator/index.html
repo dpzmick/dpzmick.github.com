@@ -71,8 +71,8 @@
       <a href="http://dpzmick.com" class="site-title">dpzmick.com</a>
       <nav class="site-nav right">
         <a href="/about/">About</a>
+<a href="/series/">Blog Series</a>
 <a href="http://dpzmick.com/resume/resume.pdf">Resume</a>
-<a href="/contact/">Contact</a>
 
       </nav>
       <div class="clearfix"></div>
@@ -86,9 +86,13 @@
     <a class="fa fa-rss" href="/feed.xml"></a>
     
     
+
+    <!--
     
     <a class="fa fa-envelope" href="/contact"></a>
     
+    -->
+
     
       <a class="fa fa-linkedin" href="https://www.linkedin.com/in/dpzmick"></a>
     
@@ -196,8 +200,8 @@ change in $t$ seconds, given it only has a single force acting on it.</p>
 <p>So, now we can compute the particles new velocity. Since we have assumed that no
 acceleration happens during the time period.</p>
 
-<h3 id="quick-numeric-example-of-something-kind-of-like-the-above">Quick Numeric Example of Something Kind of like the Above</h3>
-<p>Let $p_1$ and $p_2$ both be particles with mass 100 kg.</p>
+<p>###Quick Numeric Example of Something Kind of like the Above
+Let $p_1$ and $p_2$ both be particles with mass 100 kg.</p>
 
 <p>$p_1$ is located at $(0,0)$, and $p_2$ is at $(5,5)$.</p>
 
@@ -210,8 +214,8 @@ in x-direction.</p>
 dealing too much with vectors, but I will use the same process. This is the
 process my simulator used.</p>
 
-<h4 id="step-1-find-the-force">Step 1: Find the force</h4>
-<p>Find distance:
+<p>####Step 1: Find the force
+Find distance:
 <script type="math/tex">|\textbf{r}|^2 = \sqrt{ (5-0)^2 + (5-0)^2 } = \sqrt{50} = 5\sqrt{2}</script></p>
 
 <p>Find magnitude of $ \textbf{F} $:
@@ -227,8 +231,8 @@ we can easily get the x and y components of the force.</p>
 <p><script type="math/tex">F\_x = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2}</script>
 <script type="math/tex">F\_y = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2}</script></p>
 
-<h4 id="step-2-find-delta-v">Step 2: Find $\Delta v$</h4>
-<p>We know that the velocity of the particle the instant $t=0$ is
+<p>####Step 2: Find $\Delta v$
+We know that the velocity of the particle the instant $t=0$ is
 $\langle 5,5 \rangle$. At $t=0.00001$ the velocity will be different, at
 $t=0.000001$ the velocity will be different, because our particles are always 
 accelerating. This is where we will use our (possibly foolish) assumption.
@@ -243,7 +247,7 @@ it.</p>
 
 <p>So, the velocity of $p_2$ will need to change that much due to the force.</p>
 
-<h4 id="step-3-find-a-new-velocity-for-p2">Step 3: Find a new velocity for $p_2$</h4>
+<p>####Step 3: Find a new velocity for $p_2$</p>
 
 <p>The initial velocity was 5 up and 5 right. This force is pulling us down and
 left, so:</p>
@@ -251,8 +255,8 @@ left, so:</p>
 <p><script type="math/tex">V\_{x,new} = V\_x - \Delta V\_x = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999</script>
 <script type="math/tex">V\_{y,new} = V\_y - \Delta V\_y = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999</script></p>
 
-<h4 id="step-4-find-new-position">Step 4: Find new position</h4>
-<p>Now, since we have assumed zero acceleration in the entire time frame from $t=0$
+<p>####Step 4: Find new position
+Now, since we have assumed zero acceleration in the entire time frame from $t=0$
 to $t=0.1$, we can use simple formulas to compute next locations.</p>
 
 <p><script type="math/tex">x\_{new} = x\_{old} + V\_{x,new} \Delta t = 5 + 9.99999(0.01) = 5.9999</script>
@@ -272,8 +276,8 @@ like this:</p>
 </code></pre>
 </div>
 
-<h3 id="the-assumption">The assumption</h3>
-<p>I am not sure if the technique I used to deal with the dynamic nature of the
+<p>###The assumption
+I am not sure if the technique I used to deal with the dynamic nature of the
 system is a good or bad technique. On one hand, I can see bad behavior arising
 very easily. Lets think about a correct solution for a moment.</p>
 
@@ -284,8 +288,8 @@ be decent. I am not sure, and have not actually worked much of this out with pen
 and paper, so everything I just said, and all of my physics may be completely
 wrong.</p>
 
-<h3 id="more-implementation-notes">More implementation notes</h3>
-<p>Other than not really doing the physics correctly, my simulation had some other
+<p>###More implementation notes
+Other than not really doing the physics correctly, my simulation had some other
 issues.</p>
 
 <ul>
@@ -303,8 +307,8 @@ particles get really close, the force increases substantially, then they fly
 through each other and continue on their marry way.</li>
 </ul>
 
-<h3 id="conclusion">Conclusion</h3>
-<p>If I were to do this project again, I would certainly go about it differently. I
+<p>###Conclusion
+If I were to do this project again, I would certainly go about it differently. I
 did not do a good job actually representing any real physics with my little toy,
 but the goals of a short “day project” are fun and learning, both of which have
 happened here. Most interesting to me is my apparent incompetence with physics.

@@ -71,8 +71,8 @@
       <a href="http://dpzmick.com" class="site-title">dpzmick.com</a>
       <nav class="site-nav right">
         <a href="/about/">About</a>
+<a href="/series/">Blog Series</a>
 <a href="http://dpzmick.com/resume/resume.pdf">Resume</a>
-<a href="/contact/">Contact</a>
 
       </nav>
       <div class="clearfix"></div>
@@ -86,9 +86,13 @@
     <a class="fa fa-rss" href="/feed.xml"></a>
     
     
+
+    <!--
     
     <a class="fa fa-envelope" href="/contact"></a>
     
+    -->
+
     
       <a class="fa fa-linkedin" href="https://www.linkedin.com/in/dpzmick"></a>
     
@@ -208,16 +212,16 @@ neighbors are</li>
   <li>move_failed - tells an ant that its move failed</li>
 </ul>
 
-<h3 id="simulation">Simulation</h3>
-<p>When the simulator starts, it loads a config file specifying things like the
+<p>###Simulation
+When the simulator starts, it loads a config file specifying things like the
 size of the grid and the location of food, builds the grid of cells, puts ants
 on the upper edge of the board, then starts a wakeup_and_move_loop for each ant.</p>
 
 <p>These loops tell their respective ants to wake up and perform their move over
 and over again until the simulation is shut down.</p>
 
-<h3 id="wakeupandmove">Wakeup_and_move</h3>
-<p>When an ant receives a wakeup_and_move message, it has to figure where it wants
+<p>###Wakeup_and_move
+When an ant receives a wakeup_and_move message, it has to figure where it wants
 to move, if it can move there, and it needs to perform the pheromone propagation
 step. I don’t want to let two ants occupy the same cell at once, but it isn’t so
 bad if one ant is sort of in two places at once (I think). Those rules motivate
@@ -250,7 +254,7 @@ to sleep</li>
   </li>
 </ol>
 
-<h5 id="sequence-diagram">Sequence Diagram:</h5>
+<p>#####Sequence Diagram:</p>
 
 <p><a href="/img/ants/sequence.png"><img src="/img/ants/sequence.png" alt="sequence diagram" /></a></p>
 
