@@ -161,7 +161,7 @@ If messages lives on the heap, we must ensure they are allocated and freed outsi
 Then we will ship this message over to the realtime thread.</p>
 
 <p>When the realtime thread takes ownership of the message, it will need to hold onto the data for some undefined period of time.
-But, when the realtime thread is done with the message, it cannot free it.</p>
+But, when the realtime thread is done with the message, it cannot free it (because we can’t allocate or deallocatein the realtime thread).</p>
 
 <p>To solve this, let’s run one more thread to clean up messages which are no longer being used by the realtime thread.</p>
 
@@ -180,15 +180,15 @@ Note that anything I have to say should be taken with grain of salt; I haven’t
 
 <p>First, let’s talk about when we would not want to use this approach.</p>
 
-<p>If the realtime thread always consumes new messages in a predictable amount of time, we can preallocate a fixed size buffer to hold onto “in flight” UI messages.
+<p>If the realtime thread always consumes new messages in a predictable amount of time, we can preallocate a certain number of messages and just keep reusing the same blocks of memory.
 When the UI needs to send a message it can grab one of the preallocated messages and use it.
-Some predictable amount of time later, the message can be returned to the pool.</p>
+Some predictable amount of time later, when the realtime thread is done with it, the message can be returned to the pool (by the realtime thread).</p>
 
 <p>This is also a bad idea if the UI thread generates messages significantly faster than the realtime thread consumes them.
 It might be fine for the realtime thread to lag behind the UI thread (if it eventually catches up), but the GC pointer list is going to get quite large.
 If we do our GC scan frequently, we will be using a lot of cpu time scanning this list.
 If we slow the collector down, the list is going to keep growing, and so will our memory usage.
-In other words, its a sticky situation.
+In other words, it’s a sticky situation.
 A modern computer can probably handle this load, but we should avoid generating more load than necessary so that other audio applications running at the same time can use as much time as they need.</p>
 
 <p>Finally, if the realtime thread needs to send a message to the UI thread, it can’t just allocate memory and toss it at the GC thread for cleanup later.
@@ -201,10 +201,11 @@ So, if we don’t need something more clever, maybe this is a good thing to try 
 <p>Finally, since we are using reference counting to manage memory, there will be some runtime cost to increment and decrement the reference counts.
 This isn’t a big deal for us, in this case, because the performance is predictable (we won’t be suddenly surprised by the non-deterministic reference count incrementing).</p>
 
-<p>Regardless of the actual efficacy of this approach, it will be interesting to try to build one in Rust, so let’s get started.</p>
+<p>There are many other variations of this technique (some which involve extra threads, some which don’t, some which reuse freed memory, etc).
+Regardless of the actual efficacy of this approach, it will be interesting to try to build one in Rust, so let’s get started.</p>
 
 <h1 id="lets-make-one">Let’s make one</h1>
-<p>For the sake of these examples, let’s assume that the built in Rust <a href="https://doc.rust-lang.org/std/sync/mpsc/index.html">mpsc channel</a> is an appropriate lock free queue.
+<p>For the sake of these examples, let’s assume that the built-in Rust <a href="https://doc.rust-lang.org/std/sync/mpsc/index.html">mpsc channel</a> is an appropriate lock free queue.
 It will be pretty easy to swap this with something different later, and, if we use the standard library, all of the examples will easily run in the Rust playground.
 We are also going to fake a bunch of the details of the audio library.</p>
 
@@ -536,7 +537,7 @@ We can’t let our realtime callback perform memory allocation.</p>
 
 <h1 id="build-the-gc">Build the GC</h1>
 
-<p>We now need to build the GC thread, to clean up after us, outside of the realtime thread.
+<p>We now need to build the GC that I promised we would build, to clean up after us, outside of the realtime thread.
 Sneak peak, once the GC is implemented, all we have to change is <code class="highlighter-rouge">UIThread::run</code>, in a very small way:</p>
 
 <div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// All of the UI thread code</span>
@@ -696,7 +697,7 @@ The join handle is wrapped in an <code class="highlighter-rouge">Option</code>, 
 </code></pre>
 </div>
 
-<p>We written a bunch of new code, better make sure it compiles (<a href="https://play.rust-lang.org/?gist=0740c7896b0dd8c37e1d57aa9e53ca0b&amp;version=stable&amp;backtrace=0">Rust playground</a>):</p>
+<p>We’ve written a bunch of new code, better make sure it compiles (<a href="https://play.rust-lang.org/?gist=0740c7896b0dd8c37e1d57aa9e53ca0b&amp;version=stable&amp;backtrace=0">Rust playground</a>):</p>
 
 <div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="n">error</span><span class="p">[</span><span class="n">E0277</span><span class="p">]:</span> <span class="n">the</span> <span class="k">trait</span> <span class="n">bound</span> <span class="err">`</span><span class="n">T</span><span class="p">:</span> <span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="nb">Send</span><span class="err">`</span> <span class="n">is</span> <span class="n">not</span> <span class="n">satisfied</span>
    <span class="o">-</span><span class="k">-&gt;</span> <span class="o">&lt;</span><span class="n">anon</span><span class="o">&gt;</span><span class="p">:</span><span class="mi">154</span><span class="p">:</span><span class="mi">25</span>

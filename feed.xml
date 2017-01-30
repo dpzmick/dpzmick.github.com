@@ -49,7 +49,7 @@ If messages lives on the heap, we must ensure they are allocated and freed outsi
 Then we will ship this message over to the realtime thread.&lt;/p&gt;
 
 &lt;p&gt;When the realtime thread takes ownership of the message, it will need to hold onto the data for some undefined period of time.
-But, when the realtime thread is done with the message, it cannot free it.&lt;/p&gt;
+But, when the realtime thread is done with the message, it cannot free it (because we can’t allocate or deallocatein the realtime thread).&lt;/p&gt;
 
 &lt;p&gt;To solve this, let’s run one more thread to clean up messages which are no longer being used by the realtime thread.&lt;/p&gt;
 
@@ -68,15 +68,15 @@ Note that anything I have to say should be taken with grain of salt; I haven’t
 
 &lt;p&gt;First, let’s talk about when we would not want to use this approach.&lt;/p&gt;
 
-&lt;p&gt;If the realtime thread always consumes new messages in a predictable amount of time, we can preallocate a fixed size buffer to hold onto “in flight” UI messages.
+&lt;p&gt;If the realtime thread always consumes new messages in a predictable amount of time, we can preallocate a certain number of messages and just keep reusing the same blocks of memory.
 When the UI needs to send a message it can grab one of the preallocated messages and use it.
-Some predictable amount of time later, the message can be returned to the pool.&lt;/p&gt;
+Some predictable amount of time later, when the realtime thread is done with it, the message can be returned to the pool (by the realtime thread).&lt;/p&gt;
 
 &lt;p&gt;This is also a bad idea if the UI thread generates messages significantly faster than the realtime thread consumes them.
 It might be fine for the realtime thread to lag behind the UI thread (if it eventually catches up), but the GC pointer list is going to get quite large.
 If we do our GC scan frequently, we will be using a lot of cpu time scanning this list.
 If we slow the collector down, the list is going to keep growing, and so will our memory usage.
-In other words, its a sticky situation.
+In other words, it’s a sticky situation.
 A modern computer can probably handle this load, but we should avoid generating more load than necessary so that other audio applications running at the same time can use as much time as they need.&lt;/p&gt;
 
 &lt;p&gt;Finally, if the realtime thread needs to send a message to the UI thread, it can’t just allocate memory and toss it at the GC thread for cleanup later.
@@ -89,10 +89,11 @@ So, if we don’t need something more clever, maybe this is a good thing to try 
 &lt;p&gt;Finally, since we are using reference counting to manage memory, there will be some runtime cost to increment and decrement the reference counts.
 This isn’t a big deal for us, in this case, because the performance is predictable (we won’t be suddenly surprised by the non-deterministic reference count incrementing).&lt;/p&gt;
 
-&lt;p&gt;Regardless of the actual efficacy of this approach, it will be interesting to try to build one in Rust, so let’s get started.&lt;/p&gt;
+&lt;p&gt;There are many other variations of this technique (some which involve extra threads, some which don’t, some which reuse freed memory, etc).
+Regardless of the actual efficacy of this approach, it will be interesting to try to build one in Rust, so let’s get started.&lt;/p&gt;
 
 &lt;h1 id=&quot;lets-make-one&quot;&gt;Let’s make one&lt;/h1&gt;
-&lt;p&gt;For the sake of these examples, let’s assume that the built in Rust &lt;a href=&quot;https://doc.rust-lang.org/std/sync/mpsc/index.html&quot;&gt;mpsc channel&lt;/a&gt; is an appropriate lock free queue.
+&lt;p&gt;For the sake of these examples, let’s assume that the built-in Rust &lt;a href=&quot;https://doc.rust-lang.org/std/sync/mpsc/index.html&quot;&gt;mpsc channel&lt;/a&gt; is an appropriate lock free queue.
 It will be pretty easy to swap this with something different later, and, if we use the standard library, all of the examples will easily run in the Rust playground.
 We are also going to fake a bunch of the details of the audio library.&lt;/p&gt;
 
@@ -424,7 +425,7 @@ We can’t let our realtime callback perform memory allocation.&lt;/p&gt;
 
 &lt;h1 id=&quot;build-the-gc&quot;&gt;Build the GC&lt;/h1&gt;
 
-&lt;p&gt;We now need to build the GC thread, to clean up after us, outside of the realtime thread.
+&lt;p&gt;We now need to build the GC that I promised we would build, to clean up after us, outside of the realtime thread.
 Sneak peak, once the GC is implemented, all we have to change is &lt;code class=&quot;highlighter-rouge&quot;&gt;UIThread::run&lt;/code&gt;, in a very small way:&lt;/p&gt;
 
 &lt;div class=&quot;language-rust highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;/// All of the UI thread code&lt;/span&gt;
@@ -584,7 +585,7 @@ The join handle is wrapped in an &lt;code class=&quot;highlighter-rouge&quot;&gt
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 
-&lt;p&gt;We written a bunch of new code, better make sure it compiles (&lt;a href=&quot;https://play.rust-lang.org/?gist=0740c7896b0dd8c37e1d57aa9e53ca0b&amp;amp;version=stable&amp;amp;backtrace=0&quot;&gt;Rust playground&lt;/a&gt;):&lt;/p&gt;
+&lt;p&gt;We’ve written a bunch of new code, better make sure it compiles (&lt;a href=&quot;https://play.rust-lang.org/?gist=0740c7896b0dd8c37e1d57aa9e53ca0b&amp;amp;version=stable&amp;amp;backtrace=0&quot;&gt;Rust playground&lt;/a&gt;):&lt;/p&gt;
 
 &lt;div class=&quot;language-rust highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;error&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;E0277&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;the&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;trait&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bound&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;nn&quot;&gt;marker&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Send&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;satisfied&lt;/span&gt;
    &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;anon&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;154&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;
