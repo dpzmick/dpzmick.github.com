@@ -1047,6 +1047,8 @@ I’m glad to be exposed to potential issues, even if I have to work around the 
 
 &lt;p&gt;If you made it this far, thank you for reading.
 I hope you’ve learned something interesting (maybe even useful).&lt;/p&gt;
+
+&lt;p&gt;Discussion on &lt;a href=&quot;https://www.reddit.com/r/rust/comments/5qxqo8/show_and_ask_rrust_garbage_collection_for_rust/&quot;&gt;reddit&lt;/a&gt;.&lt;/p&gt;
 </description>
         <pubDate>Mon, 23 Jan 2017 00:00:00 -0600</pubDate>
         <link>http://dpzmick.com/2017/01/23/rust-arc-gc-realtime/</link>
