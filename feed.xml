@@ -3,8 +3,8 @@
   <channel>
     <title>dpzmick.com</title>
     <description>Just some dude's blog</description>
-    <link>http://0.0.0.0:4000/</link>
-    <atom:link href="http://0.0.0.0:4000/feed.xml" rel="self" type="application/rss+xml" />
+    <link>http://dpzmick.com/</link>
+    <atom:link href="http://dpzmick.com/feed.xml" rel="self" type="application/rss+xml" />
     
       <item>
         <title>&quot;Garbage collection&quot; for Rust Arc Pointers</title>
@@ -1049,8 +1049,8 @@ I’m glad to be exposed to potential issues, even if I have to work around the 
 I hope you’ve learned something interesting (maybe even useful).&lt;/p&gt;
 </description>
         <pubDate>Mon, 23 Jan 2017 00:00:00 -0600</pubDate>
-        <link>http://0.0.0.0:4000/2017/01/23/rust-arc-gc-realtime/</link>
-        <guid isPermaLink="true">http://0.0.0.0:4000/2017/01/23/rust-arc-gc-realtime/</guid>
+        <link>http://dpzmick.com/2017/01/23/rust-arc-gc-realtime/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2017/01/23/rust-arc-gc-realtime/</guid>
       </item>
     
       <item>
@@ -1255,8 +1255,8 @@ Future posts will discuss possible solutions and many of their tradeoffs, eventu
 &lt;p&gt;See you next time!&lt;/p&gt;
 </description>
         <pubDate>Sat, 17 Dec 2016 00:00:00 -0600</pubDate>
-        <link>http://0.0.0.0:4000/2016/12/17/audio-basics/</link>
-        <guid isPermaLink="true">http://0.0.0.0:4000/2016/12/17/audio-basics/</guid>
+        <link>http://dpzmick.com/2016/12/17/audio-basics/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2016/12/17/audio-basics/</guid>
       </item>
     
       <item>
@@ -1514,8 +1514,8 @@ I have only one thing to say about Rust: Rust is an amazing language.
 Go learn Rust.&lt;/p&gt;
 </description>
         <pubDate>Thu, 11 Aug 2016 00:00:00 -0500</pubDate>
-        <link>http://0.0.0.0:4000/2016/08/11/rust-jit-image-processing/</link>
-        <guid isPermaLink="true">http://0.0.0.0:4000/2016/08/11/rust-jit-image-processing/</guid>
+        <link>http://dpzmick.com/2016/08/11/rust-jit-image-processing/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2016/08/11/rust-jit-image-processing/</guid>
       </item>
     
       <item>
@@ -1784,8 +1784,8 @@ assignment.&lt;/p&gt;
 
 </description>
         <pubDate>Fri, 05 Feb 2016 00:00:00 -0600</pubDate>
-        <link>http://0.0.0.0:4000/2016/02/05/deploy-gen/</link>
-        <guid isPermaLink="true">http://0.0.0.0:4000/2016/02/05/deploy-gen/</guid>
+        <link>http://dpzmick.com/2016/02/05/deploy-gen/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2016/02/05/deploy-gen/</guid>
       </item>
     
       <item>
@@ -2010,8 +2010,8 @@ introduce other ones).&lt;/p&gt;
 &lt;/div&gt;
 </description>
         <pubDate>Tue, 09 Jun 2015 00:00:00 -0500</pubDate>
-        <link>http://0.0.0.0:4000/2015/06/09/ants/</link>
-        <guid isPermaLink="true">http://0.0.0.0:4000/2015/06/09/ants/</guid>
+        <link>http://dpzmick.com/2015/06/09/ants/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2015/06/09/ants/</guid>
       </item>
     
       <item>
@@ -2076,8 +2076,8 @@ solution is slightly easier to type.&lt;/p&gt;
 
 </description>
         <pubDate>Wed, 25 Feb 2015 00:00:00 -0600</pubDate>
-        <link>http://0.0.0.0:4000/2015/02/25/vim-remote-make/</link>
-        <guid isPermaLink="true">http://0.0.0.0:4000/2015/02/25/vim-remote-make/</guid>
+        <link>http://dpzmick.com/2015/02/25/vim-remote-make/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2015/02/25/vim-remote-make/</guid>
       </item>
     
       <item>
@@ -2325,8 +2325,8 @@ the rather unpolished graphics I used.&lt;/p&gt;
 to the commit used to write this post.&lt;/p&gt;
 </description>
         <pubDate>Mon, 07 Jul 2014 01:15:14 -0500</pubDate>
-        <link>http://0.0.0.0:4000/2014/07/07/study-groups-pt-2/</link>
-        <guid isPermaLink="true">http://0.0.0.0:4000/2014/07/07/study-groups-pt-2/</guid>
+        <link>http://dpzmick.com/2014/07/07/study-groups-pt-2/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2014/07/07/study-groups-pt-2/</guid>
       </item>
     
       <item>
@@ -2476,8 +2476,8 @@ is interesting to you, we could discuss more ideas!&lt;/p&gt;
 
 </description>
         <pubDate>Sat, 31 May 2014 00:00:00 -0500</pubDate>
-        <link>http://0.0.0.0:4000/2014/05/31/study-groups-pt-1/</link>
-        <guid isPermaLink="true">http://0.0.0.0:4000/2014/05/31/study-groups-pt-1/</guid>
+        <link>http://dpzmick.com/2014/05/31/study-groups-pt-1/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2014/05/31/study-groups-pt-1/</guid>
       </item>
     
       <item>
@@ -2969,8 +2969,8 @@ though may still hold some potential.&lt;/p&gt;
 &lt;p&gt;Thanks for reading! If you have any thoughts please drop them in the comments.&lt;/p&gt;
 </description>
         <pubDate>Fri, 17 Jan 2014 00:00:00 -0600</pubDate>
-        <link>http://0.0.0.0:4000/2014/01/17/decision-matrix/</link>
-        <guid isPermaLink="true">http://0.0.0.0:4000/2014/01/17/decision-matrix/</guid>
+        <link>http://dpzmick.com/2014/01/17/decision-matrix/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2014/01/17/decision-matrix/</guid>
       </item>
     
       <item>
@@ -3178,8 +3178,8 @@ this time documenting my incorrect work).&lt;/p&gt;
 something in the comments?&lt;/p&gt;
 </description>
         <pubDate>Thu, 27 Jun 2013 00:00:00 -0500</pubDate>
-        <link>http://0.0.0.0:4000/2013/06/27/particle-simulator/</link>
-        <guid isPermaLink="true">http://0.0.0.0:4000/2013/06/27/particle-simulator/</guid>
+        <link>http://dpzmick.com/2013/06/27/particle-simulator/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2013/06/27/particle-simulator/</guid>
       </item>
     
   </channel>
