@@ -7,6 +7,298 @@
     <atom:link href="http://dpzmick.com/feed.xml" rel="self" type="application/rss+xml" />
     
       <item>
+        <title>Outsmarting the compiler</title>
+        <description>&lt;p&gt;Suppose we have two very similar structs which we need to partially populate “ahead of time” and store somewhere.
+Then, a bit later, we need to &lt;strong&gt;very quickly&lt;/strong&gt; finish populating the structs.
+Here are some example structs:&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__attribute__&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;packed&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;A&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;arr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PADDING1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__attribute__&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;packed&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;B&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;arr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PADDING2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;The “padding” arrays are populated ahead of time, so we just need to set &lt;code class=&quot;highlighter-rouge&quot;&gt;a&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;b&lt;/code&gt;, and &lt;code class=&quot;highlighter-rouge&quot;&gt;c&lt;/code&gt; for each struct (quickly):&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;template&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;typename&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;writeFields&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;c&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Unfortunately, we don’t statically know what struct we are going to have to operate on; we only get this information at runtime.
+We just have a blob of memory and a tag which indicates which of the two variants of the struct is sitting in the blob of memory:&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;enum&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Variant&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eA&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eB&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;Variant&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;payload&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[];&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;So, our fast path &lt;code class=&quot;highlighter-rouge&quot;&gt;write&lt;/code&gt; function will need to take a wrapper struct, switch on the tag, then call the appropriate version of &lt;code class=&quot;highlighter-rouge&quot;&gt;writeFields&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Variant&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;eA&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;writeFields&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;reinterpret_cast&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;payload&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;writeFields&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;B&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;reinterpret_cast&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;B&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;payload&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;If &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING1 == PADDING2&lt;/code&gt;, then, regardless of the value of the tag (which struct we are populating), we will need to write to the same offsets.
+The cast and the templated function call will all compile out.
+Take a look (&lt;code class=&quot;highlighter-rouge&quot;&gt;clang-4.0 --std=c++1z -O3&lt;/code&gt;):&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI2_0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xc&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x19&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movaps&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rip&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI2_0&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movups&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;qword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;36&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Before we move on, take a moment to appreciate what your compiler just did for you:&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;It allowed you to write a type safe &lt;code class=&quot;highlighter-rouge&quot;&gt;writeFields&lt;/code&gt; method. If the layout of the struct changes for some reason, this part of the code will not begin to misbehave.&lt;/li&gt;
+  &lt;li&gt;It removed the cost of the abstraction when it could figure out how to.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Unfortunately, if &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING1 != PADDING2&lt;/code&gt;, we will need to write the value of &lt;code class=&quot;highlighter-rouge&quot;&gt;c&lt;/code&gt; in a different location in struct &lt;code class=&quot;highlighter-rouge&quot;&gt;A&lt;/code&gt; and struct &lt;code class=&quot;highlighter-rouge&quot;&gt;B&lt;/code&gt;.
+In this case, it looks like we will need read the tag out of the &lt;code class=&quot;highlighter-rouge&quot;&gt;Wrapper*&lt;/code&gt;, then branch to the appropriate &lt;code class=&quot;highlighter-rouge&quot;&gt;writeFields&lt;/code&gt; method.
+We are good programmers, we know that branches might be expensive, so we really want avoid any branching.&lt;/p&gt;
+
+&lt;p&gt;We can skip the branch by storing the offset in our wrapper struct and precomputing the offset when the wrapper is set up.
+Introduce a new wrapper type (and abandon all type safety):&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;WrapperWithOffset&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;Variant&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;size_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;payload&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[];&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Next, we can write a new function which will operate on structs of type &lt;code class=&quot;highlighter-rouge&quot;&gt;A&lt;/code&gt; or type &lt;code class=&quot;highlighter-rouge&quot;&gt;B&lt;/code&gt;, but, instead of writing to &lt;code class=&quot;highlighter-rouge&quot;&gt;c&lt;/code&gt; directly, it computes a pointer to &lt;code class=&quot;highlighter-rouge&quot;&gt;c&lt;/code&gt; using the offset we’ve stored in the wrapper, then writes to that pointer.&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;writeFieldsWithOffset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;size_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c_offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// make sure a and b are always at the same offset in struct A and struct B
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;static_assert&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;offsetof&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;offsetof&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;B&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;!&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;static_assert&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;offsetof&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;offsetof&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;B&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;!&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;// c will be at the offset we've provided
+&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int64_t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)(((&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c_offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;writeLessSafe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;WrapperWithOffset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;reinterpret_cast&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;payload&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;writeFieldsWithOffset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Checking the code, this compiles down to exactly what we were hoping it would (again with clang-4.0)!&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI1_0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xc&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x19&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;writeLessSafe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;WrapperWithOffset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;writeLessSafe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;WrapperWithOffset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;rax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;qword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movaps&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rip&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI1_0&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movups&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;qword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rax&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Hooray, no conditional generated, exactly as we desired.
+We’ve outsmarted the compiler!&lt;/p&gt;
+
+&lt;h4 id=&quot;assertion-failed-smarter_than_compiler&quot;&gt;Assertion Failed: smarter_than_compiler&lt;/h4&gt;
+
+&lt;p&gt;Let’s set &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING1 = 16&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING2 = 17&lt;/code&gt;.
+The code generated on clang-4.0 for &lt;code class=&quot;highlighter-rouge&quot;&gt;write(Wrapper*)&lt;/code&gt; looks quite interesting:&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI2_0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xc&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x19&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;xor&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;cmp&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;dword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[rdi],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movaps&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rip&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI2_0&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movups&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;setne&lt;/span&gt;   &lt;span class=&quot;n&quot;&gt;al&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;qword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rax&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;36&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;This code is still very slightly longer than the unsafe code written previously, but, its really not bad at all.&lt;/p&gt;
+
+&lt;p&gt;The compiler has succeeded in avoiding a branch using a rather clever &lt;code class=&quot;highlighter-rouge&quot;&gt;cmp&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;setne&lt;/code&gt; instruction pair.
+Essentially, clang figured out that it could compute the offset of &lt;code class=&quot;highlighter-rouge&quot;&gt;c&lt;/code&gt; using the tag we’ve placed in the &lt;code class=&quot;highlighter-rouge&quot;&gt;Wrapper&lt;/code&gt;’s &lt;code class=&quot;highlighter-rouge&quot;&gt;Variant&lt;/code&gt; field.
+In this case, I’ve allowed the enum values to default to &lt;code class=&quot;highlighter-rouge&quot;&gt;0&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;1&lt;/code&gt; (hence the &lt;code class=&quot;highlighter-rouge&quot;&gt;cmp dword ptr [rdi], 0&lt;/code&gt; checking if the first thing in the functions first arg is equal to 0).&lt;/p&gt;
+
+&lt;p&gt;What happens if we change the values?&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;enum&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Variant&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eA&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;666&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1337&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI2_0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xc&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x19&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[rdi]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movaps&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rip&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI2_0&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movups&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;xor&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;ecx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ecx&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;cmp&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;666&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;setne&lt;/span&gt;   &lt;span class=&quot;n&quot;&gt;cl&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;qword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rcx&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;36&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;The code has changed slightly to account for the new potential values of &lt;code class=&quot;highlighter-rouge&quot;&gt;Wrapper::v&lt;/code&gt;, but it looks much nicer than a branch.&lt;/p&gt;
+
+&lt;h3 id=&quot;meaner-padding&quot;&gt;Meaner PADDING&lt;/h3&gt;
+&lt;p&gt;Reminder: In the previous examples &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING1 = 16&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING2 = 17&lt;/code&gt;.
+What happens to the generated code if we make the paddings completely wacky?&lt;/p&gt;
+
+&lt;p&gt;With &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING1 = 16&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING2 = 173&lt;/code&gt;, and with the enum values reverted to their defaults:&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI1_0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xc&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x19&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;writeLessSafe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;WrapperWithOffset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;writeLessSafe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;WrapperWithOffset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;rax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;qword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movaps&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rip&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI1_0&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movups&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;qword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rax&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;ret&lt;/span&gt;
+
+&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI2_0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xc&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;quad&lt;/span&gt;   &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x19&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;                      &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;cmp&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;dword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[rdi],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movaps&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rip&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LCPI2_0&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;movups&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;xmmword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xmm0&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;32&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;ecx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;189&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;cmove&lt;/span&gt;   &lt;span class=&quot;n&quot;&gt;rcx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rax&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;qword&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ptr&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rcx&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;writeLessSafe&lt;/code&gt; doesn’t change, as expected.
+&lt;code class=&quot;highlighter-rouge&quot;&gt;write&lt;/code&gt; does get tweaked a bit to account for the new offsets, but its still pretty great code.&lt;/p&gt;
+
+&lt;p&gt;So, have we beaten the compiler?
+The answer to that depends on which compiler you ask.&lt;/p&gt;
+
+&lt;h3 id=&quot;gcc-71-stdc1z--o3&quot;&gt;gcc 7.1 (–std=c++1z -O3)&lt;/h3&gt;
+&lt;h4 id=&quot;padding1--padding2&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING1&lt;/code&gt; == &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING2&lt;/code&gt;&lt;/h4&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;writeLessSafe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;WrapperWithOffset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;rax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;24&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;DWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;36&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;test&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;je&lt;/span&gt;      &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;L7&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;rep&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;L7&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;rep&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;That’s a little odd.&lt;/p&gt;
+
+&lt;h4 id=&quot;padding1--16-and-padding2--17&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING1 = 16&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING2 = 17&lt;/code&gt;&lt;/h4&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;DWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;test&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;je&lt;/span&gt;      &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;L7&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;37&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;L7&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;36&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h4 id=&quot;padding1--16-and-padding2--173&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING1 = 16&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;PADDING2 = 173&lt;/code&gt;&lt;/h4&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Wrapper&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;DWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;test&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eax&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;je&lt;/span&gt;      &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;L7&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;193&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;L7&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;mov&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;QWORD&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PTR&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rdi&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;36&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Interesting.
+This branch felt &lt;em&gt;almost&lt;/em&gt; detectable in some micro-benchmarks, but I would require additional testing before I’m willing to declare that it is harmful.
+At the moment I’m not convinced that it hurts much.&lt;/p&gt;
+
+&lt;h3 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h3&gt;
+&lt;p&gt;No conclusion.
+None of my benchmarks have managed to detect any convincing cost for this branch (even when variants are randomly chosen inside of a loop in an attempt to confuse branch predictor) so none of this actually matters (probably).
+The only interesting fact my benchmarks showed is that clang 4.0 looked very very slightly faster than gcc 6.3, possibly because of the vector instructions clang is generating, but also possibly because benchmarking is hard and I’m not benchmarking on isolated cores.
+Here’s some code: &lt;a href=&quot;https://gist.github.com/dpzmick/a8f937c5e35185092b6af9a5ed87a7b8&quot;&gt;gist&lt;/a&gt;.&lt;/p&gt;
+</description>
+        <pubDate>Thu, 25 May 2017 00:00:00 -0500</pubDate>
+        <link>http://dpzmick.com/2017/05/25/outsmarting-the-compiler/</link>
+        <guid isPermaLink="true">http://dpzmick.com/2017/05/25/outsmarting-the-compiler/</guid>
+      </item>
+    
+      <item>
         <title>&quot;Garbage collection&quot; for Rust Arc Pointers</title>
         <description>&lt;p&gt;Recently, I’ve been working on a synthesizer (the kind that makes sounds) in Rust.
 This post is the second post in a series of posts about this project.
@@ -2006,7 +2298,7 @@ introduce other ones).&lt;/p&gt;
 &lt;div class=&quot;footnotes&quot;&gt;
   &lt;ol&gt;
     &lt;li id=&quot;fn:1&quot;&gt;
-      &lt;p&gt;I like my ants like I like my editors. &lt;a href=&quot;#fnref:1&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;I like my ants like I like my editors.&amp;nbsp;&lt;a href=&quot;#fnref:1&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
   &lt;/ol&gt;
 &lt;/div&gt;
@@ -2973,215 +3265,6 @@ though may still hold some potential.&lt;/p&gt;
         <pubDate>Fri, 17 Jan 2014 00:00:00 -0600</pubDate>
         <link>http://dpzmick.com/2014/01/17/decision-matrix/</link>
         <guid isPermaLink="true">http://dpzmick.com/2014/01/17/decision-matrix/</guid>
-      </item>
-    
-      <item>
-        <title>Particle Simulator</title>
-        <description>&lt;p&gt;This post is a write up of a very small “day project” I did recently. The
-project was a &lt;em&gt;very&lt;/em&gt; naive particle motion simulation.&lt;/p&gt;
-
-&lt;h2 id=&quot;what-is-it&quot;&gt;What is it&lt;/h2&gt;
-&lt;p&gt;I thought it would be cool to try and simulate simple masses moving around in
-space as a programming exercise. So, I used some simple physics and made a
-little toy.&lt;/p&gt;
-
-&lt;h2 id=&quot;physics&quot;&gt;Physics&lt;/h2&gt;
-&lt;p&gt;Particles are not charged. They are just particles with a mass, and some
-velocity. Say particles $ p_1 $ and $ p_2 $ are floating around in space. Let’s
-also assume that $ p_1 $ is moving with some velocity, but $ p_2 $ is not
-moving. If we want to figure out where $ p_1 $ will be in $ t $ time, how would
-we do that?&lt;/p&gt;
-
-&lt;p&gt;We know that the force on $p_1$ will change its movement. Once we compute
-that force, we can compute the acceleration the particle is undergoing, figure
-out the new velocity of the particle, and use that to find the final location.&lt;/p&gt;
-
-&lt;p&gt;But, the problem is not quite that easy. As the particle moves, the force on the
-particle will change, so its acceleration will change as it move, and it will
-always be undergoing acceleration. So we can’t just use $ \Delta x = vt $,
-because $v$ is changing with time. We need to find some way to deal with the
-continuous nature of the system.&lt;/p&gt;
-
-&lt;p&gt;But, for now, let us look at a very simple model. We have the two particles
-mentioned above. We will compute the net force on $p_1$ particle, then figure
-out its acceleration (change in velocity), change the velocity, then figure out
-its location in $t$ seconds. We must (possibly foolishly) assume that the affect
-of acceleration due to the forces on the particle during this time period is
-negligible.&lt;/p&gt;
-
-&lt;p&gt;The first thing we need is the force on $p_1$. Since there are only two object
-in our world, the only force that will exist is the force between $p_1$ and
-$p_2$. This force is attractive, and is computed using the following:&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\textbf{F} = G \frac{m_1m_2}{\mid\textbf{r}^2\mid} \hat{\textbf{r}}&lt;/script&gt;
-
-&lt;p&gt;Where $ G $ is the Gravitational Constant, $ m_1 $ and $ m_2 $ are the masses
-of $ p_1 $ and $ p_2 $ respectively, $ \textbf{r} $ is the vector between
-$ p_1 $ and $ p_2 $, so $|\textbf{r}|$ (magnitudue of the vector $\textbf{r}$
-is the distance between them. $ \hat{r} $ is the unit vector (has length of one,
-that is what the litte hat means) describing the direction of the force
-(towards $p_2$).&lt;/p&gt;
-
-&lt;p&gt;So, now we have the force. We need to find the acceleration. That is easy,
-because Newton made it easy:&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\textbf{F} = m\textbf{a}&lt;/script&gt;
-
-&lt;p&gt;Substituting the derivative of velocity for acceleration, we can see that&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\textbf{F} = m \frac{d\textbf{v}}{dt}&lt;/script&gt;
-
-&lt;p&gt;But, we aren’t really going to use calculus to solve this (at least I think I’m
-pretending we aren’t for now), so lets go ahead an use
-$\frac{\Delta v}{\Delta t}$ for acceleration for now:&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\textbf{F} = m \frac{\Delta \textbf{v}}{\Delta t}&lt;/script&gt;
-
-&lt;p&gt;Do some algebra to get:&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\Delta \textbf{v} = \frac{\textbf{F}}{m} \Delta t&lt;/script&gt;
-
-&lt;p&gt;So, we know $\textbf{F}$, let’s go ahead and substitute that in, then cancel
-unneeded masses:&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\Delta \textbf{v} = \frac{ G m\_2 \hat{\textbf{r}} } { | \textbf{r} |^2 }
-\Delta t&lt;/script&gt;
-
-&lt;p&gt;So, now we can easily figure out how much the velocity of a particle should
-change in $t$ seconds, given it only has a single force acting on it.&lt;/p&gt;
-
-&lt;p&gt;So, now we can compute the particles new velocity. Since we have assumed that no
-acceleration happens during the time period.&lt;/p&gt;
-
-&lt;p&gt;###Quick Numeric Example of Something Kind of like the Above
-Let $p_1$ and $p_2$ both be particles with mass 100 kg.&lt;/p&gt;
-
-&lt;p&gt;$p_1$ is located at $(0,0)$, and $p_2$ is at $(5,5)$.&lt;/p&gt;
-
-&lt;p&gt;$p_1$ is not moving, $p_2$ has a velocity of 10 m/s in y-direction, and 10 m/s
-in x-direction.&lt;/p&gt;
-
-&lt;p&gt;We want to find where $p_2$ will be in 0.1 seconds.&lt;/p&gt;
-
-&lt;p&gt;I am not going to use the formula we just derived in this example to avoid
-dealing too much with vectors, but I will use the same process. This is the
-process my simulator used.&lt;/p&gt;
-
-&lt;p&gt;####Step 1: Find the force
-Find distance:
-&lt;script type=&quot;math/tex&quot;&gt;|\textbf{r}|^2 = \sqrt{ (5-0)^2 + (5-0)^2 } = \sqrt{50} = 5\sqrt{2}&lt;/script&gt;&lt;/p&gt;
-
-&lt;p&gt;Find magnitude of $ \textbf{F} $:
-&lt;script type=&quot;math/tex&quot;&gt;\textbf{F} = G \frac{(100)(100)}{(5\sqrt{2})^2} = G \frac{1000}{50} = 20G&lt;/script&gt;&lt;/p&gt;
-
-&lt;p&gt;To resolve components of $\textbf{F}$ we need an angle, since the triangle
-representing the force is and isosceles right triangle, the angle with respect
-to the horizontal is $ \frac{\pi}{4} $&lt;/p&gt;
-
-&lt;p&gt;Since the sine and cosine of $ \frac{\pi}{4} $ are both $\frac{\sqrt{2}}{2}$,
-we can easily get the x and y components of the force.&lt;/p&gt;
-
-&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;F\_x = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2}&lt;/script&gt;
-&lt;script type=&quot;math/tex&quot;&gt;F\_y = \textbf{F} \frac{\sqrt{2}}{2} = \frac{20G\sqrt{2}}{2} = 10G\sqrt{2}&lt;/script&gt;&lt;/p&gt;
-
-&lt;p&gt;####Step 2: Find $\Delta v$
-We know that the velocity of the particle the instant $t=0$ is
-$\langle 5,5 \rangle$. At $t=0.00001$ the velocity will be different, at
-$t=0.000001$ the velocity will be different, because our particles are always 
-accelerating. This is where we will use our (possibly foolish) assumption.
-We assumed that $ \Delta t $ is so small that the
-acceleration that occurs while $ \Delta t $ passes is so small we can ignore
-it.&lt;/p&gt;
-
-&lt;p&gt;Because of our assumption, we can do this (In components):&lt;/p&gt;
-
-&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;\Delta v\_x = \frac{F\_x}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10}&lt;/script&gt;
-&lt;script type=&quot;math/tex&quot;&gt;\Delta v\_y = \frac{F\_y}{m\_2}\Delta t = \frac{10G\sqrt{2}}{10}0.1 = G \frac{\sqrt{2}}{10}&lt;/script&gt;&lt;/p&gt;
-
-&lt;p&gt;So, the velocity of $p_2$ will need to change that much due to the force.&lt;/p&gt;
-
-&lt;p&gt;####Step 3: Find a new velocity for $p_2$&lt;/p&gt;
-
-&lt;p&gt;The initial velocity was 5 up and 5 right. This force is pulling us down and
-left, so:&lt;/p&gt;
-
-&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;V\_{x,new} = V\_x - \Delta V\_x = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999&lt;/script&gt;
-&lt;script type=&quot;math/tex&quot;&gt;V\_{y,new} = V\_y - \Delta V\_y = 10 - G \frac{\sqrt{2}}{10} \approx 9.99999&lt;/script&gt;&lt;/p&gt;
-
-&lt;p&gt;####Step 4: Find new position
-Now, since we have assumed zero acceleration in the entire time frame from $t=0$
-to $t=0.1$, we can use simple formulas to compute next locations.&lt;/p&gt;
-
-&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;x\_{new} = x\_{old} + V\_{x,new} \Delta t = 5 + 9.99999(0.01) = 5.9999&lt;/script&gt;
-&lt;script type=&quot;math/tex&quot;&gt;y\_{new} = y\_{old} + V\_{y,new} \Delta t = 5 + 9.99999(0.01) = 5.9999&lt;/script&gt;&lt;/p&gt;
-
-&lt;p&gt;So, the particle was at $(5,5)$, and it now is at $(5.9999,5.99999)$. Yay?&lt;/p&gt;
-
-&lt;p&gt;Each time-step in my simulation performed this calculation. So, it looks kind of
-like this:&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;function Timestep:
-    calculate net force on each particle
-    calclate change in velocity for each particle
-    update each particle's velocity
-    move each particle
-    repeat
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;###The assumption
-I am not sure if the technique I used to deal with the dynamic nature of the
-system is a good or bad technique. On one hand, I can see bad behavior arising
-very easily. Lets think about a correct solution for a moment.&lt;/p&gt;
-
-&lt;p&gt;Doing this correctly, with calculus, is described &lt;a href=&quot;http://hyperphysics.phy-astr.gsu.edu/hbase/avari.html&quot;&gt;here&lt;/a&gt;,
-but, I think that my technique is just an approximation of this technique. With
-sufficiently small $ \Delta t$ for each time step, I think the approximation may
-be decent. I am not sure, and have not actually worked much of this out with pen
-and paper, so everything I just said, and all of my physics may be completely
-wrong.&lt;/p&gt;
-
-&lt;p&gt;###More implementation notes
-Other than not really doing the physics correctly, my simulation had some other
-issues.&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;If a particle flew off the top, it came back into the space on the bottom,
-but, it a particle were sitting still at the top, and a particle were
-sitting still at the bottom of the space, they would not feel force “over the
-edge.” So, essentially, I defined a really weird shaped space with really
-really strange physical properties. If I were to try again, doing this
-correctly, I would probably let particles fly off the edge and cease to exist
-after doing so.&lt;/li&gt;
-  &lt;li&gt;No collision detection. If particles collided, nothing happened, they just
-flew threw each other. This is a serious problem. As particles get closer, the
-force between them increases substantially, then they collide in nature. My
-particles get really close, the force increases substantially, then they fly
-through each other and continue on their marry way.&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;###Conclusion
-If I were to do this project again, I would certainly go about it differently. I
-did not do a good job actually representing any real physics with my little toy,
-but the goals of a short “day project” are fun and learning, both of which have
-happened here. Most interesting to me is my apparent incompetence with physics.
-This represents a major hole in my knowledge and is absolutely something I need
-to work to fill. I guess I do know that I should have just gotten paper out and
-started doing this correctly with calculus, but I would really like to be able
-to determine how wrong what I just did really is. I still feel like a really
-really small $ \Delta t $ would make my approximation pretty valid, but I do not
-really know how to prove that. This is an issue with my understanding of
-physics. Alternatively, I’ve fixated so much on this idea that I don’t see what
-is really going on. In a few months I will revisit this project and will likely
-be able to tell how crazy I was when I did it (part of the reason I spent all
-this time documenting my incorrect work).&lt;/p&gt;
-
-&lt;p&gt;If you for some reason read this far, thank you for reading, maybe drop
-something in the comments?&lt;/p&gt;
-</description>
-        <pubDate>Thu, 27 Jun 2013 00:00:00 -0500</pubDate>
-        <link>http://dpzmick.com/2013/06/27/particle-simulator/</link>
-        <guid isPermaLink="true">http://dpzmick.com/2013/06/27/particle-simulator/</guid>
       </item>
     
   </channel>
