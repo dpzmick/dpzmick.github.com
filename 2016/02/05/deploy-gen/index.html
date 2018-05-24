@@ -8,7 +8,7 @@
     <meta name="description" content="making life easier for course staff">
     <meta name="author" content="David Zmick">
     <meta name="keywords" content="">
-    <link rel="canonical" href="http://dpzmick.com/2016/02/05/deploy-gen/">
+    <link rel="canonical" href="http://0.0.0.0:4000/2016/02/05/deploy-gen/">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/pixyll.css" type="text/css">
@@ -43,7 +43,7 @@
     <meta property="og:type" content="article">
     <meta property="og:title" content="CS241 Automatic Deploy Generation">
     <meta property="og:description" content="Just some dude's blog">
-    <meta property="og:url" content="http://dpzmick.com/2016/02/05/deploy-gen/">
+    <meta property="og:url" content="http://0.0.0.0:4000/2016/02/05/deploy-gen/">
     <meta property="og:site_name" content="dpzmick.com">
 
     <!-- Icons -->
@@ -68,7 +68,7 @@
     <header class="site-header px2 px-responsive">
   <div class="mt2 wrap">
     <div class="measure">
-      <a href="http://dpzmick.com" class="site-title">dpzmick.com</a>
+      <a href="http://0.0.0.0:4000" class="site-title">dpzmick.com</a>
       <nav class="site-nav right">
         <a href="/about/">About</a>
 <a href="/series/">Blog Series</a>
@@ -148,8 +148,8 @@ code as “solution code” and remove it.</p>
 
 <figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
 <span class="cp">#ifdef DEPLOY
-</span>    <span class="c1">// student code goes here
-</span>    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span>    <span class="c1">// student code goes here</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="cp">#else
 </span>    <span class="kt">int</span> <span class="n">awesome_thing</span> <span class="o">=</span> <span class="n">awesome_syscall</span><span class="p">(</span><span class="n">cryptic_argument</span><span class="p">);</span>
     <span class="k">return</span> <span class="n">awesome_thing</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">;</span>
@@ -161,8 +161,8 @@ code as “solution code” and remove it.</p>
 these <code class="highlighter-rouge">ifdef</code> guards, and you get exactly what you wanted out:</p>
 
 <figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="c1">// student code goes here
-</span>    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="c1">// student code goes here</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span></code></pre></figure>
 
 <p>We also probably want to copy over the Makefile for the assignment, but this
@@ -185,10 +185,10 @@ things. I decided to use GNU make to define these scripts.</p>
 
 <figure class="highlight"><pre><code class="language-make" data-lang="make"><span class="nl">$(DEPLOY_DIR)/%.c</span><span class="o">:</span> <span class="nf">$(DEPLOY_DIR)</span>
 	<span class="p">@</span><span class="nb">echo</span> <span class="s2">"creating"</span> <span class="nv">$@</span>
-	<span class="p">@</span>mkdir -p <span class="nf">$(</span><span class="nb">shell</span> dirname <span class="nv">$@)</span>
-	<span class="p">@</span>unifdef -DDEPLOY <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> | <span class="nv">$(FORMATTER)</span> &gt; <span class="nv">$@</span>-temp
-	<span class="p">@</span>cat <span class="nv">$(CODE_HEADER)</span> <span class="nv">$@</span>-temp | dos2unix &gt; <span class="nv">$@</span>
-	<span class="p">@</span><span class="err">rm $@-temp</span></code></pre></figure>
+	<span class="p">@</span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="nf">$(</span><span class="nb">shell</span> <span class="nb">dirname</span> <span class="nv">$@)</span>
+	<span class="p">@</span>unifdef <span class="nt">-DDEPLOY</span> <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> | <span class="nv">$(FORMATTER)</span> <span class="o">&gt;</span> <span class="nv">$@</span><span class="nt">-temp</span>
+	<span class="p">@</span><span class="nb">cat</span> <span class="nv">$(CODE_HEADER)</span> <span class="nv">$@</span><span class="nt">-temp</span> | dos2unix <span class="o">&gt;</span> <span class="nv">$@</span>
+	<span class="p">@</span><span class="nb">rm</span> <span class="nv">$@</span><span class="nt">-temp</span></code></pre></figure>
 
 <p>Any <code class="highlighter-rouge">%.c</code> target in the deploy directory, first, depends on the existence of the
 deploy directory. Then, we have to make sure the file’s directory actually
@@ -212,10 +212,10 @@ words, to generate a file <code class="highlighter-rouge">deploy/test.c</code> w
 
 <figure class="highlight"><pre><code class="language-make" data-lang="make"><span class="nl">$(DEPLOY_DIR)/%-reference</span><span class="o">:</span>
 	<span class="p">@</span><span class="nb">echo</span> <span class="s2">"making reference for"</span> <span class="nv">$@</span>
-	<span class="p">@</span>make -s -C <span class="nv">$(SOURCE_DIR)</span>
-	<span class="p">@</span>cp <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%-reference<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> <span class="nv">$@</span>
-	<span class="p">@</span>strip -s <span class="nv">$@</span>
-	<span class="p">@</span>make clean -s -C <span class="nv">$(SOURCE_DIR)</span></code></pre></figure>
+	<span class="p">@</span>make <span class="nt">-s</span> <span class="nt">-C</span> <span class="nv">$(SOURCE_DIR)</span>
+	<span class="p">@</span><span class="nb">cp</span> <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%-reference<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> <span class="nv">$@</span>
+	<span class="p">@</span>strip <span class="nt">-s</span> <span class="nv">$@</span>
+	<span class="p">@</span>make clean <span class="nt">-s</span> <span class="nt">-C</span> <span class="nv">$(SOURCE_DIR)</span></code></pre></figure>
 
 <p>We run make in the solution directory, then copy the executable with name
 given in the target into the deploy directory, then run strip.</p>
@@ -224,8 +224,8 @@ given in the target into the deploy directory, then run strip.</p>
 
 <figure class="highlight"><pre><code class="language-make" data-lang="make"><span class="nl">$(DEPLOY_DIR)/%</span><span class="o">:</span> <span class="nf">$(DEPLOY_DIR)</span>
 	<span class="p">@</span><span class="nb">echo</span> <span class="s2">"copying"</span> <span class="nv">$@</span>
-	<span class="p">@</span>mkdir -p <span class="nf">$(</span><span class="nb">shell</span> dirname <span class="nv">$@)</span>
-	<span class="p">@</span>-cp <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span><span class="err"> $@</span></code></pre></figure>
+	<span class="p">@</span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="nf">$(</span><span class="nb">shell</span> <span class="nb">dirname</span> <span class="nv">$@)</span>
+	<span class="p">@</span><span class="nt">-cp</span> <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> <span class="nv">$@</span></code></pre></figure>
 
 <p>Just copy the file. This rule comes last, so that make will fall through to this
 rule. Again, you see a bunch of text replacement going on.</p>
@@ -241,8 +241,8 @@ that’s the Makefile model).</p>
 <p>Here’s what I mean:</p>
 
 <figure class="highlight"><pre><code class="language-make" data-lang="make"><span class="c"># recursively fetch all of the C and H files in the source directory
-</span><span class="nv">C_SOURCES</span> <span class="o">:=</span> <span class="nf">$(</span><span class="nb">shell</span> find <span class="nv">$(SOURCE_DIR)</span> -name <span class="s1">'*.c'</span><span class="nv">)</span>
-<span class="nv">H_SOURCES</span> <span class="o">:=</span> <span class="nf">$(</span><span class="nb">shell</span> find <span class="nv">$(SOURCE_DIR)</span> -name <span class="s1">'*.h'</span><span class="nv">)</span>
+</span><span class="nv">C_SOURCES</span> <span class="o">:=</span> <span class="nf">$(</span><span class="nb">shell</span> find <span class="nv">$(SOURCE_DIR)</span> <span class="nt">-name</span> <span class="s1">'*.c'</span><span class="nv">)</span>
+<span class="nv">H_SOURCES</span> <span class="o">:=</span> <span class="nf">$(</span><span class="nb">shell</span> find <span class="nv">$(SOURCE_DIR)</span> <span class="nt">-name</span> <span class="s1">'*.h'</span><span class="nv">)</span>
 
 <span class="nl">.PHONY</span><span class="o">:</span> <span class="nf">all</span>
 <span class="nl">all</span><span class="o">:</span> <span class="nf">clean $(DEPLOY_DIR) code_files other_files $(REFERENCE_IMPL:%=$(DEPLOY_DIR)/%-reference)</span>
@@ -318,11 +318,11 @@ assignment.</p>
 <span class="c"># TODO run an extraneous header removal tool
 # (http://include-what-you-use.org/)
 </span>
-<span class="nv">FORMATTER</span><span class="o">=</span>clang-format -style<span class="o">=</span>llvm
+<span class="nv">FORMATTER</span><span class="o">=</span>clang-format <span class="nt">-style</span><span class="o">=</span>llvm
 
 <span class="c"># recursively fetch all of the C and H files in the source directory
-</span><span class="nv">C_SOURCES</span> <span class="o">:=</span> <span class="nf">$(</span><span class="nb">shell</span> find <span class="nv">$(SOURCE_DIR)</span> -name <span class="s1">'*.c'</span><span class="nv">)</span>
-<span class="nv">H_SOURCES</span> <span class="o">:=</span> <span class="nf">$(</span><span class="nb">shell</span> find <span class="nv">$(SOURCE_DIR)</span> -name <span class="s1">'*.h'</span><span class="nv">)</span>
+</span><span class="nv">C_SOURCES</span> <span class="o">:=</span> <span class="nf">$(</span><span class="nb">shell</span> find <span class="nv">$(SOURCE_DIR)</span> <span class="nt">-name</span> <span class="s1">'*.c'</span><span class="nv">)</span>
+<span class="nv">H_SOURCES</span> <span class="o">:=</span> <span class="nf">$(</span><span class="nb">shell</span> find <span class="nv">$(SOURCE_DIR)</span> <span class="nt">-name</span> <span class="s1">'*.h'</span><span class="nv">)</span>
 
 <span class="nv">CODE_HEADER</span><span class="o">=</span>code_header
 
@@ -341,40 +341,40 @@ assignment.</p>
 # for example, a deploy_dir/%.c file is processed with unifdef then formatted,
 # and emitted to the deploy directory
 </span><span class="nl">$(DEPLOY_DIR)</span><span class="o">:</span>
-	<span class="p">@</span>mkdir -p <span class="nv">$(DEPLOY_DIR)</span>
+	<span class="p">@</span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="nv">$(DEPLOY_DIR)</span>
 
 <span class="c"># process each of the c and header files with unifdef and a formatter
 </span><span class="nl">$(DEPLOY_DIR)/%.c</span><span class="o">:</span> <span class="nf">$(DEPLOY_DIR)</span>
 	<span class="p">@</span><span class="nb">echo</span> <span class="s2">"creating"</span> <span class="nv">$@</span>
-	<span class="p">@</span>mkdir -p <span class="nf">$(</span><span class="nb">shell</span> dirname <span class="nv">$@)</span>
-	<span class="p">@</span>unifdef -DDEPLOY <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> | <span class="nv">$(FORMATTER)</span> &gt; <span class="nv">$@</span>-temp
-	<span class="p">@</span>cat <span class="nv">$(CODE_HEADER)</span> <span class="nv">$@</span>-temp | dos2unix &gt; <span class="nv">$@</span>
-	<span class="p">@</span>rm <span class="nv">$@</span>-temp
+	<span class="p">@</span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="nf">$(</span><span class="nb">shell</span> <span class="nb">dirname</span> <span class="nv">$@)</span>
+	<span class="p">@</span>unifdef <span class="nt">-DDEPLOY</span> <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> | <span class="nv">$(FORMATTER)</span> <span class="o">&gt;</span> <span class="nv">$@</span><span class="nt">-temp</span>
+	<span class="p">@</span><span class="nb">cat</span> <span class="nv">$(CODE_HEADER)</span> <span class="nv">$@</span><span class="nt">-temp</span> | dos2unix <span class="o">&gt;</span> <span class="nv">$@</span>
+	<span class="p">@</span><span class="nb">rm</span> <span class="nv">$@</span><span class="nt">-temp</span>
 
 <span class="nl">$(DEPLOY_DIR)/%.h</span><span class="o">:</span> <span class="nf">$(DEPLOY_DIR)</span>
 	<span class="p">@</span><span class="nb">echo</span> <span class="s2">"creating"</span> <span class="nv">$@</span>
-	<span class="p">@</span>mkdir -p <span class="nf">$(</span><span class="nb">shell</span> dirname <span class="nv">$@)</span>
-	<span class="p">@</span>unifdef -DDEPLOY <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> | <span class="nv">$(FORMATTER)</span> &gt; <span class="nv">$@</span>-temp
-	<span class="p">@</span>cat <span class="nv">$(CODE_HEADER)</span> <span class="nv">$@</span>-temp | dos2unix &gt; <span class="nv">$@</span>
-	<span class="p">@</span>rm <span class="nv">$@</span>-temp
+	<span class="p">@</span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="nf">$(</span><span class="nb">shell</span> <span class="nb">dirname</span> <span class="nv">$@)</span>
+	<span class="p">@</span>unifdef <span class="nt">-DDEPLOY</span> <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> | <span class="nv">$(FORMATTER)</span> <span class="o">&gt;</span> <span class="nv">$@</span><span class="nt">-temp</span>
+	<span class="p">@</span><span class="nb">cat</span> <span class="nv">$(CODE_HEADER)</span> <span class="nv">$@</span><span class="nt">-temp</span> | dos2unix <span class="o">&gt;</span> <span class="nv">$@</span>
+	<span class="p">@</span><span class="nb">rm</span> <span class="nv">$@</span><span class="nt">-temp</span>
 
 <span class="nl">$(DEPLOY_DIR)/%-reference</span><span class="o">:</span>
 	<span class="p">@</span><span class="nb">echo</span> <span class="s2">"making reference for"</span> <span class="nv">$@</span>
-	<span class="p">@</span>make -s -C <span class="nv">$(SOURCE_DIR)</span>
-	<span class="p">@</span>cp <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%-reference<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> <span class="nv">$@</span>
-	<span class="p">@</span>strip -s <span class="nv">$@</span>
-	<span class="p">@</span>make clean -s -C <span class="nv">$(SOURCE_DIR)</span>
+	<span class="p">@</span>make <span class="nt">-s</span> <span class="nt">-C</span> <span class="nv">$(SOURCE_DIR)</span>
+	<span class="p">@</span><span class="nb">cp</span> <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%-reference<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> <span class="nv">$@</span>
+	<span class="p">@</span>strip <span class="nt">-s</span> <span class="nv">$@</span>
+	<span class="p">@</span>make clean <span class="nt">-s</span> <span class="nt">-C</span> <span class="nv">$(SOURCE_DIR)</span>
 
 <span class="c"># if we didn't catch it yet, just copy the file
 </span><span class="nl">$(DEPLOY_DIR)/%</span><span class="o">:</span> <span class="nf">$(DEPLOY_DIR)</span>
 	<span class="p">@</span><span class="nb">echo</span> <span class="s2">"copying"</span> <span class="nv">$@</span>
-	<span class="p">@</span>mkdir -p <span class="nf">$(</span><span class="nb">shell</span> dirname <span class="nv">$@)</span>
-	<span class="p">@</span>-cp <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> <span class="nv">$@</span>
+	<span class="p">@</span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="nf">$(</span><span class="nb">shell</span> <span class="nb">dirname</span> <span class="nv">$@)</span>
+	<span class="p">@</span><span class="nt">-cp</span> <span class="err">$</span><span class="o">(</span>@:<span class="nv">$(DEPLOY_DIR)</span>/%<span class="o">=</span><span class="nv">$(SOURCE_DIR)</span>/%<span class="o">)</span> <span class="nv">$@</span>
 
 <span class="nl">.PHONY</span><span class="o">:</span> <span class="nf">clean</span>
 <span class="nl">clean</span><span class="o">:</span>
 	<span class="p">@</span><span class="nb">echo</span> <span class="s2">"cleaning up old deploy directory"</span>
-	<span class="p">@</span>rm -rf <span class="nv">$(DEPLOY_DIR)</span></code></pre></figure>
+	<span class="p">@</span><span class="nb">rm</span> <span class="nt">-rf</span> <span class="nv">$(DEPLOY_DIR)</span></code></pre></figure>
 
 
 </article>

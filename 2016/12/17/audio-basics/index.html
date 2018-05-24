@@ -8,7 +8,7 @@
     <meta name="description" content="Just some dude's blog">
     <meta name="author" content="David Zmick">
     <meta name="keywords" content="">
-    <link rel="canonical" href="http://dpzmick.com/2016/12/17/audio-basics/">
+    <link rel="canonical" href="http://0.0.0.0:4000/2016/12/17/audio-basics/">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/pixyll.css" type="text/css">
@@ -43,7 +43,7 @@
     <meta property="og:type" content="article">
     <meta property="og:title" content="Audio programming 101">
     <meta property="og:description" content="Just some dude's blog">
-    <meta property="og:url" content="http://dpzmick.com/2016/12/17/audio-basics/">
+    <meta property="og:url" content="http://0.0.0.0:4000/2016/12/17/audio-basics/">
     <meta property="og:site_name" content="dpzmick.com">
 
     <!-- Icons -->
@@ -68,7 +68,7 @@
     <header class="site-header px2 px-responsive">
   <div class="mt2 wrap">
     <div class="measure">
-      <a href="http://dpzmick.com" class="site-title">dpzmick.com</a>
+      <a href="http://0.0.0.0:4000" class="site-title">dpzmick.com</a>
       <nav class="site-nav right">
         <a href="/about/">About</a>
 <a href="/series/">Blog Series</a>
@@ -263,14 +263,13 @@ Things that might block include access to the network, access to a disk, and oth
 In general, if I/O needs to be performed, it is best to perform the I/O on another thread and communicate the results to the realtime thread.
 There are some interesting subtleties to this, for example, can the following code perform I/O?</p>
 
-<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">callback</span><span class="p">(</span><span class="cm">/* args */</span><span class="p">)</span> <span class="p">{</span>
-  <span class="kt">float</span><span class="o">*</span> <span class="n">samples</span> <span class="o">=</span> <span class="c1">// get a contiguous array of samples in a nonblocking way
-</span>  <span class="k">for</span> <span class="p">(</span><span class="kt">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">callback</span><span class="p">(</span><span class="cm">/* args */</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">float</span><span class="o">*</span> <span class="n">samples</span> <span class="o">=</span> <span class="c1">// get a contiguous array of samples in a nonblocking way</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">output_sample</span><span class="p">(</span> <span class="n">samples</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="p">);</span>
   <span class="p">}</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Unfortunately, it can.
 If the array of samples is <em>extremely</em> large, the samples might not all actually be in physical memory.

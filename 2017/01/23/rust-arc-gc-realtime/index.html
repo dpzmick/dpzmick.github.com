@@ -8,7 +8,7 @@
     <meta name="description" content="Cleaning up after yourself in realtime">
     <meta name="author" content="David Zmick">
     <meta name="keywords" content="">
-    <link rel="canonical" href="http://dpzmick.com/2017/01/23/rust-arc-gc-realtime/">
+    <link rel="canonical" href="http://0.0.0.0:4000/2017/01/23/rust-arc-gc-realtime/">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/pixyll.css" type="text/css">
@@ -43,7 +43,7 @@
     <meta property="og:type" content="article">
     <meta property="og:title" content=""Garbage collection" for Rust Arc Pointers">
     <meta property="og:description" content="Just some dude's blog">
-    <meta property="og:url" content="http://dpzmick.com/2017/01/23/rust-arc-gc-realtime/">
+    <meta property="og:url" content="http://0.0.0.0:4000/2017/01/23/rust-arc-gc-realtime/">
     <meta property="og:site_name" content="dpzmick.com">
 
     <!-- Icons -->
@@ -68,7 +68,7 @@
     <header class="site-header px2 px-responsive">
   <div class="mt2 wrap">
     <div class="measure">
-      <a href="http://dpzmick.com" class="site-title">dpzmick.com</a>
+      <a href="http://0.0.0.0:4000" class="site-title">dpzmick.com</a>
       <nav class="site-nav right">
         <a href="/about/">About</a>
 <a href="/series/">Blog Series</a>
@@ -212,9 +212,9 @@ In this example, the realtime callback function says “I’m done!” to let th
 
 <p>Here’s the code:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="k">use</span> <span class="nn">std</span><span class="p">::</span><span class="n">thread</span><span class="p">;</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">use</span> <span class="nn">std</span><span class="p">::</span><span class="n">thread</span><span class="p">;</span>
 
-<span class="cp">#[derive(PartialEq)]</span>
+<span class="nd">#[derive(PartialEq)]</span>
 <span class="k">enum</span> <span class="n">CallbackStatus</span> <span class="p">{</span>
     <span class="n">Continue</span><span class="p">,</span>
     <span class="n">Shutdown</span><span class="p">,</span>
@@ -272,17 +272,15 @@ In this example, the realtime callback function says “I’m done!” to let th
     <span class="k">let</span> <span class="n">ui</span> <span class="o">=</span> <span class="nn">UIThread</span><span class="p">::</span><span class="nf">new</span><span class="p">();</span>
     <span class="nf">run_threads</span><span class="p">(</span><span class="n">rt</span><span class="p">,</span> <span class="n">ui</span><span class="p">);</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Output (one of many possible):</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>[realtime] thread started
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[realtime] thread started
 [realtime] thread shutting down
 [ui] thread started
 [ui] thread shutting down
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h2 id="sending-arcs-between-threads">Sending Arcs between threads</h2>
 <p>Now that we have an “audio library,” let’s try to make some messages and pass them between threads.</p>
@@ -291,15 +289,14 @@ In this example, the realtime callback function says “I’m done!” to let th
 We want these samples to be heap allocated and reference counted, so we wrap them in an <a href="https://doc.rust-lang.org/std/sync/struct.Arc.html"><code class="highlighter-rouge">Arc</code></a>.
 Finally, we want to leave the samples uninitialized until the UI thread sends us some, so we wrap the <code class="highlighter-rouge">Arc&lt;Samples&gt;</code> in an <a href="https://doc.rust-lang.org/std/option/enum.Option.html"><code class="highlighter-rouge">Option</code></a>.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="k">struct</span> <span class="n">RealtimeThread</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">RealtimeThread</span> <span class="p">{</span>
   <span class="n">current_samples</span><span class="p">:</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">Samples</span><span class="o">&gt;&gt;</span><span class="p">,</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Now that the realtime thread has a list of samples, we can fill in a bit of the body of the realtime callback function:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">realtime_callback</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">,</span> <span class="n">output_samples</span><span class="p">:</span> <span class="o">&amp;</span><span class="k">mut</span> <span class="n">Samples</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="n">CallbackStatus</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">realtime_callback</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">,</span> <span class="n">output_samples</span><span class="p">:</span> <span class="o">&amp;</span><span class="k">mut</span> <span class="n">Samples</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="n">CallbackStatus</span> <span class="p">{</span>
     <span class="k">self</span><span class="py">.current_samples</span><span class="nf">.as_ref</span><span class="p">()</span><span class="nf">.map</span><span class="p">(|</span><span class="n">samples</span><span class="p">|</span> <span class="p">{</span>
         <span class="c">// samples: &amp;Arc&lt;[f32; 64]&gt;</span>
         <span class="n">output_samples</span><span class="nf">.copy_from_slice</span><span class="p">(</span><span class="n">samples</span><span class="nf">.as_ref</span><span class="p">())</span>
@@ -307,15 +304,14 @@ Finally, we want to leave the samples uninitialized until the UI thread sends us
 
     <span class="nn">CallbackStatus</span><span class="p">::</span><span class="n">Continue</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>The function <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.copy_from_slice"><code class="highlighter-rouge">copy_from_slice</code></a> will <code class="highlighter-rouge">memcpy</code> the samples we are holding onto into the buffer provided by the audio library.</p>
 
 <p>Moving over to the UI thread, first, we need to be able to compute a list of samples to compute.
 Here is a function that computes 64 samples along a sine wave with a given peak amplitude:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// computes the samples needed for on cycle of a sine wave</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// computes the samples needed for on cycle of a sine wave</span>
 <span class="c">/// the volume parameter sets the audible volume of sound produced</span>
 <span class="k">fn</span> <span class="nf">compute_samples</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">volume</span><span class="p">:</span> <span class="nb">f32</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="n">Samples</span> <span class="p">{</span>
     <span class="k">assert</span><span class="o">!</span><span class="p">(</span><span class="n">volume</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">);</span>
@@ -324,21 +320,20 @@ Here is a function that computes 64 samples along a sine wave with a given peak 
     <span class="c">// we need to populate 64 samples with 1 cycle of a sine wave (arbitrary choice)</span>
     <span class="k">let</span> <span class="n">constant_factor</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span><span class="err">/</span><span class="mf">64.0</span><span class="p">)</span> <span class="o">*</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="nn">f32</span><span class="p">::</span><span class="nn">consts</span><span class="p">::</span><span class="n">PI</span><span class="p">;</span>
     <span class="k">let</span> <span class="k">mut</span> <span class="n">samples</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">;</span> <span class="mi">64</span><span class="p">];</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span><span class="err">..</span><span class="mi">64</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span><span class="o">..</span><span class="mi">64</span> <span class="p">{</span>
         <span class="n">samples</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">constant_factor</span> <span class="o">*</span> <span class="n">i</span> <span class="k">as</span> <span class="nb">f32</span><span class="p">)</span><span class="nf">.sin</span><span class="p">()</span> <span class="o">*</span> <span class="n">volume</span><span class="p">;</span>
     <span class="p">}</span>
 
     <span class="n">samples</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>The UI thread will generate some fake events, and compute samples for these events:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// All of the UI thread code</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// All of the UI thread code</span>
 <span class="k">fn</span> <span class="nf">run</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">{</span>
     <span class="c">// create 5 "ui events"</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span><span class="err">..</span><span class="mi">5</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span><span class="o">..</span><span class="mi">5</span> <span class="p">{</span>
         <span class="k">let</span> <span class="n">volume</span> <span class="o">=</span> <span class="n">i</span> <span class="k">as</span> <span class="nb">f32</span> <span class="err">/</span> <span class="mf">10.0</span><span class="p">;</span>
         <span class="k">let</span> <span class="n">samples</span> <span class="o">=</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="k">self</span><span class="nf">.compute_samples</span><span class="p">(</span><span class="n">volume</span><span class="p">));</span>
 
@@ -347,8 +342,7 @@ Here is a function that computes 64 samples along a sine wave with a given peak 
 
     <span class="c">// tell the other thread to shutdown</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Now that we’ve done all of that, we need to send the samples between threads.</p>
 
@@ -356,12 +350,11 @@ Here is a function that computes 64 samples along a sine wave with a given peak 
 
 <p>As discussed previously, we will create the <code class="highlighter-rouge">Arc</code> on the UI thread, then send it to the realtime thread.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="k">enum</span> <span class="n">Message</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">enum</span> <span class="n">Message</span> <span class="p">{</span>
     <span class="nf">NewSamples</span><span class="p">(</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">Samples</span><span class="o">&gt;</span><span class="p">),</span>
     <span class="n">Shutdown</span><span class="p">,</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Remember when I said that we would make a bunch of assumptions about the <code class="highlighter-rouge">mpsc</code> queues?
 Here’s where I’m going to do that.
@@ -389,18 +382,17 @@ Whenever a message is placed on <code class="highlighter-rouge">tx</code> it wil
 <p>Then, we let each of our threads take ownership of the appropriate channel.
 We give <code class="highlighter-rouge">rx</code> to the <code class="highlighter-rouge">RealtimeThread</code>, because it will receive messages, and <code class="highlighter-rouge">tx</code> to the <code class="highlighter-rouge">UIThread</code>, because it will be sending them.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
     <span class="k">let</span> <span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">rx</span><span class="p">)</span> <span class="o">=</span> <span class="nn">mpsc</span><span class="p">::</span><span class="nf">sync_channel</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
     <span class="k">let</span> <span class="n">rt</span> <span class="o">=</span> <span class="nn">RealtimeThread</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">rx</span><span class="p">);</span>
     <span class="k">let</span> <span class="n">ui</span> <span class="o">=</span> <span class="nn">UIThread</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">tx</span><span class="p">);</span>
     <span class="nf">run_threads</span><span class="p">(</span><span class="n">rt</span><span class="p">,</span> <span class="n">ui</span><span class="p">);</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Then, modify both thread structs and both <code class="highlighter-rouge">new</code> functions.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="k">struct</span> <span class="n">RealtimeThread</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">RealtimeThread</span> <span class="p">{</span>
     <span class="n">current_samples</span><span class="p">:</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">Samples</span><span class="o">&gt;&gt;</span><span class="p">,</span>
     <span class="n">incoming</span><span class="p">:</span>        <span class="nn">mpsc</span><span class="p">::</span><span class="n">Receiver</span><span class="o">&lt;</span><span class="n">Message</span><span class="o">&gt;</span><span class="p">,</span>
 <span class="p">}</span>
@@ -412,16 +404,15 @@ We give <code class="highlighter-rouge">rx</code> to the <code class="highlighte
 <span class="p">}</span>
 
 <span class="c">// changes to new omitted</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Now, let’s get our threads sending messages, starting with the UI thread.
 If any sends fails, something has gone horribly wrong, so its fine to <code class="highlighter-rouge">unwrap</code> the result of these sends.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// All of the UI thread code</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// All of the UI thread code</span>
 <span class="k">fn</span> <span class="nf">run</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">{</span>
     <span class="c">// create 10 "ui events"</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span><span class="err">..</span><span class="mi">10</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span><span class="o">..</span><span class="mi">10</span> <span class="p">{</span>
         <span class="k">let</span> <span class="n">volume</span> <span class="o">=</span> <span class="n">i</span> <span class="k">as</span> <span class="nb">f32</span> <span class="err">/</span> <span class="mf">10.0</span><span class="p">;</span>
         <span class="k">let</span> <span class="n">samples</span> <span class="o">=</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="k">self</span><span class="nf">.compute_samples</span><span class="p">(</span><span class="n">volume</span><span class="p">));</span>
 
@@ -433,14 +424,13 @@ If any sends fails, something has gone horribly wrong, so its fine to <code clas
     <span class="c">// tell the other thread to shutdown</span>
     <span class="k">self</span><span class="py">.outgoing</span><span class="nf">.send</span><span class="p">(</span><span class="nn">Message</span><span class="p">::</span><span class="n">Shutdown</span><span class="p">)</span><span class="nf">.unwrap</span><span class="p">();</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>In the realtime thread, we check if there is a new message on the queue.
 If there is, handle it.
 If not, just keep doing what we were doing.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// realtime callback, called to get the list of samples</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// realtime callback, called to get the list of samples</span>
 <span class="k">fn</span> <span class="nf">realtime_callback</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">,</span> <span class="n">output_samples</span><span class="p">:</span> <span class="o">&amp;</span><span class="k">mut</span> <span class="n">Samples</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="n">CallbackStatus</span> <span class="p">{</span>
     <span class="k">match</span> <span class="k">self</span><span class="py">.incoming</span><span class="nf">.try_recv</span><span class="p">()</span> <span class="p">{</span>
         <span class="c">// we've received a messaged</span>
@@ -466,8 +456,7 @@ If not, just keep doing what we were doing.</p>
 
     <span class="nn">CallbackStatus</span><span class="p">::</span><span class="n">Continue</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>I’ve used a <code class="highlighter-rouge">println!</code> here only for the sake of demonstration.
 You shouldn’t ever do this in real realtime code (because print statements usually allocate!)</p>
@@ -476,7 +465,7 @@ You shouldn’t ever do this in real realtime code (because print statements usu
 It might timeout if you try running it. If you see any messages about timeout, don’t worry, just try running the code again.</p>
 
 <p>Here is an example output:</p>
-<div class="highlighter-rouge"><pre class="highlight"><code>[realtime] thread started
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[realtime] thread started
 [ui] thread started
 [ui] sending new samples. Second sample: 0
 [realtime] received new samples. Second sample: 0
@@ -490,33 +479,30 @@ It might timeout if you try running it. If you see any messages about timeout, d
 [realtime] received new samples. Second sample: 0.03920686
 [realtime] thread shutting down
 [ui] thread shutting down
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h2 id="problems">Problems?</h2>
 <p>The last example <em>seems</em> to do the right thing, let’s take a look at what the realtime callback does when it receives a new set of samples.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">// ...</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// ...</span>
 <span class="nn">Message</span><span class="p">::</span><span class="nf">NewSamples</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="k">=&gt;</span> <span class="p">{</span>
     <span class="k">self</span><span class="py">.current_samples</span> <span class="o">=</span> <span class="nf">Some</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
 <span class="p">},</span>
 <span class="c">// ...</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>What happens to the old array of samples?
 Rust will insert a call to <code class="highlighter-rouge">drop</code> here, because the old value has just gone out of scope.
 Something like this (in pseudo-Rust) sort of shows what is going on.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">// ...</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// ...</span>
 <span class="nn">Message</span><span class="p">::</span><span class="nf">NewSamples</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="k">=&gt;</span> <span class="p">{</span>
     <span class="k">let</span> <span class="n">tmp</span> <span class="o">=</span> <span class="nf">Some</span><span class="p">(</span><span class="n">samples</span><span class="p">);</span>
     <span class="nn">mem</span><span class="p">::</span><span class="nf">swap</span><span class="p">(</span><span class="k">self</span><span class="py">.current_samples</span><span class="p">,</span> <span class="n">tmp</span><span class="p">);</span>
     <span class="k">drop</span><span class="p">(</span><span class="n">tmp</span><span class="p">);</span>
 <span class="p">},</span>
 <span class="c">// ...</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>When an <code class="highlighter-rouge">Arc</code> gets <code class="highlighter-rouge">drop</code>ped, what happens?
 Let’s refer to the docs for <code class="highlighter-rouge">drop</code>.</p>
@@ -534,12 +520,12 @@ We can’t let our realtime callback perform memory allocation.</p>
 <p>We now need to build the GC that I promised we would build, to clean up after us, outside of the realtime thread.
 Sneak peak, once the GC is implemented, all we have to change is <code class="highlighter-rouge">UIThread::run</code>, in a very small way:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// All of the UI thread code</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// All of the UI thread code</span>
 <span class="k">fn</span> <span class="nf">run</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">let</span> <span class="k">mut</span> <span class="n">gc</span> <span class="o">=</span> <span class="nn">GC</span><span class="p">::</span><span class="nf">new</span><span class="p">();</span> <span class="c">// + NEW LINE</span>
 
     <span class="c">// create 5 "ui events"</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span><span class="err">..</span><span class="mi">5</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span><span class="o">..</span><span class="mi">5</span> <span class="p">{</span>
         <span class="k">let</span> <span class="n">volume</span> <span class="o">=</span> <span class="n">i</span> <span class="k">as</span> <span class="nb">f32</span> <span class="err">/</span> <span class="mf">5.0</span><span class="p">;</span>
         <span class="k">let</span> <span class="n">samples</span> <span class="o">=</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="k">self</span><span class="nf">.compute_samples</span><span class="p">(</span><span class="n">volume</span><span class="p">));</span>
         <span class="k">self</span><span class="py">.collector</span><span class="nf">.track</span><span class="p">(</span><span class="n">samples</span><span class="nf">.clone</span><span class="p">());</span> <span class="c">// + NEW LINE</span>
@@ -552,12 +538,11 @@ Sneak peak, once the GC is implemented, all we have to change is <code class="hi
     <span class="c">// tell the other thread to shutdown</span>
     <span class="k">self</span><span class="py">.outgoing</span><span class="nf">.send</span><span class="p">(</span><span class="nn">Message</span><span class="p">::</span><span class="n">Shutdown</span><span class="p">)</span><span class="nf">.unwrap</span><span class="p">();</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>With that in mind, lets sketch out the interface for the Garbage Collector.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
 <span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="c">// ...</span>
 <span class="p">}</span>
@@ -575,14 +560,13 @@ Sneak peak, once the GC is implemented, all we have to change is <code class="hi
     <span class="p">}</span>
 <span class="p">}</span>
 
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>First think about the <code class="highlighter-rouge">track</code> method.
 All this method needs to do is move it’s argument into some list (vector) of pointers.
 We will keep this vector in the GC thread struct so that each of the references will live until the GC thread is shut down or until the GC drops them.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">pool</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="p">,</span>
 <span class="p">}</span>
 
@@ -593,23 +577,21 @@ We will keep this vector in the GC thread struct so that each of the references 
         <span class="k">self</span><span class="py">.pool</span><span class="nf">.push</span><span class="p">(</span><span class="n">t</span><span class="p">);</span>
     <span class="p">}</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Now lets think about the garbage collection logic.
 Since we have a <code class="highlighter-rouge">Vec&lt;Arc&lt;T&gt;&gt;</code>, we will want to iterate over it, removing any elements which meet (or fail) a condition.
 We can use <code class="highlighter-rouge">Vec::retain</code> to do this.
 Something like the following might work:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="n">pool</span><span class="nf">.retain</span><span class="p">(|</span><span class="n">e</span><span class="p">|</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pool</span><span class="nf">.retain</span><span class="p">(|</span><span class="n">e</span><span class="p">|</span> <span class="p">{</span>
     <span class="k">if</span> <span class="cm">/* has more than one reference */</span> <span class="p">{</span>
         <span class="k">return</span> <span class="k">true</span>
     <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
         <span class="k">return</span> <span class="k">false</span>
     <span class="p">}</span>
 <span class="p">})</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Looking at the <a href="https://doc.rust-lang.org/std/sync/struct.Arc.html"><code class="highlighter-rouge">Arc</code> docs</a>, there are a few ways we can figure out if the <code class="highlighter-rouge">Arc</code> has only one remaining reference:</p>
 <ul>
@@ -621,22 +603,21 @@ Something like the following might work:</p>
 <p>We don’t have lots of options, so I’m going to go ahead and use <code class="highlighter-rouge">Arc::strong_count</code>.
 This is (for now) the most natural way to solve the problem:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="n">pool</span><span class="nf">.retain</span><span class="p">(|</span><span class="n">e</span><span class="p">:</span> <span class="nb">Arc</span><span class="o">&lt;</span><span class="n">_</span><span class="o">&gt;</span><span class="p">|</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pool</span><span class="nf">.retain</span><span class="p">(|</span><span class="n">e</span><span class="p">:</span> <span class="nb">Arc</span><span class="o">&lt;</span><span class="n">_</span><span class="o">&gt;</span><span class="p">|</span> <span class="p">{</span>
     <span class="k">if</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">strong_count</span><span class="p">(</span><span class="o">&amp;</span><span class="n">e</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">return</span> <span class="k">true</span>
     <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
         <span class="k">return</span> <span class="k">false</span>
     <span class="p">}</span>
 <span class="p">})</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Let’s move on to <code class="highlighter-rouge">new</code>.
 The <code class="highlighter-rouge">new</code> method needs to start new thread which will run the <code class="highlighter-rouge">pool.retain</code> thing every once and a while.
 We also need to hold on to a thread handle so that we can eventually join the thread.
 The join handle is wrapped in an <code class="highlighter-rouge">Option</code>, we will see why quite a bit later.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
 <span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">pool</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="p">,</span>
     <span class="n">thread</span><span class="p">:</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nn">thread</span><span class="p">::</span><span class="n">JoinHandle</span><span class="o">&lt;</span><span class="p">()</span><span class="o">&gt;&gt;</span><span class="p">,</span>
@@ -688,18 +669,17 @@ The join handle is wrapped in an <code class="highlighter-rouge">Option</code>, 
     <span class="k">let</span> <span class="n">ui</span> <span class="o">=</span> <span class="nn">UIThread</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">tx</span><span class="p">);</span>
     <span class="nf">run_threads</span><span class="p">(</span><span class="n">rt</span><span class="p">,</span> <span class="n">ui</span><span class="p">);</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>We’ve written a bunch of new code, better make sure it compiles (<a href="https://play.rust-lang.org/?gist=0740c7896b0dd8c37e1d57aa9e53ca0b&amp;version=stable&amp;backtrace=0">Rust playground</a>):</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="n">error</span><span class="p">[</span><span class="n">E0277</span><span class="p">]:</span> <span class="n">the</span> <span class="k">trait</span> <span class="n">bound</span> <span class="err">`</span><span class="n">T</span><span class="p">:</span> <span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="nb">Send</span><span class="err">`</span> <span class="n">is</span> <span class="n">not</span> <span class="n">satisfied</span>
-   <span class="o">-</span><span class="k">-&gt;</span> <span class="o">&lt;</span><span class="n">anon</span><span class="o">&gt;</span><span class="p">:</span><span class="mi">154</span><span class="p">:</span><span class="mi">25</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">error</span><span class="p">[</span><span class="n">E0277</span><span class="p">]:</span> <span class="n">the</span> <span class="k">trait</span> <span class="n">bound</span> <span class="err">`</span><span class="n">T</span><span class="p">:</span> <span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="nb">Send</span><span class="err">`</span> <span class="n">is</span> <span class="n">not</span> <span class="n">satisfied</span>
+   <span class="err">-</span><span class="k">-&gt;</span> <span class="o">&lt;</span><span class="n">anon</span><span class="o">&gt;</span><span class="p">:</span><span class="mi">154</span><span class="p">:</span><span class="mi">25</span>
     <span class="p">|</span>
 <span class="mi">154</span> <span class="p">|</span>         <span class="k">let</span> <span class="n">gc_thread</span> <span class="o">=</span> <span class="nn">thread</span><span class="p">::</span><span class="nf">spawn</span><span class="p">(</span><span class="n">gc</span><span class="p">);</span>
     <span class="p">|</span>                         <span class="o">^^^^^^^^^^^^^</span> <span class="n">the</span> <span class="k">trait</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="nb">Send</span><span class="err">`</span> <span class="n">is</span> <span class="n">not</span> <span class="n">implemented</span> <span class="k">for</span> <span class="err">`</span><span class="n">T</span><span class="err">`</span>
     <span class="p">|</span>
-    <span class="o">=</span> <span class="n">help</span><span class="p">:</span> <span class="n">consider</span> <span class="n">adding</span> <span class="n">a</span> <span class="err">`</span><span class="n">where</span> <span class="n">T</span><span class="p">:</span> <span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="nb">Send</span><span class="err">`</span> <span class="n">bound</span>
+    <span class="o">=</span> <span class="n">help</span><span class="p">:</span> <span class="n">consider</span> <span class="n">adding</span> <span class="n">a</span> <span class="err">`</span><span class="k">where</span> <span class="n">T</span><span class="p">:</span> <span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="nb">Send</span><span class="err">`</span> <span class="n">bound</span>
     <span class="o">=</span> <span class="n">note</span><span class="p">:</span> <span class="n">required</span> <span class="n">because</span> <span class="n">of</span> <span class="n">the</span> <span class="n">requirements</span> <span class="n">on</span> <span class="n">the</span> <span class="k">impl</span> <span class="n">of</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="nb">Send</span><span class="err">`</span> <span class="k">for</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">sync</span><span class="p">::</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="err">`</span>
     <span class="o">=</span> <span class="n">note</span><span class="p">:</span> <span class="n">required</span> <span class="n">because</span> <span class="n">of</span> <span class="n">the</span> <span class="n">requirements</span> <span class="n">on</span> <span class="n">the</span> <span class="k">impl</span> <span class="n">of</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="nb">Send</span><span class="err">`</span> <span class="k">for</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">ptr</span><span class="p">::</span><span class="n">Unique</span><span class="o">&lt;</span><span class="nn">std</span><span class="p">::</span><span class="nn">sync</span><span class="p">::</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="err">`</span>
     <span class="o">=</span> <span class="n">note</span><span class="p">:</span> <span class="n">required</span> <span class="n">because</span> <span class="n">it</span> <span class="n">appears</span> <span class="n">within</span> <span class="n">the</span> <span class="k">type</span> <span class="err">`</span><span class="nn">alloc</span><span class="p">::</span><span class="nn">raw_vec</span><span class="p">::</span><span class="n">RawVec</span><span class="o">&lt;</span><span class="nn">std</span><span class="p">::</span><span class="nn">sync</span><span class="p">::</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="err">`</span>
@@ -709,12 +689,12 @@ The join handle is wrapped in an <code class="highlighter-rouge">Option</code>, 
     <span class="o">=</span> <span class="n">note</span><span class="p">:</span> <span class="n">required</span> <span class="n">by</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">thread</span><span class="p">::</span><span class="n">spawn</span><span class="err">`</span>
 
 <span class="n">error</span><span class="p">[</span><span class="n">E0277</span><span class="p">]:</span> <span class="n">the</span> <span class="k">trait</span> <span class="n">bound</span> <span class="err">`</span><span class="n">T</span><span class="p">:</span> <span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="n">Sync</span><span class="err">`</span> <span class="n">is</span> <span class="n">not</span> <span class="n">satisfied</span>
-   <span class="o">-</span><span class="k">-&gt;</span> <span class="o">&lt;</span><span class="n">anon</span><span class="o">&gt;</span><span class="p">:</span><span class="mi">154</span><span class="p">:</span><span class="mi">25</span>
+   <span class="err">-</span><span class="k">-&gt;</span> <span class="o">&lt;</span><span class="n">anon</span><span class="o">&gt;</span><span class="p">:</span><span class="mi">154</span><span class="p">:</span><span class="mi">25</span>
     <span class="p">|</span>
 <span class="mi">154</span> <span class="p">|</span>         <span class="k">let</span> <span class="n">gc_thread</span> <span class="o">=</span> <span class="nn">thread</span><span class="p">::</span><span class="nf">spawn</span><span class="p">(</span><span class="n">gc</span><span class="p">);</span>
     <span class="p">|</span>                         <span class="o">^^^^^^^^^^^^^</span> <span class="n">the</span> <span class="k">trait</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="n">Sync</span><span class="err">`</span> <span class="n">is</span> <span class="n">not</span> <span class="n">implemented</span> <span class="k">for</span> <span class="err">`</span><span class="n">T</span><span class="err">`</span>
     <span class="p">|</span>
-    <span class="o">=</span> <span class="n">help</span><span class="p">:</span> <span class="n">consider</span> <span class="n">adding</span> <span class="n">a</span> <span class="err">`</span><span class="n">where</span> <span class="n">T</span><span class="p">:</span> <span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="n">Sync</span><span class="err">`</span> <span class="n">bound</span>
+    <span class="o">=</span> <span class="n">help</span><span class="p">:</span> <span class="n">consider</span> <span class="n">adding</span> <span class="n">a</span> <span class="err">`</span><span class="k">where</span> <span class="n">T</span><span class="p">:</span> <span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="n">Sync</span><span class="err">`</span> <span class="n">bound</span>
     <span class="o">=</span> <span class="n">note</span><span class="p">:</span> <span class="n">required</span> <span class="n">because</span> <span class="n">of</span> <span class="n">the</span> <span class="n">requirements</span> <span class="n">on</span> <span class="n">the</span> <span class="k">impl</span> <span class="n">of</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="nb">Send</span><span class="err">`</span> <span class="k">for</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">sync</span><span class="p">::</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="err">`</span>
     <span class="o">=</span> <span class="n">note</span><span class="p">:</span> <span class="n">required</span> <span class="n">because</span> <span class="n">of</span> <span class="n">the</span> <span class="n">requirements</span> <span class="n">on</span> <span class="n">the</span> <span class="k">impl</span> <span class="n">of</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">marker</span><span class="p">::</span><span class="nb">Send</span><span class="err">`</span> <span class="k">for</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">ptr</span><span class="p">::</span><span class="n">Unique</span><span class="o">&lt;</span><span class="nn">std</span><span class="p">::</span><span class="nn">sync</span><span class="p">::</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="err">`</span>
     <span class="o">=</span> <span class="n">note</span><span class="p">:</span> <span class="n">required</span> <span class="n">because</span> <span class="n">it</span> <span class="n">appears</span> <span class="n">within</span> <span class="n">the</span> <span class="k">type</span> <span class="err">`</span><span class="nn">alloc</span><span class="p">::</span><span class="nn">raw_vec</span><span class="p">::</span><span class="n">RawVec</span><span class="o">&lt;</span><span class="nn">std</span><span class="p">::</span><span class="nn">sync</span><span class="p">::</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="err">`</span>
@@ -724,8 +704,7 @@ The join handle is wrapped in an <code class="highlighter-rouge">Option</code>, 
     <span class="o">=</span> <span class="n">note</span><span class="p">:</span> <span class="n">required</span> <span class="n">by</span> <span class="err">`</span><span class="nn">std</span><span class="p">::</span><span class="nn">thread</span><span class="p">::</span><span class="n">spawn</span><span class="err">`</span>
 
 <span class="n">error</span><span class="p">:</span> <span class="n">aborting</span> <span class="n">due</span> <span class="n">to</span> <span class="mi">2</span> <span class="n">previous</span> <span class="n">errors</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Oops, this isn’t good.
 This error makes it feel sort of like Rust hates us, but the compiler is actually doing us a massive favor.</p>
@@ -741,7 +720,7 @@ For more info, you can read <a href="http://huonw.github.io/blog/2015/02/some-no
 
 <p>I know that <code class="highlighter-rouge">T</code> must be <code class="highlighter-rouge">Send</code>, because it has to be sent between threads, so let’s go ahead and add that restriction:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
 <span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">pool</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="p">,</span>
     <span class="n">thread</span><span class="p">:</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nn">thread</span><span class="p">::</span><span class="n">JoinHandle</span><span class="o">&lt;</span><span class="p">()</span><span class="o">&gt;&gt;</span><span class="p">,</span>
@@ -749,8 +728,7 @@ For more info, you can read <a href="http://huonw.github.io/blog/2015/02/some-no
 
 <span class="k">impl</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span><span class="o">&gt;</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
 <span class="c">// ....</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p><a href="https://play.rust-lang.org/?gist=4f718d3a1795409d67894a8f4f86f010&amp;version=stable&amp;backtrace=0">Rust playground link</a></p>
 
@@ -758,7 +736,7 @@ For more info, you can read <a href="http://huonw.github.io/blog/2015/02/some-no
 Unfortunately, we still have the issue with <code class="highlighter-rouge">Sync</code>.
 Let’s look more closely at the error we are getting:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>error[E0277]: the trait bound `T: std::marker::Sync` is not satisfied
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>error[E0277]: the trait bound `T: std::marker::Sync` is not satisfied
    --&gt; &lt;anon&gt;:154:25
     |
 154 |         let gc_thread = thread::spawn(gc);
@@ -774,8 +752,7 @@ Let’s look more closely at the error we are getting:</p>
     = note: required by `std::thread::spawn`
 
 error: aborting due to previous error
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>This error is really confusing, and my solution for it is not going to be much better, but stick with me.</p>
 
@@ -796,13 +773,12 @@ When the GC thread frees the memory holding the data, we know that there will be
 <p>I might be wrong about this (please let me know if I am), but I think that we don’t actually <em>need</em> the type <code class="highlighter-rouge">T</code> to be <code class="highlighter-rouge">Sync</code>.
 The compiler will never let us get away with this (because it doesn’t know all of these properties) but we can let it know that it should trust us, with a new struct:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="k">struct</span> <span class="n">TrustMe</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">TrustMe</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="k">pub</span> <span class="n">inner</span><span class="p">:</span> <span class="n">T</span>
 <span class="p">}</span>
 
 <span class="k">unsafe</span> <span class="k">impl</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nb">Send</span> <span class="k">for</span> <span class="n">TrustMe</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>This will tell the compiler “yes, this thing is <code class="highlighter-rouge">Send</code>”, even when it actually isn’t, so the implementation of the trait <code class="highlighter-rouge">Send</code> is unsafe.</p>
 
@@ -810,7 +786,7 @@ The compiler will never let us get away with this (because it doesn’t know all
 
 <p>Now, lets add this to our GC:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
 <span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">pool</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="n">TrustMe</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;&gt;</span><span class="p">,</span>
     <span class="n">thread</span><span class="p">:</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nn">thread</span><span class="p">::</span><span class="n">JoinHandle</span><span class="o">&lt;</span><span class="p">()</span><span class="o">&gt;&gt;</span><span class="p">,</span>
@@ -856,8 +832,7 @@ The compiler will never let us get away with this (because it doesn’t know all
         <span class="k">self</span><span class="py">.pool</span><span class="nf">.push</span><span class="p">(</span><span class="n">t</span><span class="p">);</span>
     <span class="p">}</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p><a href="https://play.rust-lang.org/?gist=b23d5e7a7541eda3096daac685d309bf&amp;version=stable&amp;backtrace=0">Rust Playground Link</a></p>
 
@@ -877,20 +852,19 @@ This condition just means that they might live that long.</p>
 
 <p>Anyway, we can now add the <code class="highlighter-rouge">+ 'static</code> specifier the compiler has asked us to add, and try to compile this one more time.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
-<span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="err">'</span><span class="k">static</span><span class="o">&gt;</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="nv">'static</span><span class="o">&gt;</span> <span class="p">{</span>
 
 <span class="c">// ...</span>
 
-<span class="k">impl</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="err">'</span><span class="k">static</span><span class="o">&gt;</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
+<span class="k">impl</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="nv">'static</span><span class="o">&gt;</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
 
 <span class="c">// ...</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>GUESS WHAT IT DIDN’T WORK.</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>error[E0373]: closure may outlive the current function, but it borrows `pool`, which is owned by the current function
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>error[E0373]: closure may outlive the current function, but it borrows `pool`, which is owned by the current function
    --&gt; &lt;anon&gt;:149:18
     |
 149 |         let gc = || {
@@ -903,8 +877,7 @@ help: to force the closure to take ownership of `pool` (and any other referenced
     |         let gc = move || {
 
 error: aborting due to previous error
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Once again, this is a good thing, I promise!
 Now, the compiler is trying to tell us that the vector named <code class="highlighter-rouge">pool</code> is being accessed from two different places.
@@ -918,19 +891,19 @@ The <code class="highlighter-rouge">Arc</code> allows us to create one instance 
 
 <p>Here are most of the changes:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">// introduce some news type aliases to make life a little bit easier</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// introduce some news type aliases to make life a little bit easier</span>
 <span class="k">type</span> <span class="n">TrustedArc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">TrustMe</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="p">;</span>
 <span class="k">type</span> <span class="n">ArcPool</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="n">TrustedArc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="p">;</span>
 
 <span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
-<span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="err">'</span><span class="k">static</span><span class="o">&gt;</span> <span class="p">{</span>
+<span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="nv">'static</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">pool</span><span class="p">:</span> <span class="n">Mutex</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">ArcPool</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;&gt;</span><span class="p">,</span>
     <span class="n">thread</span><span class="p">:</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nn">thread</span><span class="p">::</span><span class="n">JoinHandle</span><span class="o">&lt;</span><span class="p">()</span><span class="o">&gt;&gt;</span><span class="p">,</span>
 <span class="p">}</span>
 
 <span class="c">// ...</span>
 
-<span class="k">impl</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="err">'</span><span class="k">static</span><span class="o">&gt;</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
+<span class="k">impl</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="nv">'static</span><span class="o">&gt;</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="c">// ...</span>
     <span class="k">pub</span> <span class="k">fn</span> <span class="nf">new</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="n">Self</span> <span class="p">{</span>
         <span class="k">let</span> <span class="n">pool</span> <span class="o">=</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="nn">Mutex</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="nn">Vec</span><span class="p">::</span><span class="nf">new</span><span class="p">()));</span>
@@ -966,8 +939,7 @@ The <code class="highlighter-rouge">Arc</code> allows us to create one instance 
         <span class="n">pool</span><span class="nf">.push</span><span class="p">(</span><span class="n">t</span><span class="p">);</span>
     <span class="p">}</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>We can finally compile this!
 Here’s a link to the <a href="https://play.rust-lang.org/?gist=7f41622e104d07f9b106495c2a5373a7&amp;version=nightly&amp;backtrace=0">Rust playground</a>.
@@ -986,7 +958,7 @@ Now, if one of the previously tracked <code class="highlighter-rouge">Arc</code>
 
 <p>First, edit main:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
     <span class="c">// start the collector</span>
     <span class="k">let</span> <span class="n">collector</span> <span class="o">=</span> <span class="nn">GC</span><span class="p">::</span><span class="nf">new</span><span class="p">();</span>
 
@@ -1002,12 +974,11 @@ Now, if one of the previously tracked <code class="highlighter-rouge">Arc</code>
 
     <span class="c">// GC thread will be shutdown here, where the GC goes out of scope</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Then, edit the <code class="highlighter-rouge">UIThread</code> struct appropriately.</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
 <span class="k">struct</span> <span class="n">UIThread</span> <span class="p">{</span>
     <span class="n">outgoing</span><span class="p">:</span> <span class="nn">mpsc</span><span class="p">::</span><span class="n">SyncSender</span><span class="o">&lt;</span><span class="n">Message</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="n">collector</span><span class="p">:</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">Samples</span><span class="o">&gt;</span>
@@ -1020,15 +991,14 @@ Now, if one of the previously tracked <code class="highlighter-rouge">Arc</code>
 
     <span class="c">// ...</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Next, update the <code class="highlighter-rouge">UIThread::run</code> method:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code>    <span class="c">/// All of the UI thread code</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c">/// All of the UI thread code</span>
     <span class="k">fn</span> <span class="nf">run</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">{</span>
         <span class="c">// create 5 "ui events"</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span><span class="err">..</span><span class="mi">5</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span><span class="o">..</span><span class="mi">5</span> <span class="p">{</span>
             <span class="k">let</span> <span class="n">volume</span> <span class="o">=</span> <span class="n">i</span> <span class="k">as</span> <span class="nb">f32</span> <span class="err">/</span> <span class="mf">5.0</span><span class="p">;</span>
             <span class="k">let</span> <span class="n">samples</span> <span class="o">=</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="k">self</span><span class="nf">.compute_samples</span><span class="p">(</span><span class="n">volume</span><span class="p">));</span>
 
@@ -1043,8 +1013,7 @@ Now, if one of the previously tracked <code class="highlighter-rouge">Arc</code>
         <span class="c">// tell the other thread to shutdown</span>
         <span class="k">self</span><span class="py">.outgoing</span><span class="nf">.send</span><span class="p">(</span><span class="nn">Message</span><span class="p">::</span><span class="n">Shutdown</span><span class="p">)</span><span class="nf">.unwrap</span><span class="p">();</span>
     <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h2 id="drop-the-gc">Drop the GC</h2>
 
@@ -1054,8 +1023,8 @@ We also set up a shared atomic boolean to indicate when the GC thread should shu
 
 <p>Here is most of that:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
-<span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="err">'</span><span class="k">static</span><span class="o">&gt;</span> <span class="p">{</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<span class="k">struct</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="nv">'static</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">pool</span><span class="p">:</span> <span class="nb">Arc</span><span class="o">&lt;</span><span class="n">Mutex</span><span class="o">&lt;</span><span class="n">ArcPool</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;&gt;</span><span class="p">,</span>
     <span class="n">thread</span><span class="p">:</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nn">thread</span><span class="p">::</span><span class="n">JoinHandle</span><span class="o">&lt;</span><span class="p">()</span><span class="o">&gt;&gt;</span><span class="p">,</span>
     <span class="n">running</span><span class="p">:</span> <span class="nb">Arc</span><span class="o">&lt;</span><span class="n">AtomicBool</span><span class="o">&gt;</span><span class="p">,</span>
@@ -1065,7 +1034,7 @@ We also set up a shared atomic boolean to indicate when the GC thread should shu
 
 <span class="c">// ....</span>
 
-<span class="k">impl</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="err">'</span><span class="k">static</span><span class="o">&gt;</span> <span class="n">Drop</span> <span class="k">for</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
+<span class="k">impl</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">Send</span> <span class="o">+</span> <span class="nv">'static</span><span class="o">&gt;</span> <span class="n">Drop</span> <span class="k">for</span> <span class="n">GC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="k">fn</span> <span class="k">drop</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">self</span><span class="py">.running</span><span class="nf">.store</span><span class="p">(</span><span class="k">false</span><span class="p">,</span> <span class="nn">Ordering</span><span class="p">::</span><span class="n">Relaxed</span><span class="p">);</span>
         <span class="k">match</span> <span class="k">self</span><span class="py">.thread</span><span class="nf">.take</span><span class="p">()</span> <span class="p">{</span>
@@ -1074,15 +1043,14 @@ We also set up a shared atomic boolean to indicate when the GC thread should shu
         <span class="p">};</span>
     <span class="p">}</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>And, here’s the <a href="https://play.rust-lang.org/?gist=c33dec5b9aad44864035de4c81c1f492&amp;version=nightly&amp;backtrace=0">Rust playground link</a>.
 You may have some trouble getting this to run (timeouts occur), but I promise it works sometimes.</p>
 
 <p>Example output:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>[realtime] thread started
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[realtime] thread started
 [ui] thread started
 [ui] sending new samples. Second sample: 0
 [ui] sending new samples. Second sample: 0.01960343
@@ -1092,13 +1060,12 @@ You may have some trouble getting this to run (timeouts occur), but I promise it
 [realtime] received new samples. Second sample: 0.03920686
 [ui] thread shutting down
 [realtime] thread shutting down
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h2 id="proof">Proof</h2>
 <p>Let’s add some logging so we can see when things are getting freed:</p>
 
-<div class="language-rust highlighter-rouge"><pre class="highlight"><code><span class="c">// private. cleans up any dead pointers in a pool</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// private. cleans up any dead pointers in a pool</span>
 <span class="k">fn</span> <span class="nf">cleanup</span><span class="p">(</span><span class="n">pool</span><span class="p">:</span> <span class="o">&amp;</span><span class="k">mut</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="n">TrustMe</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;&gt;</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">pool</span><span class="nf">.retain</span><span class="p">(|</span><span class="n">e</span><span class="p">:</span> <span class="o">&amp;</span><span class="n">TrustMe</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="n">_</span><span class="o">&gt;&gt;</span><span class="p">|</span> <span class="p">{</span>
         <span class="k">if</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">strong_count</span><span class="p">(</span><span class="o">&amp;</span><span class="n">e</span><span class="py">.inner</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="p">{</span>
@@ -1109,13 +1076,12 @@ You may have some trouble getting this to run (timeouts occur), but I promise it
         <span class="p">}</span>
     <span class="p">});</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>The completed code lives at <a href="https://play.rust-lang.org/?gist=7c48a9e595463cb4b8a2c155feb50234&amp;version=nightly&amp;backtrace=0">this Rust playground link</a>.</p>
 
 <p>Example Output:</p>
-<div class="highlighter-rouge"><pre class="highlight"><code>[realtime] thread started
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[realtime] thread started
 [ui] thread started
 [ui] sending new samples. Second sample: 0
 [realtime] received new samples. Second sample: 0
@@ -1133,8 +1099,7 @@ You may have some trouble getting this to run (timeouts occur), but I promise it
 [gc] dropping a value!
 [ui] thread shutting down
 [realtime] thread shutting down
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h1 id="conclusion">Conclusion</h1>
 <p>We did it!</p>
