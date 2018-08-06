@@ -8,7 +8,7 @@
     <meta name="description" content="Just some dude's blog">
     <meta name="author" content="David Zmick">
     <meta name="keywords" content="">
-    <link rel="canonical" href="http://0.0.0.0:4000/2013/06/27/particle-simulator/">
+    <link rel="canonical" href="http://dpzmick.com/2013/06/27/particle-simulator/">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/pixyll.css" type="text/css">
@@ -43,7 +43,7 @@
     <meta property="og:type" content="article">
     <meta property="og:title" content="Particle Simulator">
     <meta property="og:description" content="">
-    <meta property="og:url" content="http://0.0.0.0:4000/2013/06/27/particle-simulator/">
+    <meta property="og:url" content="http://dpzmick.com/2013/06/27/particle-simulator/">
     <meta property="og:site_name" content="dpzmick.com">
 
     <!-- Icons -->
@@ -68,10 +68,12 @@
     <header class="site-header px2 px-responsive">
   <div class="mt2 wrap">
     <div class="measure">
-      <a href="http://0.0.0.0:4000" class="site-title">dpzmick.com</a>
+      <a href="http://dpzmick.com" class="site-title">dpzmick.com</a>
       <nav class="site-nav right">
         <a href="/about/">About</a>
-<a href="/series/">Blog Series</a>
+<!-- don't highlight that I never finish anything -->
+<!-- <a href="/series/">Blog Series</a> -->
+<a href="https://www.youtube.com/channel/UCYkk_c66qufhHQBpM5wwLaQ">Synthesizer</a>
 <a href="http://dpzmick.com/resume/resume.pdf">Resume</a>
 
       </nav>
@@ -257,13 +259,14 @@ to $t=0.1$, we can use simple formulas to compute next locations.</p>
 <p>Each time-step in my simulation performed this calculation. So, it looks kind of
 like this:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function Timestep:
+<div class="highlighter-rouge"><pre class="highlight"><code>function Timestep:
     calculate net force on each particle
     calclate change in velocity for each particle
     update each particle's velocity
     move each particle
     repeat
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>###The assumption
 I am not sure if the technique I used to deal with the dynamic nature of the

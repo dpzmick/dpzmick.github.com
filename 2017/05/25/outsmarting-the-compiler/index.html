@@ -8,7 +8,7 @@
     <meta name="description" content="Just some dude's blog">
     <meta name="author" content="David Zmick">
     <meta name="keywords" content="">
-    <link rel="canonical" href="http://0.0.0.0:4000/2017/05/25/outsmarting-the-compiler/">
+    <link rel="canonical" href="http://dpzmick.com/2017/05/25/outsmarting-the-compiler/">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/pixyll.css" type="text/css">
@@ -42,8 +42,8 @@
     <meta property="og:locale" content="en_US">
     <meta property="og:type" content="article">
     <meta property="og:title" content="Outsmarting the compiler">
-    <meta property="og:description" content="">
-    <meta property="og:url" content="http://0.0.0.0:4000/2017/05/25/outsmarting-the-compiler/">
+    <meta property="og:description" content="Can you?">
+    <meta property="og:url" content="http://dpzmick.com/2017/05/25/outsmarting-the-compiler/">
     <meta property="og:site_name" content="dpzmick.com">
 
     <!-- Icons -->
@@ -68,10 +68,12 @@
     <header class="site-header px2 px-responsive">
   <div class="mt2 wrap">
     <div class="measure">
-      <a href="http://0.0.0.0:4000" class="site-title">dpzmick.com</a>
+      <a href="http://dpzmick.com" class="site-title">dpzmick.com</a>
       <nav class="site-nav right">
         <a href="/about/">About</a>
-<a href="/series/">Blog Series</a>
+<!-- don't highlight that I never finish anything -->
+<!-- <a href="/series/">Blog Series</a> -->
+<a href="https://www.youtube.com/channel/UCYkk_c66qufhHQBpM5wwLaQ">Synthesizer</a>
 <a href="http://dpzmick.com/resume/resume.pdf">Resume</a>
 
       </nav>
@@ -118,7 +120,7 @@
 Then, a bit later, we need to <strong>very quickly</strong> finish populating the structs.
 Here are some example structs:</p>
 
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">packed</span><span class="p">))</span> <span class="n">A</span> <span class="p">{</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">struct</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">packed</span><span class="p">))</span> <span class="n">A</span> <span class="p">{</span>
   <span class="kt">int64_t</span> <span class="n">a</span><span class="p">;</span>
   <span class="kt">int64_t</span> <span class="n">b</span><span class="p">;</span>
   <span class="kt">char</span>    <span class="n">arr</span><span class="p">[</span><span class="n">PADDING1</span><span class="p">];</span>
@@ -131,33 +133,36 @@ Here are some example structs:</p>
   <span class="kt">char</span>    <span class="n">arr</span><span class="p">[</span><span class="n">PADDING2</span><span class="p">];</span>
   <span class="kt">int64_t</span> <span class="n">c</span><span class="p">;</span>
 <span class="p">};</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>The “padding” arrays are populated ahead of time, so we just need to set <code class="highlighter-rouge">a</code>, <code class="highlighter-rouge">b</code>, and <code class="highlighter-rouge">c</code> for each struct (quickly):</p>
 
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kt">void</span> <span class="n">writeFields</span><span class="p">(</span><span class="n">T</span><span class="o">*</span> <span class="n">t</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">t</span><span class="o">-&gt;</span><span class="n">a</span> <span class="o">=</span> <span class="mi">12</span><span class="p">;</span>
   <span class="n">t</span><span class="o">-&gt;</span><span class="n">b</span> <span class="o">=</span> <span class="mi">25</span><span class="p">;</span>
   <span class="n">t</span><span class="o">-&gt;</span><span class="n">c</span> <span class="o">=</span> <span class="mi">16</span><span class="p">;</span>
 <span class="p">}</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>Unfortunately, we don’t statically know what struct we are going to have to operate on; we only get this information at runtime.
 We just have a blob of memory and a tag which indicates which of the two variants of the struct is sitting in the blob of memory:</p>
 
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">enum</span> <span class="k">class</span> <span class="nc">Variant</span> <span class="p">{</span> <span class="n">eA</span><span class="p">,</span> <span class="n">eB</span> <span class="p">};</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">enum</span> <span class="k">class</span> <span class="nc">Variant</span> <span class="p">{</span> <span class="n">eA</span><span class="p">,</span> <span class="n">eB</span> <span class="p">};</span>
 
 <span class="k">struct</span> <span class="n">Wrapper</span> <span class="p">{</span>
   <span class="n">Variant</span> <span class="n">v</span><span class="p">;</span>
   <span class="kt">char</span> <span class="n">payload</span><span class="p">[];</span>
 <span class="p">};</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>So, our fast path <code class="highlighter-rouge">write</code> function will need to take a wrapper struct, switch on the tag, then call the appropriate version of <code class="highlighter-rouge">writeFields</code>:</p>
 
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span> <span class="n">w</span><span class="p">)</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span> <span class="n">w</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">w</span><span class="o">-&gt;</span><span class="n">v</span> <span class="o">==</span> <span class="n">Variant</span><span class="o">::</span><span class="n">eA</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">writeFields</span><span class="o">&lt;</span><span class="n">A</span><span class="o">&gt;</span><span class="p">(</span><span class="k">reinterpret_cast</span><span class="o">&lt;</span><span class="n">A</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">w</span><span class="o">-&gt;</span><span class="n">payload</span><span class="p">));</span>
@@ -166,13 +171,14 @@ We just have a blob of memory and a tag which indicates which of the two variant
     <span class="n">writeFields</span><span class="o">&lt;</span><span class="n">B</span><span class="o">&gt;</span><span class="p">(</span><span class="k">reinterpret_cast</span><span class="o">&lt;</span><span class="n">B</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">w</span><span class="o">-&gt;</span><span class="n">payload</span><span class="p">));</span>
   <span class="p">}</span>
 <span class="p">}</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>If <code class="highlighter-rouge">PADDING1 == PADDING2</code>, then, regardless of the value of the tag (which struct we are populating), we will need to write to the same offsets.
 The cast and the templated function call will all compile out.
 Take a look (<code class="highlighter-rouge">clang-4.0 --std=c++1z -O3</code>):</p>
 
-<div class="language-nasm highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">.</span><span class="n">LCPI2_0</span><span class="o">:</span>
+<div class="language-nasm highlighter-rouge"><pre class="highlight"><code><span class="p">.</span><span class="n">LCPI2_0</span><span class="o">:</span>
         <span class="p">.</span><span class="n">quad</span>   <span class="mi">12</span>                      <span class="err">#</span> <span class="mh">0xc</span>
         <span class="p">.</span><span class="n">quad</span>   <span class="mi">25</span>                      <span class="err">#</span> <span class="mh">0x19</span>
 <span class="n">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span><span class="p">)</span><span class="o">:</span>                      <span class="err">#</span> <span class="err">@</span><span class="n">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span><span class="p">)</span>
@@ -180,7 +186,8 @@ Take a look (<code class="highlighter-rouge">clang-4.0 --std=c++1z -O3</code>):<
         <span class="n">movups</span>  <span class="n">xmmword</span> <span class="n">ptr</span> <span class="err">[</span><span class="n">rdi</span> <span class="o">+</span> <span class="mi">4</span><span class="err">]</span><span class="p">,</span> <span class="n">xmm0</span>
         <span class="k">mov</span>     <span class="n">qword</span> <span class="n">ptr</span> <span class="err">[</span><span class="n">rdi</span> <span class="o">+</span> <span class="mi">36</span><span class="err">]</span><span class="p">,</span> <span class="mi">16</span>
         <span class="k">ret</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>Before we move on, take a moment to appreciate what your compiler just did for you:</p>
 <ol>
@@ -195,26 +202,27 @@ We are good programmers, we know that branches might be expensive, so we really 
 <p>We can skip the branch by storing the offset in our wrapper struct and precomputing the offset when the wrapper is set up.
 Introduce a new wrapper type (and abandon all type safety):</p>
 
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">WrapperWithOffset</span> <span class="p">{</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">struct</span> <span class="n">WrapperWithOffset</span> <span class="p">{</span>
   <span class="n">Variant</span> <span class="n">v</span><span class="p">;</span>
   <span class="kt">size_t</span> <span class="n">offset</span><span class="p">;</span>
   <span class="kt">char</span> <span class="n">payload</span><span class="p">[];</span>
 <span class="p">};</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>Next, we can write a new function which will operate on structs of type <code class="highlighter-rouge">A</code> or type <code class="highlighter-rouge">B</code>, but, instead of writing to <code class="highlighter-rouge">c</code> directly, it computes a pointer to <code class="highlighter-rouge">c</code> using the offset we’ve stored in the wrapper, then writes to that pointer.</p>
 
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">writeFieldsWithOffset</span><span class="p">(</span><span class="n">A</span><span class="o">*</span> <span class="n">t</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">c_offset</span><span class="p">)</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">writeFieldsWithOffset</span><span class="p">(</span><span class="n">A</span><span class="o">*</span> <span class="n">t</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">c_offset</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="c1">// make sure a and b are always at the same offset in struct A and struct B</span>
-  <span class="k">static_assert</span><span class="p">(</span><span class="n">offsetof</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="n">offsetof</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">a</span><span class="p">),</span> <span class="s">"!"</span><span class="p">);</span>
+  <span class="c1">// make sure a and b are always at the same offset in struct A and struct B
+</span>  <span class="k">static_assert</span><span class="p">(</span><span class="n">offsetof</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="n">offsetof</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">a</span><span class="p">),</span> <span class="s">"!"</span><span class="p">);</span>
   <span class="k">static_assert</span><span class="p">(</span><span class="n">offsetof</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="o">==</span> <span class="n">offsetof</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="s">"!"</span><span class="p">);</span>
 
   <span class="n">t</span><span class="o">-&gt;</span><span class="n">a</span> <span class="o">=</span> <span class="mi">12</span><span class="p">;</span>
   <span class="n">t</span><span class="o">-&gt;</span><span class="n">b</span> <span class="o">=</span> <span class="mi">25</span><span class="p">;</span>
 
-  <span class="c1">// c will be at the offset we've provided</span>
-  <span class="o">*</span><span class="p">(</span><span class="kt">int64_t</span><span class="o">*</span><span class="p">)(((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">t</span> <span class="o">+</span> <span class="n">c_offset</span><span class="p">))</span> <span class="o">=</span> <span class="mi">16</span><span class="p">;</span>
+  <span class="c1">// c will be at the offset we've provided
+</span>  <span class="o">*</span><span class="p">(</span><span class="kt">int64_t</span><span class="o">*</span><span class="p">)(((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">t</span> <span class="o">+</span> <span class="n">c_offset</span><span class="p">))</span> <span class="o">=</span> <span class="mi">16</span><span class="p">;</span>
 <span class="p">}</span>
 
 <span class="kt">void</span> <span class="nf">writeLessSafe</span><span class="p">(</span><span class="n">WrapperWithOffset</span><span class="o">*</span> <span class="n">w</span><span class="p">)</span>
@@ -222,11 +230,12 @@ Introduce a new wrapper type (and abandon all type safety):</p>
   <span class="n">A</span><span class="o">*</span> <span class="n">a</span> <span class="o">=</span> <span class="k">reinterpret_cast</span><span class="o">&lt;</span><span class="n">A</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">w</span><span class="o">-&gt;</span><span class="n">payload</span><span class="p">);</span>
   <span class="n">writeFieldsWithOffset</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">w</span><span class="o">-&gt;</span><span class="n">offset</span><span class="p">);</span>
 <span class="p">}</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>Checking the code, this compiles down to exactly what we were hoping it would (again with clang-4.0)!</p>
 
-<div class="language-nasm highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">.</span><span class="n">LCPI1_0</span><span class="o">:</span>
+<div class="language-nasm highlighter-rouge"><pre class="highlight"><code><span class="p">.</span><span class="n">LCPI1_0</span><span class="o">:</span>
         <span class="p">.</span><span class="n">quad</span>   <span class="mi">12</span>                      <span class="err">#</span> <span class="mh">0xc</span>
         <span class="p">.</span><span class="n">quad</span>   <span class="mi">25</span>                      <span class="err">#</span> <span class="mh">0x19</span>
 <span class="n">writeLessSafe</span><span class="p">(</span><span class="n">WrapperWithOffset</span><span class="o">*</span><span class="p">)</span><span class="o">:</span> <span class="err">#</span> <span class="err">@</span><span class="n">writeLessSafe</span><span class="p">(</span><span class="n">WrapperWithOffset</span><span class="o">*</span><span class="p">)</span>
@@ -235,7 +244,8 @@ Introduce a new wrapper type (and abandon all type safety):</p>
         <span class="n">movups</span>  <span class="n">xmmword</span> <span class="n">ptr</span> <span class="err">[</span><span class="n">rdi</span> <span class="o">+</span> <span class="mi">16</span><span class="err">]</span><span class="p">,</span> <span class="n">xmm0</span>
         <span class="k">mov</span>     <span class="n">qword</span> <span class="n">ptr</span> <span class="err">[</span><span class="n">rdi</span> <span class="o">+</span> <span class="n">rax</span> <span class="o">+</span> <span class="mi">16</span><span class="err">]</span><span class="p">,</span> <span class="mi">16</span>
         <span class="k">ret</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>Hooray, no conditional generated, exactly as we desired.
 We’ve outsmarted the compiler!</p>
@@ -245,7 +255,7 @@ We’ve outsmarted the compiler!</p>
 <p>Let’s set <code class="highlighter-rouge">PADDING1 = 16</code> and <code class="highlighter-rouge">PADDING2 = 17</code>.
 The code generated on clang-4.0 for <code class="highlighter-rouge">write(Wrapper*)</code> looks quite interesting:</p>
 
-<div class="language-nasm highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">.</span><span class="n">LCPI2_0</span><span class="o">:</span>
+<div class="language-nasm highlighter-rouge"><pre class="highlight"><code><span class="p">.</span><span class="n">LCPI2_0</span><span class="o">:</span>
         <span class="p">.</span><span class="n">quad</span>   <span class="mi">12</span>                      <span class="err">#</span> <span class="mh">0xc</span>
         <span class="p">.</span><span class="n">quad</span>   <span class="mi">25</span>                      <span class="err">#</span> <span class="mh">0x19</span>
 <span class="n">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span><span class="p">)</span><span class="o">:</span>                      <span class="err">#</span> <span class="err">@</span><span class="n">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span><span class="p">)</span>
@@ -256,7 +266,8 @@ The code generated on clang-4.0 for <code class="highlighter-rouge">write(Wrappe
         <span class="k">setne</span>   <span class="n">al</span>
         <span class="k">mov</span>     <span class="n">qword</span> <span class="n">ptr</span> <span class="err">[</span><span class="n">rdi</span> <span class="o">+</span> <span class="n">rax</span> <span class="o">+</span> <span class="mi">36</span><span class="err">]</span><span class="p">,</span> <span class="mi">16</span>
         <span class="k">ret</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>This code is still very slightly longer than the unsafe code written previously, but, its really not bad at all.</p>
 
@@ -266,10 +277,11 @@ In this case, I’ve allowed the enum values to default to <code class="highligh
 
 <p>What happens if we change the values?</p>
 
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">enum</span> <span class="k">class</span> <span class="nc">Variant</span> <span class="p">{</span> <span class="n">eA</span> <span class="o">=</span> <span class="mi">666</span><span class="p">,</span> <span class="n">eB</span> <span class="o">=</span> <span class="mi">1337</span> <span class="p">};</span>
-</code></pre></div></div>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">enum</span> <span class="k">class</span> <span class="nc">Variant</span> <span class="p">{</span> <span class="n">eA</span> <span class="o">=</span> <span class="mi">666</span><span class="p">,</span> <span class="n">eB</span> <span class="o">=</span> <span class="mi">1337</span> <span class="p">};</span>
+</code></pre>
+</div>
 
-<div class="language-nasm highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">.</span><span class="n">LCPI2_0</span><span class="o">:</span>
+<div class="language-nasm highlighter-rouge"><pre class="highlight"><code><span class="p">.</span><span class="n">LCPI2_0</span><span class="o">:</span>
         <span class="p">.</span><span class="n">quad</span>   <span class="mi">12</span>                      <span class="err">#</span> <span class="mh">0xc</span>
         <span class="p">.</span><span class="n">quad</span>   <span class="mi">25</span>                      <span class="err">#</span> <span class="mh">0x19</span>
 <span class="n">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span><span class="p">)</span><span class="o">:</span>                      <span class="err">#</span> <span class="err">@</span><span class="n">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span><span class="p">)</span>
@@ -281,7 +293,8 @@ In this case, I’ve allowed the enum values to default to <code class="highligh
         <span class="k">setne</span>   <span class="n">cl</span>
         <span class="k">mov</span>     <span class="n">qword</span> <span class="n">ptr</span> <span class="err">[</span><span class="n">rdi</span> <span class="o">+</span> <span class="n">rcx</span> <span class="o">+</span> <span class="mi">36</span><span class="err">]</span><span class="p">,</span> <span class="mi">16</span>
         <span class="k">ret</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>The code has changed slightly to account for the new potential values of <code class="highlighter-rouge">Wrapper::v</code>, but it looks much nicer than a branch.</p>
 
@@ -291,7 +304,7 @@ What happens to the generated code if we make the paddings completely wacky?</p>
 
 <p>With <code class="highlighter-rouge">PADDING1 = 16</code> and <code class="highlighter-rouge">PADDING2 = 173</code>, and with the enum values reverted to their defaults:</p>
 
-<div class="language-nasm highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">.</span><span class="n">LCPI1_0</span><span class="o">:</span>
+<div class="language-nasm highlighter-rouge"><pre class="highlight"><code><span class="p">.</span><span class="n">LCPI1_0</span><span class="o">:</span>
         <span class="p">.</span><span class="n">quad</span>   <span class="mi">12</span>                      <span class="err">#</span> <span class="mh">0xc</span>
         <span class="p">.</span><span class="n">quad</span>   <span class="mi">25</span>                      <span class="err">#</span> <span class="mh">0x19</span>
 <span class="n">writeLessSafe</span><span class="p">(</span><span class="n">WrapperWithOffset</span><span class="o">*</span><span class="p">)</span><span class="o">:</span> <span class="err">#</span> <span class="err">@</span><span class="n">writeLessSafe</span><span class="p">(</span><span class="n">WrapperWithOffset</span><span class="o">*</span><span class="p">)</span>
@@ -313,7 +326,8 @@ What happens to the generated code if we make the paddings completely wacky?</p>
         <span class="k">cmove</span>   <span class="n">rcx</span><span class="p">,</span> <span class="n">rax</span>
         <span class="k">mov</span>     <span class="n">qword</span> <span class="n">ptr</span> <span class="err">[</span><span class="n">rdi</span> <span class="o">+</span> <span class="n">rcx</span> <span class="o">+</span> <span class="mi">4</span><span class="err">]</span><span class="p">,</span> <span class="mi">16</span>
         <span class="k">ret</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p><code class="highlighter-rouge">writeLessSafe</code> doesn’t change, as expected.
 <code class="highlighter-rouge">write</code> does get tweaked a bit to account for the new offsets, but its still pretty great code.</p>
@@ -324,7 +338,7 @@ The answer to that depends on which compiler you ask.</p>
 <h3 id="gcc-71-stdc1z--o3">gcc 7.1 (–std=c++1z -O3)</h3>
 <h4 id="padding1--padding2"><code class="highlighter-rouge">PADDING1</code> == <code class="highlighter-rouge">PADDING2</code></h4>
 
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">writeLessSafe</span><span class="p">(</span><span class="n">WrapperWithOffset</span><span class="o">*</span><span class="p">)</span><span class="o">:</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">writeLessSafe</span><span class="p">(</span><span class="n">WrapperWithOffset</span><span class="o">*</span><span class="p">)</span><span class="o">:</span>
         <span class="n">mov</span>     <span class="n">rax</span><span class="p">,</span> <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="o">+</span><span class="mi">8</span><span class="p">]</span>
         <span class="n">mov</span>     <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="o">+</span><span class="mi">16</span><span class="p">],</span> <span class="mi">12</span>
         <span class="n">mov</span>     <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="o">+</span><span class="mi">24</span><span class="p">],</span> <span class="mi">25</span>
@@ -340,13 +354,14 @@ The answer to that depends on which compiler you ask.</p>
         <span class="n">rep</span> <span class="n">ret</span>
 <span class="p">.</span><span class="n">L7</span><span class="o">:</span>
         <span class="n">rep</span> <span class="n">ret</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>That’s a little odd.</p>
 
 <h4 id="padding1--16-and-padding2--17"><code class="highlighter-rouge">PADDING1 = 16</code> and <code class="highlighter-rouge">PADDING2 = 17</code></h4>
 
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span><span class="p">)</span><span class="o">:</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span><span class="p">)</span><span class="o">:</span>
         <span class="n">mov</span>     <span class="n">eax</span><span class="p">,</span> <span class="n">DWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="p">]</span>
         <span class="n">mov</span>     <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="o">+</span><span class="mi">4</span><span class="p">],</span> <span class="mi">12</span>
         <span class="n">mov</span>     <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="o">+</span><span class="mi">12</span><span class="p">],</span> <span class="mi">25</span>
@@ -357,11 +372,12 @@ The answer to that depends on which compiler you ask.</p>
 <span class="p">.</span><span class="n">L7</span><span class="o">:</span>
         <span class="n">mov</span>     <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="o">+</span><span class="mi">36</span><span class="p">],</span> <span class="mi">16</span>
         <span class="n">ret</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <h4 id="padding1--16-and-padding2--173"><code class="highlighter-rouge">PADDING1 = 16</code> and <code class="highlighter-rouge">PADDING2 = 173</code></h4>
 
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span><span class="p">)</span><span class="o">:</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">write</span><span class="p">(</span><span class="n">Wrapper</span><span class="o">*</span><span class="p">)</span><span class="o">:</span>
         <span class="n">mov</span>     <span class="n">eax</span><span class="p">,</span> <span class="n">DWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="p">]</span>
         <span class="n">mov</span>     <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="o">+</span><span class="mi">4</span><span class="p">],</span> <span class="mi">12</span>
         <span class="n">mov</span>     <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="o">+</span><span class="mi">12</span><span class="p">],</span> <span class="mi">25</span>
@@ -372,7 +388,8 @@ The answer to that depends on which compiler you ask.</p>
 <span class="p">.</span><span class="n">L7</span><span class="o">:</span>
         <span class="n">mov</span>     <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[</span><span class="n">rdi</span><span class="o">+</span><span class="mi">36</span><span class="p">],</span> <span class="mi">16</span>
         <span class="n">ret</span>
-</code></pre></div></div>
+</code></pre>
+</div>
 
 <p>Interesting.
 This branch felt <em>almost</em> detectable in some micro-benchmarks, but I would require additional testing before I’m willing to declare that it is harmful.

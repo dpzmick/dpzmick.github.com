@@ -8,7 +8,7 @@
     <meta name="description" content="Just some dude's blog">
     <meta name="author" content="David Zmick">
     <meta name="keywords" content="">
-    <link rel="canonical" href="http://0.0.0.0:4000/2015/02/25/vim-remote-make/">
+    <link rel="canonical" href="http://dpzmick.com/2015/02/25/vim-remote-make/">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/pixyll.css" type="text/css">
@@ -43,7 +43,7 @@
     <meta property="og:type" content="article">
     <meta property="og:title" content="Vim Remote Make">
     <meta property="og:description" content="">
-    <meta property="og:url" content="http://0.0.0.0:4000/2015/02/25/vim-remote-make/">
+    <meta property="og:url" content="http://dpzmick.com/2015/02/25/vim-remote-make/">
     <meta property="og:site_name" content="dpzmick.com">
 
     <!-- Icons -->
@@ -68,10 +68,12 @@
     <header class="site-header px2 px-responsive">
   <div class="mt2 wrap">
     <div class="measure">
-      <a href="http://0.0.0.0:4000" class="site-title">dpzmick.com</a>
+      <a href="http://dpzmick.com" class="site-title">dpzmick.com</a>
       <nav class="site-nav right">
         <a href="/about/">About</a>
-<a href="/series/">Blog Series</a>
+<!-- don't highlight that I never finish anything -->
+<!-- <a href="/series/">Blog Series</a> -->
+<a href="https://www.youtube.com/channel/UCYkk_c66qufhHQBpM5wwLaQ">Synthesizer</a>
 <a href="http://dpzmick.com/resume/resume.pdf">Resume</a>
 
       </nav>
@@ -131,7 +133,7 @@ or something?), and that takes a little bit of tweaking but it works nicely.</p>
 <figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#!/bin/bash</span>
 <span class="nv">oldpath</span><span class="o">=</span>/home/cs423/<span class="nv">$1</span>
 <span class="nv">newpath</span><span class="o">=</span>/Users/dz0004455/programming/cs423/remote/<span class="nv">$1</span>
-ssh cs423@<span class="nv">$REMOTE_HOST</span> <span class="s2">"cd ~/</span><span class="nv">$1</span><span class="s2"> &amp;&amp; make"</span>  2&gt;&amp;1 | <span class="nb">sed</span> <span class="nt">-e</span> <span class="s2">"s|</span><span class="nv">$oldpath</span><span class="s2">|</span><span class="nv">$newpath</span><span class="s2">|g"</span></code></pre></figure>
+ssh cs423@<span class="nv">$REMOTE_HOST</span> <span class="s2">"cd ~/</span><span class="nv">$1</span><span class="s2"> &amp;&amp; make"</span>  2&gt;&amp;1 | sed -e <span class="s2">"s|</span><span class="nv">$oldpath</span><span class="s2">|</span><span class="nv">$newpath</span><span class="s2">|g"</span></code></pre></figure>
 
 <p>This script runs the make program remotely (makes lots of assumptions about
 directory structure, but that’s totally fine). Then it pipes the output through
@@ -158,11 +160,11 @@ to this mix.</p>
 
 <p>423get</p>
 
-<figure class="highlight"><pre><code class="language-bash" data-lang="bash">rsync <span class="nt">-a</span> cs423@<span class="nv">$REMOTE_HOST</span>:/home/cs423/<span class="nv">$1</span>/ ~/programming/cs423/sync/<span class="nv">$1</span>/</code></pre></figure>
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">rsync -a cs423@<span class="nv">$REMOTE_HOST</span>:/home/cs423/<span class="nv">$1</span>/ ~/programming/cs423/sync/<span class="nv">$1</span>/</code></pre></figure>
 
 <p>423push</p>
 
-<figure class="highlight"><pre><code class="language-bash" data-lang="bash">rsync <span class="nt">-a</span> ~/programming/cs423/sync/<span class="nv">$1</span>/ cs423@<span class="nv">$REMOTE_HOST</span>:/home/cs423/<span class="nv">$1</span>/</code></pre></figure>
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">rsync -a ~/programming/cs423/sync/<span class="nv">$1</span>/ cs423@<span class="nv">$REMOTE_HOST</span>:/home/cs423/<span class="nv">$1</span>/</code></pre></figure>
 
 <p>Then, in vim:</p>
 

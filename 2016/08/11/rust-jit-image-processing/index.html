@@ -8,7 +8,7 @@
     <meta name="description" content="A JIT compiled image processing DSL using LLVM">
     <meta name="author" content="David Zmick">
     <meta name="keywords" content="">
-    <link rel="canonical" href="http://0.0.0.0:4000/2016/08/11/rust-jit-image-processing/">
+    <link rel="canonical" href="http://dpzmick.com/2016/08/11/rust-jit-image-processing/">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/pixyll.css" type="text/css">
@@ -43,7 +43,7 @@
     <meta property="og:type" content="article">
     <meta property="og:title" content="Rust Image Processing DSL">
     <meta property="og:description" content="Just some dude's blog">
-    <meta property="og:url" content="http://0.0.0.0:4000/2016/08/11/rust-jit-image-processing/">
+    <meta property="og:url" content="http://dpzmick.com/2016/08/11/rust-jit-image-processing/">
     <meta property="og:site_name" content="dpzmick.com">
 
     <!-- Icons -->
@@ -68,10 +68,12 @@
     <header class="site-header px2 px-responsive">
   <div class="mt2 wrap">
     <div class="measure">
-      <a href="http://0.0.0.0:4000" class="site-title">dpzmick.com</a>
+      <a href="http://dpzmick.com" class="site-title">dpzmick.com</a>
       <nav class="site-nav right">
         <a href="/about/">About</a>
-<a href="/series/">Blog Series</a>
+<!-- don't highlight that I never finish anything -->
+<!-- <a href="/series/">Blog Series</a> -->
+<a href="https://www.youtube.com/channel/UCYkk_c66qufhHQBpM5wwLaQ">Synthesizer</a>
 <a href="http://dpzmick.com/resume/resume.pdf">Resume</a>
 
       </nav>
@@ -168,9 +170,9 @@ The syntax tree defined by the <code class="highlighter-rouge">grad</code> funct
 <p>There is also helper function that can be used to generate functions which perform a convolution on a single image with a kernel matrix
 For example, to generate a function that takes a single image as input and returns the convolution with the horizontal sobel matrix, use the following code:</p>
 
-<figure class="highlight"><pre><code class="language-rust" data-lang="rust"><span class="k">let</span> <span class="n">sobel_x</span> <span class="o">=</span> <span class="p">[[</span><span class="err">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
-               <span class="p">[</span><span class="err">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
-               <span class="p">[</span><span class="err">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]];</span>
+<figure class="highlight"><pre><code class="language-rust" data-lang="rust"><span class="k">let</span> <span class="n">sobel_x</span> <span class="o">=</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+               <span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+               <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]];</span>
 
 <span class="k">let</span> <span class="n">sobel_x</span> <span class="o">=</span> <span class="nn">Function</span><span class="p">::</span><span class="nf">gen_3x3_kernel</span><span class="p">(</span><span class="n">sobel_x</span><span class="p">);</span></code></pre></figure>
 
@@ -276,8 +278,8 @@ Every generated function is marked with an LLVM attribute <code class="highlight
 <h3 id="aside-function-inlining">Aside: Function inlining</h3>
 <p>For those who are not totally familiar with the concept of function ininling, here’s a quick example (note that the <code class="highlighter-rouge">inline</code> keyword in C doesn’t guarantee this behavior, it is just a hint to the compiler):</p>
 
-<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="c1">// before AlwaysInlinePass</span>
-<span class="kr">inline</span> <span class="kt">int</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="mi">12</span><span class="p">;</span> <span class="p">}</span>
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="c1">// before AlwaysInlinePass
+</span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="mi">12</span><span class="p">;</span> <span class="p">}</span>
 
 <span class="kt">int</span> <span class="nf">bar</span><span class="p">()</span> <span class="p">{</span>
     <span class="k">for</span> <span class="p">(</span><span class="kt">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
@@ -287,8 +289,8 @@ Every generated function is marked with an LLVM attribute <code class="highlight
     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="c1">// after AlwaysInlinePass</span>
-<span class="kt">int</span> <span class="nf">bar</span><span class="p">()</span> <span class="p">{</span>
+<span class="c1">// after AlwaysInlinePass
+</span><span class="kt">int</span> <span class="nf">bar</span><span class="p">()</span> <span class="p">{</span>
     <span class="k">for</span> <span class="p">(</span><span class="kt">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">if</span> <span class="p">(</span><span class="mi">12</span> <span class="o">&gt;</span> <span class="mi">13</span><span class="p">)</span> <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
     <span class="p">}</span>
