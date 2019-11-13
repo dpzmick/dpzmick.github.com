@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2019-11-12 Tue 23:59 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rust Image Processing DSL</title>
+<meta name="generator" content="Org mode" />
+<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="preamble" class="status">
+<div id='#preamble'><h1><a href='./'>dpzmick.com</a></h1></div><div id='bulb'><a href='#/' onclick='switchModes()'><img class='light-invert' src='static/icons/bulb.png' /></a></div>
+</div>
+<div id="content">
+<h1 class="title">Rust Image Processing DSL</h1>
+<p>
+<a href="https://github.com/dpzmick/rust_img_dsl">This Project</a> is essentially an attempt to recreate some of the <a href="http://halide-lang.org/">Halide</a> project in Rust as a means of learning that Rust language.
+Halide is a really clever C++ library that allows programmers to define image processing algorithms in domain specific language which are compiled according to some sort of execution strategy.
+These strategies might be "tile for cache efficiency" or "optimize for execution on a GPU."
+The project is definitely worth poking at for a few minutes.
+</p>
+
+<p>
+The project I will be discussing in this blog post is an implementation of the first "half" of Halide, using <a href="https://www.rust-lang.org">Rust</a>.
+Specifically, I've implemented a simple DSL for image processing which is JIT compiled with LLVM.
+I picked this project mostly to learn rust, so my result is certainly not production code but it may still be interesting to read a bit about.
+</p>
+
+<div id="outline-container-orga75a0fa" class="outline-2">
+<h2 id="orga75a0fa">Annotated example</h2>
+<div class="outline-text-2" id="text-orga75a0fa">
+<p>
+Before jumping into a discussion about how all of this works, lets look at an example of the DSL.
+In this example, we will define the sobel operator, then process an images with it.
+For a great overview of the sobel operator, check out <a href="https://blog.saush.com/2011/04/20/edge-detection-with-the-sobel-operator-in-ruby/">this article</a>.
+</p>
+
+<p>
+In the DSL, there are things to worry about: Functions and Chains.
+A function is a single unit of work that takes an \((x,y)\) coordinate and an arbitrary number of inputs.
+For example, suppose we have a function \(Grad(x,y)\) that returns the magnitude of the gradient of two images \(I_1\) and \(I_2\) at the point \((x,y)\).
+We might denote this function with mathematical notation as:
+</p>
+
+<p>
+\[ Grad(x,y) = \sqrt{I_1(x,y)^2 + I_2(x,y)^2} \]
+</p>
+
+<p>
+In the DSL I have defined, we would denote this operation in a similar manner, sans syntactic differences:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><code><span class="org-comment-delimiter">// </span><span class="org-comment">create a new function named grad</span></code>
+<code><span class="org-comment-delimiter">// </span><span class="org-comment">Function::new takes a number and a lambda as an argument.</span></code>
+<code><span class="org-comment-delimiter">// </span><span class="org-comment">The number indicates how many inputs the function has</span></code>
+<code><span class="org-comment-delimiter">// </span><span class="org-comment">This lambda is always called with (x,y) coordinate values</span></code>
+<code><span class="org-comment-delimiter">// </span><span class="org-comment">and an array of inputs of the length specified.</span></code>
+<code><span class="org-keyword">let</span> <span class="org-variable-name">grad</span> = <span class="org-type">Function</span>::new(2, |x, y, inputs| {</code>
+<code>    <span class="org-comment-delimiter">// </span><span class="org-comment">first we pull out references to the InputExpressions representing our inputs</span></code>
+<code>    <span class="org-keyword">let</span> <span class="org-variable-name">input0</span> = &amp;inputs[0];</code>
+<code>    <span class="org-keyword">let</span> <span class="org-variable-name">input1</span> = &amp;inputs[1];</code>
+<code></code>
+<code>    <span class="org-comment-delimiter">// </span><span class="org-comment">compute the squares using the input expressions</span></code>
+<code>    <span class="org-comment-delimiter">// </span><span class="org-comment">Notice that x and y are both treated like functions.</span></code>
+<code>    <span class="org-comment-delimiter">// </span><span class="org-comment">This is essentially a hack to get around the way I've stored the AST</span></code>
+<code>    <span class="org-keyword">let</span> <span class="org-variable-name">t1</span> = input0(x(), y()) * input0(x(), y());</code>
+<code>    <span class="org-keyword">let</span> <span class="org-variable-name">t2</span> = input1(x(), y()) * input1(x(), y());</code>
+<code></code>
+<code>    <span class="org-comment-delimiter">// </span><span class="org-comment">Compute the sum and the square root of the sum</span></code>
+<code>    <span class="org-comment-delimiter">// </span><span class="org-comment">The last expression generated by this lambda is result of the function we are defining</span></code>
+<code>    <span class="org-comment-delimiter">// </span><span class="org-comment">The Box::new trick is needed, again, because of the way I've store the AST</span></code>
+<code>    <span class="org-type">Box</span>::new(<span class="org-type">SqrtExpr</span>::new(t1 + t2))</code>
+<code>});</code>
+</pre>
+</div>
+
+<p>
+This isn't the most beautiful way to build a representation of our function, but it works and I learned a lot implementing the magic that makes it work.
+Each function stores is a syntax tree representing the expression that the function computes.
+The syntax tree defined by the <code>grad</code> function looks something like this:
+</p>
+
+<p>
+<img src='/static/rust_img/ast.svg' class='light-invert' />
+</p>
+
+<p>
+There is also helper function that can be used to generate functions which perform a convolution on a single image with a kernel matrix
+For example, to generate a function that takes a single image as input and returns the convolution with the horizontal sobel matrix, use the following code:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><code><span class="org-keyword">let</span> <span class="org-variable-name">sobel_x</span> = [[-1, 0, 1],</code>
+<code>               [-2, 0, 2],</code>
+<code>               [-1, 0, 1]];</code>
+<code></code>
+<code><span class="org-keyword">let</span> <span class="org-variable-name">sobel_x</span> = <span class="org-type">Function</span>::gen_3x3_kernel(sobel_x);</code>
+</pre>
+</div>
+
+<p>
+Notice that these functions are defined in a purely functional, mathematical sense.
+They do not mutate their inputs, nor do they store any state, nor are they coupled to any particular inputs.
+</p>
+</div>
+
+<div id="outline-container-org6a16460" class="outline-3">
+<h3 id="org6a16460">Connecting functions</h3>
+<div class="outline-text-3" id="text-org6a16460">
+<p>
+Now that we have some abstract functions, we need to compose functions to create something meaningful.
+The composition of functions in my DSL is called a function chain.
+Chains may be thought of as a stream of pixels, starting from =ImageSource=s, flowing through a number of transformation functions, and finally, resulting in a new image.
+ImageSources define the starting inputs for the entire chain.
+Then, any number of functions may be chained together.
+For example, the entire sobel image processing chain looks something like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><code><span class="org-keyword">let</span> <span class="org-variable-name">sobel_x_fun</span> = <span class="org-comment-delimiter">// </span><span class="org-comment">define the sobel_x function as shown above</span></code>
+<code><span class="org-keyword">let</span> <span class="org-variable-name">sobel_y_fun</span> = <span class="org-comment-delimiter">// </span><span class="org-comment">define the sobel_y function similar to the sobel_x function given above</span></code>
+<code><span class="org-keyword">let</span> <span class="org-variable-name">grad_fun</span>    = <span class="org-comment-delimiter">// </span><span class="org-comment">define the gradient function, exactly as given above</span></code>
+<code></code>
+<code><span class="org-comment-delimiter">// </span><span class="org-comment">make an ImageSource defining the start of the chain</span></code>
+<code><span class="org-comment-delimiter">// </span><span class="org-comment">In this case, we only need a single image source</span></code>
+<code><span class="org-keyword">let</span> <span class="org-variable-name">image</span> = <span class="org-type">ChainLink</span>::<span class="org-type">ImageSource</span>(0);</code>
+<code></code>
+<code><span class="org-comment-delimiter">// </span><span class="org-comment">image source pixels flow into sobel_x</span></code>
+<code><span class="org-keyword">let</span> <span class="org-variable-name">c1</span> = <span class="org-type">ChainLink</span>::link(<span class="org-preprocessor">vec!</span>[&amp;image], &amp;sobel_x_fun);</code>
+<code></code>
+<code><span class="org-comment-delimiter">// </span><span class="org-comment">image source pixels flow into sobel_y</span></code>
+<code><span class="org-keyword">let</span> <span class="org-variable-name">c2</span> = <span class="org-type">ChainLink</span>::link(<span class="org-preprocessor">vec!</span>[&amp;image], &amp;sobel_y_fun);</code>
+<code></code>
+<code><span class="org-comment-delimiter">// </span><span class="org-comment">pixels from sobel_x and sobel_y flow into the gradient function</span></code>
+<code><span class="org-keyword">let</span> <span class="org-variable-name">c3</span> = <span class="org-type">ChainLink</span>::link(<span class="org-preprocessor">vec!</span>[&amp;c1, &amp;c2], &amp;grad_fun);</code>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org92c4a93" class="outline-3">
+<h3 id="org92c4a93">Compiling and executing the chain</h3>
+<div class="outline-text-3" id="text-org92c4a93">
+<p>
+Now that we have built a chain representing the entire sobel algorithm, we only need to compile the chain and use the chain to process an image:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><code><span class="org-keyword">let</span> <span class="org-variable-name">cc</span> = c3.compile(); <span class="org-comment-delimiter">// </span><span class="org-comment">create a compiled chain for this chain</span></code>
+<code><span class="org-keyword">let</span> <span class="org-variable-name">resulting_image</span> = cc.run_on(&amp;[&amp;my_image]);</code>
+</pre>
+</div>
+
+<p>
+Invoking <code>.compile()</code> on an image chain compiles each function in the chain provided into an LLVM module, optimizes the module with LLVM's optimizer, and uses LLVM's MCJIT to compile to machine code.
+A compiled chain essentially just holds a function pointer to a function which will be called when the chain is executed (and some things used for bookkeeping).
+The only work I had to do to go from AST to function pointer is code generation.
+For this reason, LLVM is decidedly <b>awesome</b>.
+</p>
+
+<p>
+Note: For the full sobel code, see <a href="https://github.com/dpzmick/rust_img_dsl/blob/master/examples/sobel.rs">sobel.rs</a>.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org2a9627e" class="outline-2">
+<h2 id="org2a9627e">Details, Details, Details</h2>
+<div class="outline-text-2" id="text-org2a9627e">
+<p>
+There's lots of little details which may be interesting to discuss, but I'm only going to discuss the compilation method.
+First, we need some slightly more rigorous definitions of things:
+</p>
+
+<ul class="org-ul">
+<li>All of the user defined functions take two 64 bit integer values and a list of inputs. They return a 64 bit integer value.</li>
+<li>Because functions themselves have no concept of chaining (the gradient function doesn't call <code>sobel_x</code> and <code>sobel_y</code>), the "inputs" to a user defined function can be thought of as function-pointers which will eventually be resolved to real functions, although this is not how they are implemented.</li>
+<li>All of the system-defined expressions (eg. <code>SqrtExpr</code>) take a 64 bit integer and return a 64 bit integer.</li>
+</ul>
+
+<p>
+The compilation strategy for the DSL is very simple: Every DSL function is compiled into a function with a signature that would look something like this in C:
+</p>
+<div class="org-src-container">
+<pre class="src src-c"><code><span class="org-keyword">inline</span> <span class="org-type">int64_t</span> <span class="org-function-name">function</span>(<span class="org-type">int64_t</span> <span class="org-variable-name">x</span>, <span class="org-type">int64_t</span> <span class="org-variable-name">y</span>, <span class="org-type">image</span> <span class="org-variable-name">inputs</span>[], <span class="org-type">size_t</span> <span class="org-variable-name">num_inputs</span>);</code>
+</pre>
+</div>
+
+<p>
+The array of image inputs provided here is <b><b>not</b></b> equivalent to the list of the inputs given to the DSL function.
+The inputs given to the DSL function are resolved to other compiled functions (using the chain) during code generation, so our generated <code>grad</code> function will directly call the <code>sobel_x</code> and <code>sobel_y</code> functions.
+</p>
+
+<p>
+Since every value is a 64 bit integer, the code generation for an expression essentially just involves spitting out adds and multiplies for integers.
+The generated <code>grad</code> code roughly corresponds to:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><code><span class="org-keyword">inline</span> <span class="org-type">int64_t</span> <span class="org-function-name">grad</span>(<span class="org-type">int64_t</span> <span class="org-variable-name">x</span>, <span class="org-type">int64_t</span> <span class="org-variable-name">y</span>, <span class="org-type">image</span> <span class="org-variable-name">inputs</span>[], <span class="org-type">size_t</span> <span class="org-variable-name">num_inputs</span>) {</code>
+<code>    <span class="org-type">int64_t</span> <span class="org-variable-name">partial1</span> = sobel_x(x, y, inputs, num_inputs) * sobel_x(x, y, inputs, num_inputs);</code>
+<code>    <span class="org-type">int64_t</span> <span class="org-variable-name">partial2</span> = sobel_y(x, y, inputs, num_inputs) * sobel_x(x, y, inputs, num_inputs);</code>
+<code>    <span class="org-type">int64_t</span> <span class="org-variable-name">partial3</span> = partial1 + partial2;</code>
+<code></code>
+<code>    <span class="org-keyword">return</span> core_isqrt(partial3);</code>
+<code>}</code>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgfb799ea" class="outline-2">
+<h2 id="orgfb799ea">Execution and image inputs</h2>
+<div class="outline-text-2" id="text-orgfb799ea">
+<p>
+A driver function is injected into the module.
+This function performs some bookkeeping tasks, then just loops over the pixels in the output image, calling the appropriate function (whichever was last in the chain) for every pixel:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><code><span class="org-keyword">for</span> (<span class="org-type">int</span> <span class="org-variable-name">x</span> = 0; x &lt; output.width; x++) {</code>
+<code>  <span class="org-keyword">for</span> (<span class="org-type">int</span> <span class="org-variable-name">y</span> = 0; y &lt; output.height; y++) {</code>
+<code>    <span class="org-type">int64_t</span> <span class="org-variable-name">res</span> = function(x, y, inputs, num_inputs);</code>
+<code></code>
+<code>    <span class="org-comment-delimiter">/* </span><span class="org-comment">output image at x, y </span><span class="org-comment-delimiter">*/</span> = (<span class="org-type">uint8_t</span>) res;</code>
+<code>  }</code>
+</pre>
+</div>
+
+<p>
+Image inputs (the actual images we are processing), are passed to each function.
+When the compiler reaches an <code>ImageSource</code> in the function chain, it emits a call to a function which returns the pixel in the image at a given \((x,y)\) coordinate.
+</p>
+
+<p>
+For anyone interested, I've dumped the entire LLVM IR module for an unoptimized sobel chain <a href="https://gist.github.com/dpzmick/a55851a9dd5ef87dd925c7f69151c0d0">here</a>.
+Some of the code is generated from the file <a href="https://github.com/dpzmick/rust_img_dsl/blob/master/src/core.c">core.c</a> in the github repo for the project, if you need some hints to figure out what's going on here.
+The entry point is the function <code>jitfunction</code>.
+There's lots of other interesting little idiosyncrasies in this code but I don't have space and you don't have time to read about all of them.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orged55c28" class="outline-2">
+<h2 id="orged55c28">Performance</h2>
+<div class="outline-text-2" id="text-orged55c28">
+<p>
+Anyone who knows a little bit about computers and performance is probably hurting a little bit thinking about how this might perform.
+You've noticed all of the function calls, don't these have lots of overhead?
+Uou've noticed that I'm computing the <code>sobel_x</code> and <code>sobel_y</code> values twice in the gradient function.
+Don't worry, it isn't quite so bad.
+</p>
+
+<p>
+Anyone who knows a fair amount about computers and performance noticed that <code>inline</code> keyword and is wondering if I'm somehow relying on function inlining to extract performance from this technique.
+The answer is yes.
+Every generated function is marked with an LLVM attribute <code>AlwaysInline</code> which, when combined with the appropriate LLVM optimization passes, guarantees that these functions will always be inlined into their caller.
+</p>
+</div>
+
+<div id="outline-container-org94567f8" class="outline-3">
+<h3 id="org94567f8">Aside: Function inlining</h3>
+<div class="outline-text-3" id="text-org94567f8">
+<p>
+For those who are not totally familiar with the concept of function ininling, here's a quick example (note that the <code>inline</code> keyword in C doesn't guarantee this behavior, it is just a hint to the compiler):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><code><span class="org-comment-delimiter">// </span><span class="org-comment">before AlwaysInlinePass</span></code>
+<code><span class="org-keyword">inline</span> <span class="org-type">int</span> <span class="org-function-name">foo</span>() { <span class="org-keyword">return</span> 12; }</code>
+<code></code>
+<code><span class="org-type">int</span> <span class="org-function-name">bar</span>() {</code>
+<code>    <span class="org-keyword">for</span> (<span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; 100; i++) {</code>
+<code>        <span class="org-keyword">if</span> (foo() &gt; 13) <span class="org-keyword">return</span> 1;</code>
+<code>    }</code>
+<code></code>
+<code>    <span class="org-keyword">return</span> 0;</code>
+<code>}</code>
+<code></code>
+<code><span class="org-comment-delimiter">// </span><span class="org-comment">after AlwaysInlinePass</span></code>
+<code><span class="org-type">int</span> <span class="org-function-name">bar</span>() {</code>
+<code>    <span class="org-keyword">for</span> (<span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; 100; i++) {</code>
+<code>        <span class="org-keyword">if</span> (12 &gt; 13) <span class="org-keyword">return</span> 1;</code>
+<code>    }</code>
+<code></code>
+<code>    <span class="org-keyword">return</span> 0;</code>
+<code>}</code>
+</pre>
+</div>
+
+<p>
+It may seem that this optimization is useful because it removes function call overhead.
+This is true, but it isn't the only critical reason that the optimization is useful.
+Many compiler optimizations cannot (or do not) cross function boundaries.
+Instead, they often view functions as black boxes about which nothing can be known (this is obviously an oversimplification).
+This often makes sense because functions may be defined in different compilations units or in shared libraries, where the compiler cannot access their source.
+Function inlining allows the compiler to "see" inside functions, then perform additional optimizations which would not have been possible otherwise.
+For example, because the call to <code>foo</code> has been inlined, the compiler can now (easily) optimize the function <code>bar</code> to:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><code><span class="org-type">int</span> <span class="org-function-name">bar</span>() {</code>
+<code>    <span class="org-keyword">return</span> 0;</code>
+<code>}</code>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org6a64b05" class="outline-3">
+<h3 id="org6a64b05">Impact</h3>
+<div class="outline-text-3" id="text-org6a64b05">
+<p>
+Aggressive function inlining gives me lots of freedom in my code generation.
+I can generate code which is totally inefficient, then inline everything and let the compiler do some of its magic.
+If course, this isn't a general rule, but for this problem the generated code is highly uniform, doesn't do much with memory (other than reading from <code>readonly</code> images), and has a few other compiler freindly properties.
+It the end of the day, LLVM is doing a pretty good job turning my functional style code into a big fat loop and eliminating redundant computations.
+If you're interested in looking at the optimized sobel LLVM module, here it is: <a href="https://gist.github.com/dpzmick/95587dbb2972e256e51b888add3364a6">gist</a>.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org070655f" class="outline-3">
+<h3 id="org070655f">Numbers</h3>
+<div class="outline-text-3" id="text-org070655f">
+<p>
+To benchmark this code, I compared the JITed code with an implementation of the exact same thing written directly in Rust.
+My benchmarking is not extremely rigorous, but I've taken steps to try to create an honest benchmark.
+</p>
+
+<p>
+Benchmarking environment:
+</p>
+
+<ul class="org-ul">
+<li>single core, 3.75GB RAM Google cloud compute virtual machine</li>
+<li>Ubuntu 16.04</li>
+<li>Rust stable (1.10.0)</li>
+<li>LLVM 3.9, built from source. Release build with assertions disabled</li>
+<li>Sobel code presented above</li>
+</ul>
+
+<p>
+The benchmark input was a 1.2 gig collection of 3255 images of various sizes, ranging from 160x120 to 6922x6922 pixels.
+The image sizes were mixed to try to stave off cache effects and other size-related effects so that I could hopefully just use averages to compare performance.
+</p>
+
+<p>
+Long story short, the average JIT/native speedup is 1.05x, so the LLVM JITed code is 1.05x faster than the direct Rust implementation (this AST construction time and compile time).
+This means that my JIT compiled code runs at the same speed (subject to some jitter) as the native rust code.
+</p>
+
+<p>
+Here is a plot of image vs average speedup (the images are sorted by the total number of pixels in the image):
+</p>
+
+
+<div class="figure">
+<p><img src="./static/rust_img/img_vs_speedup.png" alt="img_vs_speedup.png" class="light-invert" />
+</p>
+</div>
+
+<p>
+There are many more plots, but the overall conclusion is pretty clear: compared to the Rust, I'm not performing very poorly.
+Is this a win? I am not sure, I would need to do many more comparisons.
+These results do indicate to me that I have at least achieved reasonable performance, with a dramatically different programming style.
+</p>
+</div>
+
+<div id="outline-container-org613904d" class="outline-4">
+<h4 id="org613904d">Final performance notes</h4>
+<div class="outline-text-4" id="text-org613904d">
+<p>
+It should be noted that these results are not entirely surprising.
+Rust is also using LLVM as a backend.
+It is probably reasonable to assume that the code Rust is generating looks pretty similar to the code I am generating, although I have not verified this.
+</p>
+
+<p>
+If you've been nodding your head along with me, I have a confession to make: I've tricked you a little bit.
+LLVM is doing an awesome job (considering the code I've generated), but I'm certainly missing out on lots of opportunities for performance because of my code generation technique.
+Also, LLVM (or any compiler) should never be expected to be able to totally understand the problem a piece of code is trying to solve and optimize it perfectly.
+To really get good performance, I would need to pay attention to caching and quite a few other things which I have totally ignored.
+Hand tuned code should (and certainly would) run in circles around the code JIT compiled algorithm I've generated here.
+</p>
+
+<p>
+If you want something that gives you an awesome DSL AND all sorts of control over cache scheduling and whatnot, take a look at Halide.
+If you have no idea what I'm talking about or why any of this matters, take a look at Halide anyway.
+The Halide talks give fantastic descriptions of many of the problems it aims to solve.
+</p>
+</div>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org59e9f6e" class="outline-2">
+<h2 id="org59e9f6e">Conclusions</h2>
+<div class="outline-text-2" id="text-org59e9f6e">
+<p>
+Overall, this project was extremely enjoyable.
+I had yet another opportunity to fiddle with LLVM, which is always lots of fun (but sometimes very painful).
+I learned a little bit about image processing and some of the challenges that arise when shuffling pixels around.
+Finally, I learned a little bit of Rust.
+I have only one thing to say about Rust: Rust is an amazing language.
+Go learn Rust.
+</p>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<div id='#postamble'><a href='/'>home</a>   <a href=https://gitlab.com/dpzmick/dpzmick.com/blob/master/2016-08-11-rust-jit-image-processing.org>view-source</a></div>
+</div>
+</body>
+</html>
