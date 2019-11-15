@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2019-11-14 Thu 23:18 -->
+<!-- 2019-11-15 Fri 00:46 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Particle Simulator</title>
@@ -42,9 +42,9 @@ This post is a write up of a very small "day project" I did recently. The
 project was a <b>very</b> naive particle motion simulation.
 </p>
 
-<div id="outline-container-org946024f" class="outline-2">
-<h2 id="org946024f">What is it</h2>
-<div class="outline-text-2" id="text-org946024f">
+<div id="outline-container-org4232c5d" class="outline-2">
+<h2 id="org4232c5d">What is it</h2>
+<div class="outline-text-2" id="text-org4232c5d">
 <p>
 I thought it would be cool to try and simulate simple masses moving around in
 space as a programming exercise. So, I used some simple physics and made a
@@ -53,9 +53,9 @@ little toy.
 </div>
 </div>
 
-<div id="outline-container-org00787d4" class="outline-2">
-<h2 id="org00787d4">Physics</h2>
-<div class="outline-text-2" id="text-org00787d4">
+<div id="outline-container-orgec26528" class="outline-2">
+<h2 id="orgec26528">Physics</h2>
+<div class="outline-text-2" id="text-orgec26528">
 <p>
 Particles are not charged. They are just particles with a mass, and some
 velocity. Say particles $ p\_1 $ and $ p\_2 $ are floating around in space. Let's
@@ -162,9 +162,9 @@ acceleration happens during the time period.
 </p>
 </div>
 
-<div id="outline-container-org5291af5" class="outline-3">
-<h3 id="org5291af5">Quick Numeric Example of Something Kind of like the Above</h3>
-<div class="outline-text-3" id="text-org5291af5">
+<div id="outline-container-org762363f" class="outline-3">
+<h3 id="org762363f">Quick Numeric Example of Something Kind of like the Above</h3>
+<div class="outline-text-3" id="text-org762363f">
 <p>
 Let \(p\_1\) and \(p\_2\) both be particles with mass 100 kg.
 </p>
@@ -189,9 +189,9 @@ process my simulator used.
 </p>
 </div>
 
-<div id="outline-container-org98c8837" class="outline-4">
-<h4 id="org98c8837">Step 1: Find the force</h4>
-<div class="outline-text-4" id="text-org98c8837">
+<div id="outline-container-orgd76db54" class="outline-4">
+<h4 id="orgd76db54">Step 1: Find the force</h4>
+<div class="outline-text-4" id="text-orgd76db54">
 <p>
 Find distance:
 \[ |\textbf{r}|^2 = \sqrt{ (5-0)^2 + (5-0)^2 } = \sqrt{50} = 5\sqrt{2} \]
@@ -220,9 +220,9 @@ we can easily get the x and y components of the force.
 </div>
 </div>
 
-<div id="outline-container-org81beeec" class="outline-4">
-<h4 id="org81beeec">Step 2: Find \(\Delta v\)</h4>
-<div class="outline-text-4" id="text-org81beeec">
+<div id="outline-container-orgc5c0b35" class="outline-4">
+<h4 id="orgc5c0b35">Step 2: Find \(\Delta v\)</h4>
+<div class="outline-text-4" id="text-orgc5c0b35">
 <p>
 We know that the velocity of the particle the instant \(t=0\) is
 \(\langle 5,5 \rangle\). At \(t=0.00001\) the velocity will be different, at
@@ -248,9 +248,9 @@ So, the velocity of \(p\_2\) will need to change that much due to the force.
 </div>
 </div>
 
-<div id="outline-container-org412debd" class="outline-4">
-<h4 id="org412debd">Step 3: Find a new velocity for \(p\_2\)</h4>
-<div class="outline-text-4" id="text-org412debd">
+<div id="outline-container-orgba95ce8" class="outline-4">
+<h4 id="orgba95ce8">Step 3: Find a new velocity for \(p\_2\)</h4>
+<div class="outline-text-4" id="text-orgba95ce8">
 <p>
 The initial velocity was 5 up and 5 right. This force is pulling us down and
 left, so:
@@ -263,9 +263,9 @@ left, so:
 </div>
 </div>
 
-<div id="outline-container-orgcb3103d" class="outline-4">
-<h4 id="orgcb3103d">Step 4: Find new position</h4>
-<div class="outline-text-4" id="text-orgcb3103d">
+<div id="outline-container-org1eda2f5" class="outline-4">
+<h4 id="org1eda2f5">Step 4: Find new position</h4>
+<div class="outline-text-4" id="text-org1eda2f5">
 <p>
 Now, since we have assumed zero acceleration in the entire time frame from \(t=0\)
 to \(t=0.1\), we can use simple formulas to compute next locations.
@@ -296,9 +296,9 @@ function Timestep:
 </div>
 </div>
 
-<div id="outline-container-org9a902d4" class="outline-4">
-<h4 id="org9a902d4">The assumption</h4>
-<div class="outline-text-4" id="text-org9a902d4">
+<div id="outline-container-orga3b87b8" class="outline-4">
+<h4 id="orga3b87b8">The assumption</h4>
+<div class="outline-text-4" id="text-orga3b87b8">
 <p>
 I am not sure if the technique I used to deal with the dynamic nature of the
 system is a good or bad technique. On one hand, I can see bad behavior arising
@@ -316,9 +316,9 @@ wrong.
 </div>
 </div>
 
-<div id="outline-container-orga7c5b2a" class="outline-4">
-<h4 id="orga7c5b2a">More implementation notes</h4>
-<div class="outline-text-4" id="text-orga7c5b2a">
+<div id="outline-container-org3ea1698" class="outline-4">
+<h4 id="org3ea1698">More implementation notes</h4>
+<div class="outline-text-4" id="text-org3ea1698">
 <p>
 Other than not really doing the physics correctly, my simulation had some other
 issues.
@@ -343,9 +343,9 @@ through each other and continue on their marry way.</li>
 </div>
 </div>
 
-<div id="outline-container-orgfcfe2bf" class="outline-2">
-<h2 id="orgfcfe2bf">Conclusion</h2>
-<div class="outline-text-2" id="text-orgfcfe2bf">
+<div id="outline-container-org5b95f63" class="outline-2">
+<h2 id="org5b95f63">Conclusion</h2>
+<div class="outline-text-2" id="text-org5b95f63">
 <p>
 If I were to do this project again, I would certainly go about it differently. I
 did not do a good job actually representing any real physics with my little toy,
