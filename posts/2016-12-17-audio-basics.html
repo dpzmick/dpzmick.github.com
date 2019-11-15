@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 2019-11-14 Thu 23:18 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio programming 101</title>
+<meta name="generator" content="Org mode">
+<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+</head>
+<body>
+<div id="preamble" class="status">
+<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
+</div>
+<div id="content">
+<header>
+<h1 class="title">Audio programming 101</h1>
+</header><p>
+Recently, I've been working on a synthesizer (the kind that makes
+sounds) in Rust. I am hoping to write a large number of little articles
+about the things I learn as I work on this project.
+</p>
+
+<p>
+To start off this series, here's a short article about audio
+programming.
+</p>
+
+<div id="outline-container-orgb9f920d" class="outline-2">
+<h2 id="orgb9f920d">Digital audio</h2>
+<div class="outline-text-2" id="text-orgb9f920d">
+<p>
+To generate audio, audio software sends some digital audio signals to
+the audio card. Digital audio signals are just lists of floating point
+(decimal) numbers. Think of these numbers as "sound pressure" over time
+(see <a href="https://docs.cycling74.com/max5/tutorials/msp-tut/mspdigitalaudio.html">this page</a> for more)
+</p>
+
+<p>
+Because sound is continuous, we can't record every possible value.
+Instead, we take measurements of the sound pressure values at some
+evenly spaced interval. For CD quality audio, we take 44100 samples per
+second, or, one sample every 23ish microseconds. We might sample a sine
+wave like this (from Wikipedia):
+</p>
+
+
+<figure>
+<img src="../static/sound/sine_samples.png" alt="sine_samples.png" class="light-invert">
+
+<figcaption><span class="figure-number">Figure 1: </span>Samples</figcaption>
+</figure>
+
+<p>
+The audio card turns these lists of samples into some "real-world"
+audio, which is then played through the speakers.
+</p>
+</div>
+
+<div id="outline-container-org15a34bd" class="outline-3">
+<h3 id="org15a34bd">Types of audio software</h3>
+<div class="outline-text-3" id="text-org15a34bd">
+<p>
+Next let's think about a few different kinds of audio software (this
+list is by no means complete):
+</p>
+
+<ol class="org-ol">
+<li>Media players (your browser, whatever you listen to music with, a
+game, etc)</li>
+<li>Software instruments (think of a virtual piano)</li>
+<li>Audio plugins (an equalizer in a music player, effects like
+distortion and compression)</li>
+<li>Software audio systems</li>
+</ol>
+
+<p>
+Media players are pretty self explanatory, but the others might need
+some explanation. Next on the list is "Software instruments." These are
+just pieces of software that can be used to generate sounds. They are
+played with external keyboards, or "programmed" with cool user
+interfaces.
+</p>
+
+
+<figure>
+<img src="../static/sound/reason_drums.jpg" alt="reason_drums.jpg"> 
+
+<figcaption><span class="figure-number">Figure 2: </span>drum machine in some software</figcaption>
+</figure>
+
+<p>
+Next up are audio plugins. These are pieces of software which take audio
+as input, transform it in some way, then output the transformed audio.
+For example, a graphical equalizer can adjust the volume of different
+frequency ranges (make the bass louder, make the treble quieter):
+</p>
+
+
+<figure>
+<img src="../static/sound/itunes_eq.jpg" alt="itunes_eq.jpg">
+
+<figcaption><span class="figure-number">Figure 3: </span>equalizer</figcaption>
+</figure>
+
+<p>
+Finally, we come to what I'm calling a software audio system. Because
+there is only one sound card on your system, any audio you are playing
+on your computer must be mixed together, then sent to the audio card. On
+windows, using the default audio system, I can mix audio with this
+little mixer thing:
+</p>
+
+
+<figure>
+<img src="../static/sound/win_mixer.png" alt="win_mixer.png">
+
+<figcaption><span class="figure-number">Figure 4: </span>windows mixer</figcaption>
+</figure>
+
+<p>
+<a href="http://www.jackaudio.org/">Some audio systems</a> may also be able to send audio between
+applications, send <a href="https://en.wikipedia.org/wiki/MIDI">MIDI</a> signals, keep audio applications in sync, and
+perform many other tasks.
+</p>
+
+<p>
+The software audio system provides a library which application
+developers use to develop audio applications.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org0e2c54e" class="outline-2">
+<h2 id="org0e2c54e">Software audio systems</h2>
+<div class="outline-text-2" id="text-org0e2c54e">
+<p>
+Most software audio systems (as far as I know) tend to work the same
+way. There is a realtime thread that generates samples and a bunch of
+other threads that deal with everything else. The audio thread is
+usually set up by the audio system's library. The library calls a user
+provided callback function to get the samples it needs to deliver to the
+audio card.
+</p>
+</div>
+
+<div id="outline-container-orga4ae3e2" class="outline-3">
+<h3 id="orga4ae3e2">How fast is realtime?</h3>
+<div class="outline-text-3" id="text-orga4ae3e2">
+<p>
+In the previous section, I claimed that, at 44.1 kHz (the standard CD
+sample rate), we need to take one audio sample approximately every 23
+microseconds. 23 microseconds seems pretty quick, but 192 kHz, a sample
+must be taken about every 5 microseconds (192 kHz is becoming a bit of
+an industry standard)!
+</p>
+
+<p>
+At these speeds, it would not be possible for the audio system to call
+our callback function to get every individual sample. Instead, the audio
+library system ask us for larger batches of samples. If we simplify the
+real world a bit, we can approximate how often our callback function
+will be called. Here's a table comparing batch size to the time between
+callback function calls (all times in milliseconds):
+</p>
+
+<table>
+
+
+<colgroup>
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">Batch Size</th>
+<th scope="col" class="org-right">Time between calls @ 44.1 kHz (millis)</th>
+<th scope="col" class="org-right">Time between calls @ 192 kHz (millis)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">64</td>
+<td class="org-right">1.45</td>
+<td class="org-right">0.33</td>
+</tr>
+
+<tr>
+<td class="org-right">128</td>
+<td class="org-right">2.90</td>
+<td class="org-right">0.67</td>
+</tr>
+
+<tr>
+<td class="org-right">256</td>
+<td class="org-right">5.80</td>
+<td class="org-right">1.33</td>
+</tr>
+
+<tr>
+<td class="org-right">512</td>
+<td class="org-right">11.61</td>
+<td class="org-right">2.67</td>
+</tr>
+
+<tr>
+<td class="org-right">1024</td>
+<td class="org-right">23.22</td>
+<td class="org-right">5.33</td>
+</tr>
+
+<tr>
+<td class="org-right">2048</td>
+<td class="org-right">46.44</td>
+<td class="org-right">10.67</td>
+</tr>
+
+<tr>
+<td class="org-right">4096</td>
+<td class="org-right">92.88</td>
+<td class="org-right">21.33</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+There are many complicated trade offs between sample rate/and batch
+size, so I don't want to get into them now. You can read <a href="http://www.penguinproducer.com/Blog/2011/10/balancing-performance-and-reliability-in-jack/">this</a> for a
+bit more information. Long story short, use the smallest batch size
+your computer can handle.
+</p>
+
+<p>
+As audio application developers, we should make sure that our code runs
+as quickly as possible no matter what the batch size is. The time we
+spend is time other audio applications cannot use. Even if we
+theoretically have 5 milliseconds to run, using the entire 5
+milliseconds can slow everyone else down.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org80d0596" class="outline-3">
+<h3 id="org80d0596">Time keeps on ticking</h3>
+<div class="outline-text-3" id="text-org80d0596">
+<p>
+If our callback function fails to generate samples quickly enough (or
+uses up all of the CPU time), the audio system will produce crackles,
+pops, and bad sounds. We call these buffer underruns (or xruns).
+<b>Avoiding buffer underruns must be our top priority!</b>
+</p>
+
+<p>
+Everything we do in our callback function must <i>always</i> complete quickly
+and in a very predictable amount of time. Unfortunately, this constraint
+eliminates many things we often take for granted, including:
+</p>
+
+<ul class="org-ul">
+<li>Synchronization with locks</li>
+<li>Blocking operations</li>
+<li>Operations with high worst case runtime</li>
+<li>Memory allocation with standard allocators</li>
+</ul>
+
+<p>
+First, we can't use locks or semaphores or conditional variables or any
+of those kinds of things inside of our realtime callback function. If
+one of our other threads is holding the lock, it might not let go soon
+enough for us to generate our samples on time! If you try to make sure
+you locks will always be released quickly, the scheduler might step in
+and ruin your plans (this is called
+<a href="https://en.wikipedia.org/wiki/Priority_inversion">Priority
+Inversion</a>). There are some cases in which it <i>might</i> be okay to use
+locks, but, in general, it is a good idea to avoid them.
+</p>
+
+<p>
+Second, we cannot perform blocking operations in the realtime callback
+function. Things that might block include access to the network, access
+to a disk, and other system calls which might block while performing a
+task. In general, if I/O needs to be performed, it is best to perform
+the I/O on another thread and communicate the results to the realtime
+thread. There are some interesting subtleties to this, for example, can
+the following code perform I/O?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-C++"><span class="org-type">int</span> <span class="org-function-name">callback</span>(<span class="org-comment-delimiter">/* </span><span class="org-comment">args */</span>) {
+  <span class="org-type">float</span>* <span class="org-variable-name">samples</span> = <span class="org-comment-delimiter">// </span><span class="org-comment">get a contiguous array of samples in a nonblocking way</span>
+  <span class="org-keyword">for</span> (<span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; N; i++) {
+    output_sample( samples[i] );
+  }
+}
+</pre>
+</div>
+
+<p>
+Unfortunately, it can. If the array of samples is <i>extremely</i> large,
+the samples might not all actually be in physical memory. When the
+operating system must contend with increasing memory pressure, it may
+move some of the <a href="https://en.wikipedia.org/wiki/Page_(computer_memory)">virtual memory pages</a> it manages out of physical
+memory. If the page isn't in main memory, the operating system has to
+go get it from somewhere. These pages are often moved to a hard disk,
+so getting them will require blocking I/O.
+</p>
+
+<p>
+Luckily, this sort of thing is only an issue if your program uses
+extremely large amounts of memory. Audio applications usually do not
+have high memory requirements, but, if yours does, you operating system
+may provide you with a workaround. On linux, we can use the system call
+<code>mlockall</code> to make sure certain pages never leave physical memory:
+</p>
+
+<blockquote>
+<p>
+mlock(), mlock2(), and mlockall() lock part or all of the calling
+process's virtual address space into RAM, preventing that memory from
+being paged to the swap area.
+</p>
+</blockquote>
+
+<p>
+Next, we want to avoid operations which have a high worst case
+runtime.  This can be tricky because some things with bad worst case
+runtime things have a reasonable <a href="https://en.wikipedia.org/wiki/Amortized_analysis">amortized</a> runtime.  The canonical
+example of this is a <a href="https://en.wikipedia.org/wiki/Dynamic_array">dynamic array</a>. A dynamic array can be inserted
+into very quickly most of the time, but every so often it must
+reallocate itself and copy all of its data somewhere else. For a large
+array, this expensive copy might cause us to miss our deadline every
+once and a while. Fortunately, for some data structures, we can push
+these worst case costs around and make the operations realtime safe
+(see <a href="https://en.wikipedia.org/wiki/Hash_table#Dynamic_resizing">Incremental resizing</a>).
+</p>
+
+<p>
+Finally, memory allocation with standard library allocators can cause
+problems. Memory allocators are usually thread safe, which usually
+means that the are locking something. Additionally, allocation
+algorithms rarely make any time guarantees; the algorithms they use
+can have very poor worst case runtimes. Standard library allocators
+break both of our other rules! Luckily, we can still perform dynamic
+memory allocation if we use <a href="http://www.gii.upv.es/tlsf/">specially designed allocators</a> or <a href="https://github.com/supercollider/supercollider/blob/master/common/SC_AllocPool.h">pool
+allocators</a> which do not violate our realtime constraints.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org16c9fc8" class="outline-2">
+<h2 id="org16c9fc8">What do we do?</h2>
+<div class="outline-text-2" id="text-org16c9fc8">
+<p>
+In general, there are a few cool tricks we can use to design around
+these problems, but I'm not going to discuss any of them in this post.
+Future posts will discuss possible solutions and many of their
+tradeoffs, eventually.
+</p>
+
+<p>
+If you can't wait, here are some interesting things you can read to
+learn more:
+</p>
+<ul class="org-ul">
+<li><a href="http://www.cs.cmu.edu/~rbd/doc/icmc2005workshop/real-time-systems-concepts-design-patterns.pdf">Overview of Design Patterns for Real-Time Computer Music Systems</a></li>
+<li><a href="http://supercolliderbook.net/rossbencinach26.pdf">SuperCollider implementation details</a> from the <a href="http://supercolliderbook.net/">SuperCollider book</a></li>
+<li><a href="http://tim.klingt.org/publications/tim_blechmann_supernova.pdf">Supernova for SuperCollider</a> a Masters thesis discussing some of these issues</li>
+<li><a href="http://www.rossbencina.com/code/real-time-audio-programming-101-time-waits-for-nothing">this excellent blog post</a></li>
+</ul>
+
+<p>
+See you next time!
+</p>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2016-12-17-audio-basics.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
+</div>
+</body>
+</html>

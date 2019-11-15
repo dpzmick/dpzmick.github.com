@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 2019-11-14 Thu 23:18 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outsmarting the Compiler</title>
+<meta name="generator" content="Org mode">
+<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="preamble" class="status">
+<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
+</div>
+<div id="content">
+<header>
+<h1 class="title">Outsmarting the Compiler</h1>
+</header><p>
+Suppose we have two very similar structs which we need to partially populate "ahead of time" and store somewhere.
+Then, a bit later, we need to <b><b>very quickly</b></b> finish populating the structs.
+Here are some example structs:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">struct</span> <span class="org-keyword">__attribute__</span>((packed)) <span class="org-type">A</span> {
+  <span class="org-type">int64_t</span> <span class="org-variable-name">a</span>;
+  <span class="org-type">int64_t</span> <span class="org-variable-name">b</span>;
+  <span class="org-type">char</span>    <span class="org-variable-name">arr</span>[PADDING1];
+  <span class="org-type">int64_t</span> <span class="org-variable-name">c</span>;
+};
+
+<span class="org-keyword">struct</span> <span class="org-keyword">__attribute__</span>((packed)) <span class="org-type">B</span> {
+  <span class="org-type">int64_t</span> <span class="org-variable-name">a</span>;
+  <span class="org-type">int64_t</span> <span class="org-variable-name">b</span>;
+  <span class="org-type">char</span>    <span class="org-variable-name">arr</span>[PADDING2];
+  <span class="org-type">int64_t</span> <span class="org-variable-name">c</span>;
+};
+</pre>
+</div>
+
+<p>
+The "padding" arrays are populated ahead of time, so we just need to set <code>a</code>, <code>b</code>, and <code>c</code> for each struct (quickly):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>&gt;
+<span class="org-type">void</span> <span class="org-function-name">writeFields</span>(<span class="org-type">T</span>* <span class="org-variable-name">t</span>)
+{
+  t-&gt;a = 12;
+  t-&gt;b = 25;
+  t-&gt;c = 16;
+}
+</pre>
+</div>
+
+<p>
+Unfortunately, we don't statically know what struct we are going to have to operate on; we only get this information at runtime.
+We just have a blob of memory and a tag which indicates which of the two variants of the struct is sitting in the blob of memory:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">enum</span> <span class="org-keyword">class</span> <span class="org-type">Variant</span> { <span class="org-variable-name">eA</span>, <span class="org-variable-name">eB</span> };
+
+<span class="org-keyword">struct</span> <span class="org-type">Wrapper</span> {
+  <span class="org-type">Variant</span> <span class="org-variable-name">v</span>;
+  <span class="org-type">char</span> <span class="org-variable-name">payload</span>[];
+};
+</pre>
+</div>
+
+<p>
+So, our fast path <code>write</code> function will need to take a wrapper struct, switch on the tag, then call the appropriate version of <code>writeFields</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">void</span> <span class="org-function-name">write</span>(<span class="org-type">Wrapper</span>* <span class="org-variable-name">w</span>)
+{
+  <span class="org-keyword">if</span> (w-&gt;v == <span class="org-constant">Variant</span>::eA) {
+    writeFields&lt;A&gt;(<span class="org-keyword">reinterpret_cast</span>&lt;<span class="org-type">A</span>*&gt;(w-&gt;payload));
+  }
+  <span class="org-keyword">else</span> {
+    writeFields&lt;B&gt;(<span class="org-keyword">reinterpret_cast</span>&lt;<span class="org-type">B</span>*&gt;(w-&gt;payload));
+  }
+}
+</pre>
+</div>
+
+<p>
+If <code>PADDING1 =</code> PADDING2=, then, regardless of the value of the tag (which struct we are populating), we will need to write to the same offsets.
+The cast and the templated function call will all compile out.
+Take a look (<code>clang-4.0 --std=c++1z -O3</code>):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-function-name">.LCPI2_0</span>:
+        <span class="org-keyword">.quad</span>   12                      # 0xc
+        <span class="org-keyword">.quad</span>   25                      # 0x19
+<span class="org-function-name">write</span>(Wrapper*):                      # @write(Wrapper*)
+        <span class="org-keyword">movaps</span>  xmm0, xmmword ptr [rip + .LCPI2_0] # xmm0 = [12,25]
+        <span class="org-keyword">movups</span>  xmmword ptr [rdi + 4], xmm0
+        <span class="org-keyword">mov</span>     qword ptr [rdi + 36], 16
+        <span class="org-keyword">ret</span>
+</pre>
+</div>
+
+<p>
+Before we move on, take a moment to appreciate what your compiler just did for you:
+</p>
+<ol class="org-ol">
+<li>It allowed you to write a type safe <code>writeFields</code> method. If the layout of the struct changes for some reason, this part of the code will not begin to misbehave.</li>
+<li>It removed the cost of the abstraction when it could figure out how to.</li>
+</ol>
+
+<p>
+Unfortunately, if <code>PADDING1 !</code> PADDING2=, we will need to write the value of <code>c</code> in a different location in struct <code>A</code> and struct <code>B</code>.
+In this case, it looks like we will need read the tag out of the <code>Wrapper*</code>, then branch to the appropriate <code>writeFields</code> method.
+We are good programmers, we know that branches might be expensive, so we really want avoid any branching.
+</p>
+
+<p>
+We can skip the branch by storing the offset in our wrapper struct and precomputing the offset when the wrapper is set up.
+Introduce a new wrapper type (and abandon all type safety):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">struct</span> <span class="org-type">WrapperWithOffset</span> {
+  <span class="org-type">Variant</span> <span class="org-variable-name">v</span>;
+  <span class="org-type">size_t</span> <span class="org-variable-name">offset</span>;
+  <span class="org-type">char</span> <span class="org-variable-name">payload</span>[];
+};
+</pre>
+</div>
+
+<p>
+Next, we can write a new function which will operate on structs of type <code>A</code> or type <code>B</code>, but, instead of writing to <code>c</code> directly, it computes a pointer to <code>c</code> using the offset we've stored in the wrapper, then writes to that pointer.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">void</span> <span class="org-function-name">writeFieldsWithOffset</span>(<span class="org-type">A</span>* <span class="org-variable-name">t</span>, <span class="org-type">size_t</span> <span class="org-variable-name">c_offset</span>)
+{
+  <span class="org-comment-delimiter">// </span><span class="org-comment">make sure a and b are always at the same offset in struct A and struct B</span>
+  static_assert(offsetof(A, a) == offsetof(B, a), <span class="org-string">"!"</span>);
+  static_assert(offsetof(A, b) == offsetof(B, b), <span class="org-string">"!"</span>);
+
+  t-&gt;a = 12;
+  t-&gt;b = 25;
+
+  <span class="org-comment-delimiter">// </span><span class="org-comment">c will be at the offset we've provided</span>
+  *(<span class="org-type">int64_t</span>*)(((<span class="org-type">char</span>*)t + c_offset)) = 16;
+}
+
+<span class="org-type">void</span> <span class="org-function-name">writeLessSafe</span>(<span class="org-type">WrapperWithOffset</span>* <span class="org-variable-name">w</span>)
+{
+  <span class="org-type">A</span>* <span class="org-variable-name">a</span> = <span class="org-keyword">reinterpret_cast</span>&lt;<span class="org-type">A</span>*&gt;(w-&gt;payload);
+  writeFieldsWithOffset(a, w-&gt;offset);
+}
+</pre>
+</div>
+
+<p>
+Checking the code, this compiles down to exactly what we were hoping it would (again with clang-4.0)!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-function-name">.LCPI1_0</span>:
+        <span class="org-keyword">.quad</span>   12                      # 0xc
+        <span class="org-keyword">.quad</span>   25                      # 0x19
+<span class="org-function-name">writeLessSafe</span>(WrapperWithOffset*): # @writeLessSafe(WrapperWithOffset*)
+        <span class="org-keyword">mov</span>     rax, qword ptr [rdi + 8]
+        <span class="org-keyword">movaps</span>  xmm0, xmmword ptr [rip + .LCPI1_0] # xmm0 = [12,25]
+        <span class="org-keyword">movups</span>  xmmword ptr [rdi + 16], xmm0
+        <span class="org-keyword">mov</span>     qword ptr [rdi + rax + 16], 16
+        <span class="org-keyword">ret</span>
+</pre>
+</div>
+
+<p>
+Hooray, no conditional generated, exactly as we desired.
+We've outsmarted the compiler!
+</p>
+
+<div id="outline-container-org81a51fe" class="outline-5">
+<h5 id="org81a51fe">Assertion Failed: smarter_than_compiler</h5>
+<div class="outline-text-5" id="text-org81a51fe">
+<p>
+Let's set <code>PADDING1 = 16</code> and <code>PADDING2 = 17</code>.
+The code generated on clang-4.0 for <code>write(Wrapper*)</code> looks quite interesting:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-function-name">.LCPI2_0</span>:
+        <span class="org-keyword">.quad</span>   12                      # 0xc
+        <span class="org-keyword">.quad</span>   25                      # 0x19
+<span class="org-function-name">write</span>(Wrapper*):                      # @write(Wrapper*)
+        <span class="org-keyword">xor</span>     eax, eax
+        <span class="org-keyword">cmp</span>     dword ptr [rdi], 0
+        <span class="org-keyword">movaps</span>  xmm0, xmmword ptr [rip + .LCPI2_0] # xmm0 = [12,25]
+        <span class="org-keyword">movups</span>  xmmword ptr [rdi + 4], xmm0
+        <span class="org-keyword">setne</span>   al
+        <span class="org-keyword">mov</span>     qword ptr [rdi + rax + 36], 16
+        <span class="org-keyword">ret</span>
+</pre>
+</div>
+
+<p>
+This code is still very slightly longer than the unsafe code written previously, but, its really not bad at all.
+</p>
+
+<p>
+The compiler has succeeded in avoiding a branch using a rather clever <code>cmp</code> and <code>setne</code> instruction pair.
+Essentially, clang figured out that it could compute the offset of <code>c</code> using the tag we've placed in the <code>Wrapper</code>'s <code>Variant</code> field.
+In this case, I've allowed the enum values to default to \(0\) and \(1\) (hence the <code>cmp dword ptr [rdi], 0</code> checking if the first thing in the functions first arg is equal to \(0\)).
+</p>
+
+<p>
+What happens if we change the values?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">enum</span> <span class="org-keyword">class</span> <span class="org-type">Variant</span> { <span class="org-variable-name">eA</span> = 666, <span class="org-variable-name">eB</span> = 1337 };
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-function-name">.LCPI2_0</span>:
+        <span class="org-keyword">.quad</span>   12                      # 0xc
+        <span class="org-keyword">.quad</span>   25                      # 0x19
+<span class="org-function-name">write</span>(Wrapper*):                      # @write(Wrapper*)
+        <span class="org-keyword">mov</span>     eax, dword ptr [rdi]
+        <span class="org-keyword">movaps</span>  xmm0, xmmword ptr [rip + .LCPI2_0] # xmm0 = [12,25]
+        <span class="org-keyword">movups</span>  xmmword ptr [rdi + 4], xmm0
+        <span class="org-keyword">xor</span>     ecx, ecx
+        <span class="org-keyword">cmp</span>     eax, 666
+        <span class="org-keyword">setne</span>   cl
+        <span class="org-keyword">mov</span>     qword ptr [rdi + rcx + 36], 16
+        <span class="org-keyword">ret</span>
+</pre>
+</div>
+
+<p>
+The code has changed slightly to account for the new potential values of <code>Wrapper::v</code>, but it looks much nicer than a branch.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org1c026a8" class="outline-4">
+<h4 id="org1c026a8">Meaner PADDING</h4>
+<div class="outline-text-4" id="text-org1c026a8">
+<p>
+Reminder: In the previous examples <code>PADDING1 = 16</code> and <code>PADDING2 = 17</code>.
+What happens to the generated code if we make the paddings completely wacky?
+</p>
+
+<p>
+With <code>PADDING1 = 16</code> and <code>PADDING2 = 173</code>, and with the enum values reverted to their defaults:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp">.LCPI1_0:
+        .quad   12                      # 0xc
+        .quad   25                      # 0x19
+writeLessSafe(<span class="org-type">WrapperWithOffset</span>*): # @writeLessSafe(<span class="org-type">WrapperWithOffset</span>*)
+        <span class="org-type">mov</span>     <span class="org-variable-name">rax</span>, <span class="org-variable-name">qword</span> ptr [rdi + 8]
+        movaps  xmm0, <span class="org-variable-name">xmmword</span> ptr [rip + .LCPI1_0] # xmm0 = [12,25]
+        movups  xmmword ptr [rdi + 16], <span class="org-variable-name">xmm0</span>
+        mov     qword ptr [rdi + rax + 16], 16
+        ret
+
+.LCPI2_0:
+        .quad   12                      # 0xc
+        .quad   25                      # 0x19
+write(<span class="org-type">Wrapper</span>*):                      # @write(<span class="org-type">Wrapper</span>*)
+        cmp     <span class="org-type">dword</span> <span class="org-variable-name">ptr</span> [rdi], 0
+        movaps  xmm0, <span class="org-type">xmmword</span> <span class="org-variable-name">ptr</span> [rip + .LCPI2_0] # xmm0 = [12,25]
+        movups  xmmword ptr [rdi + 4], xmm0
+        <span class="org-type">mov</span>     <span class="org-variable-name">eax</span>, 32
+        mov     ecx, 189
+        cmove   rcx, rax
+        <span class="org-type">mov</span>     <span class="org-type">qword</span> <span class="org-variable-name">ptr</span> [rdi + rcx + 4], 16
+        ret
+</pre>
+</div>
+
+<p>
+<code>writeLessSafe</code> doesn't change, as expected.
+<code>write</code> does get tweaked a bit to account for the new offsets, but its still pretty great code.
+</p>
+
+<p>
+So, have we beaten the compiler?
+The answer to that depends on which compiler you ask.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgde5df88" class="outline-4">
+<h4 id="orgde5df88">gcc 7.1 (&#x2013;std=c++1z -O3)</h4>
+<div class="outline-text-4" id="text-orgde5df88">
+</div>
+<div id="outline-container-org9d34c7c" class="outline-5">
+<h5 id="org9d34c7c"><code>PADDING1</code> <code>= =PADDING2</code></h5>
+<div class="outline-text-5" id="text-org9d34c7c">
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-function-name">writeLessSafe</span>(WrapperWithOffset*):
+        <span class="org-keyword">mov</span>     rax, QWORD PTR [rdi+8]
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+16], 12
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+24], 25
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+16+rax], 16
+        <span class="org-keyword">ret</span>
+<span class="org-function-name">write</span>(Wrapper*):
+        <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+4], 12
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+12], 25
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+36], 16
+        <span class="org-keyword">test</span>    eax, eax
+        <span class="org-keyword">je</span>      .L7
+        <span class="org-keyword">rep</span> ret
+<span class="org-function-name">.L7</span>:
+        <span class="org-keyword">rep</span> ret
+</pre>
+</div>
+
+<p>
+That's a little odd.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgf46a67a" class="outline-5">
+<h5 id="orgf46a67a"><code>PADDING1 = 16</code> and <code>PADDING2 = 17</code></h5>
+<div class="outline-text-5" id="text-orgf46a67a">
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-function-name">write</span>(Wrapper*):
+        <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+4], 12
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+12], 25
+        <span class="org-keyword">test</span>    eax, eax
+        <span class="org-keyword">je</span>      .L7
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+37], 16
+        <span class="org-keyword">ret</span>
+<span class="org-function-name">.L7</span>:
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+36], 16
+        <span class="org-keyword">ret</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgbe26e4f" class="outline-5">
+<h5 id="orgbe26e4f"><code>PADDING1 = 16</code> and <code>PADDING2 = 173</code></h5>
+<div class="outline-text-5" id="text-orgbe26e4f">
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-function-name">write</span>(Wrapper*):
+        <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+4], 12
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+12], 25
+        <span class="org-keyword">test</span>    eax, eax
+        <span class="org-keyword">je</span>      .L7
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+193], 16
+        <span class="org-keyword">ret</span>
+<span class="org-function-name">.L7</span>:
+        <span class="org-keyword">mov</span>     QWORD PTR [rdi+36], 16
+        <span class="org-keyword">ret</span>
+</pre>
+</div>
+
+<p>
+Interesting.
+This branch felt <b>almost</b> detectable in some micro-benchmarks, but I would require additional testing before I'm willing to declare that it is harmful.
+At the moment I'm not convinced that it hurts much.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgca0d5dd" class="outline-2">
+<h2 id="orgca0d5dd">Conclusion</h2>
+<div class="outline-text-2" id="text-orgca0d5dd">
+<p>
+No conclusion.
+None of my benchmarks have managed to detect any convincing cost for this branch (even when variants are randomly chosen inside of a loop in an attempt to confuse branch predictor) so none of this actually matters (probably).
+The only interesting fact my benchmarks showed is that clang 4.0 looked very very slightly faster than gcc 6.3, possibly because of the vector instructions clang is generating, but also possibly because benchmarking is hard and I'm not benchmarking on isolated cores.
+Here's some code: <a href="https://gist.github.com/dpzmick/a8f937c5e35185092b6af9a5ed87a7b8">gist</a>.
+</p>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2017-05-25-outsmarting-the-compiler.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
+</div>
+</body>
+</html>

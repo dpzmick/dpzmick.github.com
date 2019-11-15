@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0"
+     xmlns:content="http://purl.org/rss/1.0/modules/content/"
+     xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:atom="http://www.w3.org/2005/Atom"
+     xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+     xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+     xmlns:georss="http://www.georss.org/georss"
+     xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+     xmlns:media="http://search.yahoo.com/mrss/"><channel>
+  <title>dpzmick.com blog posts</title>
+  <atom:link href="http://dpzmick.com/rss.xml" rel="self" type="application/rss+xml" />
+  <link>http://dpzmick.com/</link>
+  <description><![CDATA[]]></description>
+  <language>en</language>
+  <pubDate>Thu, 14 Nov 2019 23:18:34 -0600</pubDate>
+  <lastBuildDate>Thu, 14 Nov 2019 23:18:34 -0600</lastBuildDate>
+  <generator>Emacs 26.3 Org-mode 9.1.9</generator>
+  <webMaster>dpzmick@gmail.com (David Zmick)</webMaster>
+  <image>
+    <url>https://orgmode.org/img/org-mode-unicorn-logo.png</url>
+    <title>dpzmick.com blog posts</title>
+    <link>http://dpzmick.com/</link>
+  </image>
+
+
+  <item>
+    <title>May 25, 2019 - Understaning Pin (for C and C++ Developers)</title>
+    <link>http://dpzmick.com//posts/2019-05-25-pin-rs-cpp.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2019-05-25-pin-rs-cpp.html</guid>
+    <pubDate>Sat, 25 May 2019 00:00:00 -0500</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>May 25, 2017 - Outsmarting the Compiler</title>
+    <link>http://dpzmick.com//posts/2017-05-25-outsmarting-the-compiler.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2017-05-25-outsmarting-the-compiler.html</guid>
+    <pubDate>Thu, 25 May 2017 00:00:00 -0500</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>Jan 23, 2017 - "Garbage Collection" for Rust Arc Pointers</title>
+    <link>http://dpzmick.com//posts/2017-01-23-rust-arc-gc-realtime.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2017-01-23-rust-arc-gc-realtime.html</guid>
+    <pubDate>Mon, 23 Jan 2017 00:00:00 -0600</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>Dec 17, 2016 - Audio programming 101</title>
+    <link>http://dpzmick.com//posts/2016-12-17-audio-basics.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2016-12-17-audio-basics.html</guid>
+    <pubDate>Sat, 17 Dec 2016 00:00:00 -0600</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>Aug 11, 2016 - Rust Image Processing DSL</title>
+    <link>http://dpzmick.com//posts/2016-08-11-rust-jit-image-processing.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2016-08-11-rust-jit-image-processing.html</guid>
+    <pubDate>Thu, 11 Aug 2016 00:00:00 -0500</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>Jun 09, 2015 - Ants</title>
+    <link>http://dpzmick.com//posts/2015-06-09-ants.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2015-06-09-ants.html</guid>
+    <pubDate>Tue, 09 Jun 2015 00:00:00 -0500</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>Jun 01, 2014 - Study Groups Pt. 2</title>
+    <link>http://dpzmick.com//posts/2014-07-07-study-groups-pt-2.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2014-07-07-study-groups-pt-2.html</guid>
+    <pubDate>Sun, 01 Jun 2014 00:00:00 -0500</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>May 31, 2014 - Study Groups Pt. 1</title>
+    <link>http://dpzmick.com//posts/2014-05-31-study-groups-pt-1.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2014-05-31-study-groups-pt-1.html</guid>
+    <pubDate>Sat, 31 May 2014 00:00:00 -0500</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>Jan 17, 2014 - Decision Matrix</title>
+    <link>http://dpzmick.com//posts/2014-01-17-decision-matrix.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2014-01-17-decision-matrix.html</guid>
+    <pubDate>Fri, 17 Jan 2014 00:00:00 -0600</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+</channel>
+</rss>

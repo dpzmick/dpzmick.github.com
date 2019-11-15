@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 2019-11-14 Thu 23:18 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>"Garbage Collection" for Rust Arc Pointers</title>
+<meta name="generator" content="Org mode">
+<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+</head>
+<body>
+<div id="preamble" class="status">
+<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
+</div>
+<div id="content">
+<header>
+<h1 class="title">"Garbage Collection" for Rust Arc Pointers</h1>
+</header><p>
+If you don't know anything at all about realtime audio programming, you might want to read the first post in this pseudo-series, <a href="./2016-12-17-audio-basics.html">Audio Programming 101</a>, or watch <a href="https://www.youtube.com/watch?v=SJXGSJ6Zoro">this talk</a> from the Audio Developers Conference to get a little bit of background.
+</p>
+
+<p>
+In short, there's a realtime thread that can never be blocked in any way.
+The realtime thread is responsible for sending all of the audio which an application will produce to an audio system, at exactly the right moments.
+If the realtime thread ever fails to generate the audio it needs to generate, bad things happen.
+That means locks, I/O, allocation are all off limits in the realtime thread.
+</p>
+
+<p>
+Sending messages from non-realtime threads to the realtime thread is trickier than it might be in a "normal" application because we can't do these things.
+There are many, many techniques which can be used to work around this trickiness.
+This post is a discussion of one such method (presented in <a href="https://www.youtube.com/watch?v=boPEO2auJj4">this cppcon talk</a>) implemented in <a href="https://www.rust-lang.org/en-US/">Rust</a>.
+</p>
+
+<div id="outline-container-org48344f8" class="outline-2">
+<h2 id="org48344f8">Messaging between threads</h2>
+<div class="outline-text-2" id="text-org48344f8">
+<p>
+Suppose we are developing a synthesizer which produces sounds when keys are pressed on a <a href="https://en.wikipedia.org/wiki/MIDI_controller#Keyboards">MIDI keyboard</a>.
+The audio library calls a function we provide once ever 6 or so milliseconds to request a list of samples from us.
+The library calls our function with 2 arguments: 1) How many samples it wants 2) what key presses we need to handle.
+The callback function uses a precomputed list of samples to generate sounds every time it is called.
+To modify the properties of the sounds that are produced, the user edits settings with a user interface.
+</p>
+
+<p>
+It would be painful (and incorrect) to attempt to handle UI events in the realtime thread, so we will run a UI thread to handle the UI events.
+Whenever the UI thread gets an event to handle, it needs to compute a new sample list, then send the list to the realtime thread.
+</p>
+
+<p>
+Since we can't lock, let's use a queue to send some sort of message between threads.
+The queue that we choose needs to have a few properties:
+</p>
+<ul class="org-ul">
+<li>Must be a <a href="https://pdfs.semanticscholar.org/a909/1ef790788c5d252cad94dd6862adf457e073.pdf">lock free queue</a></li>
+<li>Must be able to preallocate all of its nodes (cant't allocate or free memory for a node on a push or pull)</li>
+</ul>
+
+<p>
+I want to place messages on the heap so that they do not need to be copied as we move them around.
+If messages lives on the heap, we must ensure they are allocated and freed outside of the realtime thread (we can't call allocation functions on the realtime thread).
+</p>
+</div>
+
+<div id="outline-container-orge108955" class="outline-3">
+<h3 id="orge108955">Reference counted garbage collection</h3>
+<div class="outline-text-3" id="text-orge108955">
+<p>
+It is totally fine to allocate on the UI thread, so when the UI thread handles an event it will compute a new list of samples and stick them into a freshly allocated block of memory.
+Then we will ship this message over to the realtime thread.
+</p>
+
+<p>
+When the realtime thread takes ownership of the message, it will need to hold onto the data for some undefined period of time.
+But, when the realtime thread is done with the message, it cannot free it (because we can't allocate or deallocatein the realtime thread).
+</p>
+
+<p>
+To solve this, let's run one more thread to clean up messages which are no longer being used by the realtime thread.
+</p>
+
+<p>
+Whenever the UI thread allocates space for a message using standard allocators, it will wrap the message in a <a href="https://doc.rust-lang.org/std/sync/struct.Arc.html">reference-counted pointer</a>.
+It then will let the collector thread know it should start keeping an eye on the reference-counted pointer.
+The collector will store the pointer in a list.
+When the reference count falls to 1, the collector is the only thread with a reference, and it can safely free the memory.
+The pointer is sent to the realtime thread, then, when the realtime thread drops the message, the reference count will drop.
+Sometime later, the collector thread will observe the decreased reference count and free the message.
+</p>
+
+<p>
+<a href="./static/sound/gc_queue.pdf">Here</a> is a slideshow/animation demonstrating this process.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgecb1e83" class="outline-3">
+<h3 id="orgecb1e83">Tradeoffs</h3>
+<div class="outline-text-3" id="text-orgecb1e83">
+<p>
+Let's consider the theoretical behavior of this approach.
+Note that anything I have to say should be taken with grain of salt; I haven't benchmarked anything, so I really have no evidence to support anything I'm claiming.
+</p>
+
+<p>
+First, let's talk about when we would not want to use this approach.
+</p>
+
+<p>
+If the realtime thread always consumes new messages in a predictable amount of time, we can preallocate a certain number of messages and just keep reusing the same blocks of memory.
+When the UI needs to send a message it can grab one of the preallocated messages and use it.
+Some predictable amount of time later, when the realtime thread is done with it, the message can be returned to the pool (by the realtime thread).
+</p>
+
+<p>
+This is also a bad idea if the UI thread generates messages significantly faster than the realtime thread consumes them.
+It might be fine for the realtime thread to lag behind the UI thread (if it eventually catches up), but the GC pointer list is going to get quite large.
+If we do our GC scan frequently, we will be using a lot of cpu time scanning this list.
+If we slow the collector down, the list is going to keep growing, and so will our memory usage.
+In other words, it's a sticky situation.
+A modern computer can probably handle this load, but we should avoid generating more load than necessary so that other audio applications running at the same time can use as much time as they need.
+</p>
+
+<p>
+Finally, if the realtime thread needs to send a message to the UI thread, it can't just allocate memory and toss it at the GC thread for cleanup later.
+We could still use the GC+queue method discussed here to send messages to the realtime thread, but we probably only have time to build one good messaging system (we want to make audio, not send messages back and forth!)
+</p>
+
+<p>
+If none of the above are true, a simple GC thread with some reference counted pointers might be a nice way to avoid adding lots of complexity to a small system.
+It also saves us from the need for a custom allocation mechanism, lets us send messages of various and dynamic sizes, and frees us from the burden of strict capacity constraints.
+So, if we don't need something more clever, maybe this is a good thing to try out.
+</p>
+
+<p>
+Finally, since we are using reference counting to manage memory, there will be some runtime cost to increment and decrement the reference counts.
+This isn't a big deal for us, in this case, because the performance is predictable (we won't be suddenly surprised by the non-deterministic reference count incrementing).
+</p>
+
+<p>
+There are many other variations of this technique (some which involve extra threads, some which don't, some which reuse freed memory, etc).
+Regardless of the actual efficacy of this approach, it will be interesting to try to build one in Rust, so let's get started.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org457adac" class="outline-2">
+<h2 id="org457adac">Let's make one</h2>
+<div class="outline-text-2" id="text-org457adac">
+<p>
+For the sake of these examples, let's assume that the built-in Rust <a href="https://doc.rust-lang.org/std/sync/mpsc/index.html">mpsc channel</a> is an appropriate lock free queue.
+It will be pretty easy to swap this with something different later, and, if we use the standard library, all of the examples will easily run in the Rust playground.
+We are also going to fake a bunch of the details of the audio library.
+</p>
+</div>
+
+<div id="outline-container-org8b6e7e7" class="outline-3">
+<h3 id="org8b6e7e7">Fake audio library</h3>
+<div class="outline-text-3" id="text-org8b6e7e7">
+<p>
+<a href="https://play.rust-lang.org/?gist=27d1b7a693ffe01ac899b991317b170f&amp;version=stable&amp;backtrace=0">Rust Playground Link</a>.
+</p>
+
+<p>
+We don't need to walk through this code, it just makes some threads and calls some empty functions.
+The important bits are the <code>RealtimeThread::realtime_callback</code> function and the <code>UIThread::run</code> functions.
+In this example, the realtime callback function says "I'm done!" to let the realtime thread shutdown, and the UI thread does nothing at all.
+</p>
+
+<p>
+Here's the code:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-keyword">use</span> <span class="org-constant">std</span>::thread;
+
+<span class="org-preprocessor">#[derive(PartialEq)]</span>
+<span class="org-keyword">enum</span> <span class="org-type">CallbackStatus</span> {
+    <span class="org-type">Continue</span>,
+    <span class="org-type">Shutdown</span>,
+}
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">"library" code starts here</span>
+<span class="org-keyword">type</span> <span class="org-type">Samples</span> = [<span class="org-type">f32</span>; 64];
+
+<span class="org-keyword">fn</span> <span class="org-function-name">run_threads</span>(<span class="org-keyword">mut</span> <span class="org-variable-name">rt</span>: <span class="org-type">RealtimeThread</span>, <span class="org-keyword">mut</span> <span class="org-variable-name">ui</span>: <span class="org-type">UIThread</span>) {
+    <span class="org-keyword">let</span> <span class="org-variable-name">join_handle</span> = <span class="org-constant">thread</span>::spawn(<span class="org-keyword">move</span> || {
+        <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[ui] thread started"</span>);
+        ui.run();
+        <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[ui] thread shutting down"</span>);
+    });
+
+    <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[realtime] thread started"</span>);
+    <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">output</span> = [0.0; 64];
+    <span class="org-keyword">while</span> rt.realtime_callback(&amp;<span class="org-keyword">mut</span> output) != <span class="org-type">CallbackStatus</span>::<span class="org-type">Shutdown</span> { }
+    <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[realtime] thread shutting down"</span>);
+
+    join_handle.join().unwrap();
+}
+<span class="org-comment-delimiter">// </span><span class="org-comment">end of "library" code</span>
+
+<span class="org-doc">/// A struct containing the realtime callback and all data owned by the realtime thread</span>
+<span class="org-keyword">struct</span> <span class="org-type">RealtimeThread</span> {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">some members here eventually</span>
+}
+
+<span class="org-keyword">impl</span> <span class="org-type">RealtimeThread</span> {
+    <span class="org-keyword">fn</span> <span class="org-function-name">new</span>() -&gt; <span class="org-type">Self</span> { <span class="org-type">RealtimeThread</span>{} }
+
+    <span class="org-doc">/// realtime callback, called to get the list of samples</span>
+    <span class="org-keyword">fn</span> <span class="org-function-name">realtime_callback</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">output_samples</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Samples</span>) -&gt; <span class="org-type">CallbackStatus</span> {
+        <span class="org-type">CallbackStatus</span>::<span class="org-type">Shutdown</span>
+    }
+}
+
+<span class="org-doc">/// A struct which runs the UI thread and contains all of the data owned by the UI thread</span>
+<span class="org-keyword">struct</span> <span class="org-type">UIThread</span> {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">some members here eventually</span>
+}
+
+<span class="org-keyword">impl</span> <span class="org-type">UIThread</span> {
+    <span class="org-keyword">fn</span> <span class="org-function-name">new</span>() -&gt; <span class="org-type">Self</span> { <span class="org-type">UIThread</span>{} }
+
+    <span class="org-doc">/// All of the UI thread code</span>
+    <span class="org-keyword">fn</span> <span class="org-function-name">run</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+        <span class="org-comment-delimiter">// </span><span class="org-comment">do nothing!</span>
+    }
+}
+
+<span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
+    <span class="org-keyword">let</span> <span class="org-variable-name">rt</span> = <span class="org-type">RealtimeThread</span>::new();
+    <span class="org-keyword">let</span> <span class="org-variable-name">ui</span> = <span class="org-type">UIThread</span>::new();
+    run_threads(rt, ui);
+}
+</pre>
+</div>
+
+<p>
+Output (one of many possible):
+</p>
+
+<pre class="example">
+[realtime] thread started
+[realtime] thread shutting down
+[ui] thread started
+[ui] thread shutting down
+</pre>
+</div>
+</div>
+
+
+<div id="outline-container-orgd9b331f" class="outline-3">
+<h3 id="orgd9b331f">Sending Arcs between threads</h3>
+<div class="outline-text-3" id="text-orgd9b331f">
+<p>
+Now that we have an "audio library," let's try to make some messages and pass them between threads.
+</p>
+
+<p>
+The <code>RealtimeThread</code> struct will need to hold on to a list of samples which it will use to populate the <code>output</code> samples every time the callback is called.
+We want these samples to be heap allocated and reference counted, so we wrap them in an <a href="https://doc.rust-lang.org/std/sync/struct.Arc.html"><code>Arc</code></a>.
+Finally, we want to leave the samples uninitialized until the UI thread sends us some, so we wrap the <code>Arc&lt;Samples&gt;</code> in an <a href="https://doc.rust-lang.org/std/option/enum.Option.html"><code>Option</code></a>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-keyword">struct</span> <span class="org-type">RealtimeThread</span> {
+  <span class="org-variable-name">current_samples</span>: <span class="org-type">Option</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">Samples</span>&gt;&gt;,
+}
+</pre>
+</div>
+
+<p>
+Now that the realtime thread has a list of samples, we can fill in a bit of the body of the realtime callback function:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">realtime_callback</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">output_samples</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Samples</span>) -&gt; <span class="org-type">CallbackStatus</span> {
+    <span class="org-keyword">self</span>.current_samples.as_ref().map(|samples| {
+        <span class="org-comment-delimiter">// </span><span class="org-comment">samples: &amp;Arc&lt;[f32; 64]&gt;</span>
+        output_samples.copy_from_slice(samples.as_ref())
+    });
+
+    <span class="org-type">CallbackStatus</span>::<span class="org-type">Continue</span>
+}
+</pre>
+</div>
+
+<p>
+The function <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.copy_from_slice"><code>copy_from_slice</code></a> will <code>memcpy</code> the samples we are holding onto into the buffer provided by the audio library.
+</p>
+
+<p>
+Moving over to the UI thread, first, we need to be able to compute a list of samples to compute.
+Here is a function that computes 64 samples along a sine wave with a given peak amplitude:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// computes the samples needed for on cycle of a sine wave</span>
+<span class="org-doc">/// the volume parameter sets the audible volume of sound produced</span>
+<span class="org-keyword">fn</span> <span class="org-function-name">compute_samples</span>(&amp;<span class="org-keyword">self</span>, <span class="org-variable-name">volume</span>: <span class="org-type">f32</span>) -&gt; <span class="org-type">Samples</span> {
+    <span class="org-preprocessor">assert!</span>(volume &gt;= 0.0);
+    <span class="org-preprocessor">assert!</span>(volume &lt;= 1.0);
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">we need to populate 64 samples with 1 cycle of a sine wave (arbitrary choice)</span>
+    <span class="org-keyword">let</span> <span class="org-variable-name">constant_factor</span> = (1.0/64.0) * 2.0 * <span class="org-type">f32</span>::<span class="org-constant">consts</span>::<span class="org-type">PI</span>;
+    <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">samples</span> = [0.0; 64];
+    <span class="org-keyword">for</span> <span class="org-variable-name">i</span> <span class="org-keyword">in</span> 0..64 {
+        samples[i] = (constant_factor * i <span class="org-keyword">as</span> <span class="org-type">f32</span>).sin() * volume;
+    }
+
+    samples
+}
+</pre>
+</div>
+
+<p>
+The UI thread will generate some fake events, and compute samples for these events:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// All of the UI thread code</span>
+<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">create 5 "ui events"</span>
+    <span class="org-keyword">for</span> <span class="org-variable-name">i</span> <span class="org-keyword">in</span> 0..5 {
+        <span class="org-keyword">let</span> <span class="org-variable-name">volume</span> = i <span class="org-keyword">as</span> <span class="org-type">f32</span> / 10.0;
+        <span class="org-keyword">let</span> <span class="org-variable-name">samples</span> = <span class="org-type">Arc</span>::new(<span class="org-keyword">self</span>.compute_samples(volume));
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">send the samples to the other thread</span>
+    }
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">tell the other thread to shutdown</span>
+}
+</pre>
+</div>
+
+<p>
+Now that we've done all of that, we need to send the samples between threads.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org6cc9063" class="outline-3">
+<h3 id="org6cc9063">Message type</h3>
+<div class="outline-text-3" id="text-org6cc9063">
+<p>
+As discussed previously, we will create the <code>Arc</code> on the UI thread, then send it to the realtime thread.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-keyword">enum</span> <span class="org-type">Message</span> {
+    <span class="org-type">NewSamples</span>(<span class="org-type">Arc</span>&lt;<span class="org-type">Samples</span>&gt;),
+    <span class="org-type">Shutdown</span>,
+}
+</pre>
+</div>
+
+<p>
+Remember when I said that we would make a bunch of assumptions about the <code>mpsc</code> queues?
+Here's where I'm going to do that.
+We are going to assume that this queue follows all the properties we need a realtime queue to follow.
+For a quick reminder, those are:
+</p>
+<ul class="org-ul">
+<li>No locks</li>
+<li>No allocation (or deallocation) in the realtime thread.</li>
+</ul>
+
+<p>
+To send messages between the threads, we will use <a href="https://doc.rust-lang.org/std/sync/mpsc/fn.sync_channel.html"><code>mpcs::sync_channel</code></a> to create a synchronous channel (queue).
+This channel is bounded, so a sender cannot add a new message to the queue unless there is currently space available.
+We are going to set the buffer size to zero.
+From <a href="https://doc.rust-lang.org/std/sync/mpsc/fn.sync_channel.html">the docs</a>:
+</p>
+
+<blockquote>
+<p>
+Note that a buffer size of 0 is valid, in which case this [channel] becomes "rendezvous channel" where each send will not return until a recv is paired with it.
+</p>
+</blockquote>
+
+<p>
+This "channel" will have two ends; one which can send messages and one which can receive messages.
+Lets create both of them in the <code>main</code> method.
+The send side will be called <code>tx</code> (for transmit) and the receive side is called <code>rx</code>.
+Whenever a message is placed on <code>tx</code> it will become available on <code>rx</code>.
+</p>
+
+<p>
+Then, we let each of our threads take ownership of the appropriate channel.
+We give <code>rx</code> to the <code>RealtimeThread</code>, because it will receive messages, and <code>tx</code> to the <code>UIThread</code>, because it will be sending them.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
+    <span class="org-keyword">let</span> (tx, rx) = <span class="org-constant">mpsc</span>::sync_channel(0);
+    <span class="org-keyword">let</span> <span class="org-variable-name">rt</span> = <span class="org-type">RealtimeThread</span>::new(rx);
+    <span class="org-keyword">let</span> <span class="org-variable-name">ui</span> = <span class="org-type">UIThread</span>::new(tx);
+    run_threads(rt, ui);
+}
+</pre>
+</div>
+
+<p>
+Then, modify both thread structs and both <code>new</code> functions.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-keyword">struct</span> <span class="org-type">RealtimeThread</span> {
+    <span class="org-variable-name">current_samples</span>: <span class="org-type">Option</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">Samples</span>&gt;&gt;,
+    <span class="org-variable-name">incoming</span>:        <span class="org-constant">mpsc</span>::<span class="org-type">Receiver</span>&lt;<span class="org-type">Message</span>&gt;,
+}
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+
+<span class="org-keyword">struct</span> <span class="org-type">UIThread</span> {
+    <span class="org-variable-name">outgoing</span>: <span class="org-constant">mpsc</span>::<span class="org-type">SyncSender</span>&lt;<span class="org-type">Message</span>&gt;,
+}
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">changes to new omitted</span>
+</pre>
+</div>
+
+<p>
+Now, let's get our threads sending messages, starting with the UI thread.
+If any sends fails, something has gone horribly wrong, so its fine to <code>unwrap</code> the result of these sends.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// All of the UI thread code</span>
+<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">create 10 "ui events"</span>
+    <span class="org-keyword">for</span> <span class="org-variable-name">i</span> <span class="org-keyword">in</span> 0..10 {
+        <span class="org-keyword">let</span> <span class="org-variable-name">volume</span> = i <span class="org-keyword">as</span> <span class="org-type">f32</span> / 10.0;
+        <span class="org-keyword">let</span> <span class="org-variable-name">samples</span> = <span class="org-type">Arc</span>::new(<span class="org-keyword">self</span>.compute_samples(volume));
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">send the samples to the other thread</span>
+        <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[ui] sending new samples. Second sample: </span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, samples[1]);
+        <span class="org-keyword">self</span>.outgoing.send(<span class="org-type">Message</span>::<span class="org-type">NewSamples</span>(samples)).unwrap();
+    }
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">tell the other thread to shutdown</span>
+    <span class="org-keyword">self</span>.outgoing.send(<span class="org-type">Message</span>::<span class="org-type">Shutdown</span>).unwrap();
+}
+</pre>
+</div>
+
+<p>
+In the realtime thread, we check if there is a new message on the queue.
+If there is, handle it.
+If not, just keep doing what we were doing.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// realtime callback, called to get the list of samples</span>
+<span class="org-keyword">fn</span> <span class="org-function-name">realtime_callback</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">output_samples</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Samples</span>) -&gt; <span class="org-type">CallbackStatus</span> {
+    <span class="org-keyword">match</span> <span class="org-keyword">self</span>.incoming.try_recv() {
+        <span class="org-comment-delimiter">// </span><span class="org-comment">we've received a messaged</span>
+        <span class="org-type">Ok</span>(message) =&gt; <span class="org-keyword">match</span> message {
+            <span class="org-type">Message</span>::<span class="org-type">NewSamples</span>(samples) =&gt; {
+                <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[realtime] received new samples. Second sample: </span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, samples[1]);
+                <span class="org-keyword">self</span>.current_samples = <span class="org-type">Some</span>(samples)
+            },
+
+            <span class="org-comment-delimiter">// </span><span class="org-comment">If we got a shutdown message, shutdown the realtime thread</span>
+            <span class="org-type">Message</span>::<span class="org-type">Shutdown</span> =&gt; <span class="org-keyword">return</span> <span class="org-type">CallbackStatus</span>::<span class="org-type">Shutdown</span>
+        },
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">if we didn't receive anything, just keep sending samples</span>
+        <span class="org-type">Err</span>(_) =&gt; ()
+    }
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">copy our current samples into the output buffer</span>
+    <span class="org-keyword">self</span>.current_samples.as_ref().map(|samples| {
+        <span class="org-comment-delimiter">// </span><span class="org-comment">samples: &amp;Arc&lt;[f32; 64&gt;</span>
+        output_samples.copy_from_slice(samples.as_ref())
+    });
+
+    <span class="org-type">CallbackStatus</span>::<span class="org-type">Continue</span>
+}
+</pre>
+</div>
+
+<p>
+I've used a <code>println!</code> here only for the sake of demonstration.
+You shouldn't ever do this in real realtime code (because print statements usually allocate!)
+</p>
+
+<p>
+<a href="https://play.rust-lang.org/?gist=6e37aa0a7f8d06f8b31b9822c8bbb79c&amp;version=stable&amp;backtrace=0">Here is a link</a> to this code in the Rust playground.
+It might timeout if you try running it. If you see any messages about timeout, don't worry, just try running the code again.
+</p>
+
+<p>
+Here is an example output:
+</p>
+<pre class="example">
+[realtime] thread started
+[ui] thread started
+[ui] sending new samples. Second sample: 0
+[realtime] received new samples. Second sample: 0
+[ui] sending new samples. Second sample: 0.009801715
+[realtime] received new samples. Second sample: 0.009801715
+[ui] sending new samples. Second sample: 0.01960343
+[realtime] received new samples. Second sample: 0.01960343
+[ui] sending new samples. Second sample: 0.029405143
+[realtime] received new samples. Second sample: 0.029405143
+[ui] sending new samples. Second sample: 0.03920686
+[realtime] received new samples. Second sample: 0.03920686
+[realtime] thread shutting down
+[ui] thread shutting down
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orge8956c3" class="outline-3">
+<h3 id="orge8956c3">Problems?</h3>
+<div class="outline-text-3" id="text-orge8956c3">
+<p>
+The last example <b>seems</b> to do the right thing, let's take a look at what the realtime callback does when it receives a new set of samples.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+<span class="org-type">Message</span>::<span class="org-type">NewSamples</span>(samples) =&gt; {
+    <span class="org-keyword">self</span>.current_samples = <span class="org-type">Some</span>(samples)
+},
+<span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+</pre>
+</div>
+
+<p>
+What happens to the old array of samples?
+Rust will insert a call to <code>drop</code> here, because the old value has just gone out of scope.
+Something like this (in pseudo-Rust) sort of shows what is going on.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+<span class="org-type">Message</span>::<span class="org-type">NewSamples</span>(samples) =&gt; {
+    <span class="org-keyword">let</span> <span class="org-variable-name">tmp</span> = <span class="org-type">Some</span>(samples);
+    <span class="org-constant">mem</span>::swap(<span class="org-keyword">self</span>.current_samples, tmp);
+    drop(tmp);
+},
+<span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+</pre>
+</div>
+
+<p>
+When an <code>Arc</code> gets <code>drop=ped, what happens?
+Let's refer to the docs for =drop</code>.
+</p>
+
+<blockquote>
+<p>
+This will decrement the strong reference count. If the strong reference count becomes zero and the only other references are <code>Weak&lt;T&gt;</code> ones, drops the inner value.
+</p>
+</blockquote>
+
+<p>
+In this case, the inner value is some heap allocated memory, so calling drop will deallocate that memory (since no one else is holding any references).
+This is a problem!
+We can't let our realtime callback perform memory allocation.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgb956c1b" class="outline-2">
+<h2 id="orgb956c1b">Build the GC</h2>
+<div class="outline-text-2" id="text-orgb956c1b">
+<p>
+We now need to build the GC that I promised we would build, to clean up after us, outside of the realtime thread.
+Sneak peak, once the GC is implemented, all we have to change is <code>UIThread::run</code>, in a very small way:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// All of the UI thread code</span>
+<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+    <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">gc</span> = <span class="org-type">GC</span>::new(); <span class="org-comment-delimiter">// </span><span class="org-comment">+ NEW LINE</span>
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">create 5 "ui events"</span>
+    <span class="org-keyword">for</span> <span class="org-variable-name">i</span> <span class="org-keyword">in</span> 0..5 {
+        <span class="org-keyword">let</span> <span class="org-variable-name">volume</span> = i <span class="org-keyword">as</span> <span class="org-type">f32</span> / 5.0;
+        <span class="org-keyword">let</span> <span class="org-variable-name">samples</span> = <span class="org-type">Arc</span>::new(<span class="org-keyword">self</span>.compute_samples(volume));
+        <span class="org-keyword">self</span>.collector.track(samples.clone()); <span class="org-comment-delimiter">// </span><span class="org-comment">+ NEW LINE</span>
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">send the samples to the other thread</span>
+        <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[ui] sending new samples. Second sample: </span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, samples[1]);
+        <span class="org-keyword">self</span>.outgoing.send(<span class="org-type">Message</span>::<span class="org-type">NewSamples</span>(samples)).unwrap();
+    }
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">tell the other thread to shutdown</span>
+    <span class="org-keyword">self</span>.outgoing.send(<span class="org-type">Message</span>::<span class="org-type">Shutdown</span>).unwrap();
+}
+</pre>
+</div>
+
+<p>
+With that in mind, lets sketch out the interface for the Garbage Collector.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<span class="org-keyword">struct</span> <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+}
+
+<span class="org-keyword">impl</span>&lt;<span class="org-type">T</span>&gt; <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+    <span class="org-doc">/// Construct a new garbage collector and start the collection thread</span>
+    <span class="org-keyword">fn</span> <span class="org-function-name">new</span>() -&gt; <span class="org-type">Self</span> {
+        <span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+    }
+
+    <span class="org-doc">/// Instruct the garbage collector to monitor this Arc&lt;T&gt;</span>
+    <span class="org-doc">/// When no references remain, the collector will `drop` the value</span>
+    <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
+        <span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+    }
+}
+
+</pre>
+</div>
+
+<p>
+First think about the <code>track</code> method.
+All this method needs to do is move it's argument into some list (vector) of pointers.
+We will keep this vector in the GC thread struct so that each of the references will live until the GC thread is shut down or until the GC drops them.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-keyword">struct</span> <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+    <span class="org-variable-name">pool</span>: <span class="org-type">Vec</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;,
+}
+
+<span class="org-keyword">impl</span>&lt;<span class="org-type">T</span>&gt; <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
+        <span class="org-keyword">self</span>.pool.push(t);
+    }
+}
+</pre>
+</div>
+
+<p>
+Now lets think about the garbage collection logic.
+Since we have a <code>Vec&lt;Arc&lt;T&gt;&gt;</code>, we will want to iterate over it, removing any elements which meet (or fail) a condition.
+We can use <code>Vec::retain</code> to do this.
+Something like the following might work:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust">pool.retain(|e| {
+    <span class="org-keyword">if</span> <span class="org-comment-delimiter">/* </span><span class="org-comment">has more than one reference */</span> {
+        <span class="org-keyword">return</span> <span class="org-keyword">true</span>
+    } <span class="org-keyword">else</span> {
+        <span class="org-keyword">return</span> <span class="org-keyword">false</span>
+    }
+})
+</pre>
+</div>
+
+<p>
+Looking at the <a href="https://doc.rust-lang.org/std/sync/struct.Arc.html"><code>Arc</code> docs</a>, there are a few ways we can figure out if the <code>Arc</code> has only one remaining reference:
+</p>
+<ul class="org-ul">
+<li>Attempt to consume the <code>Arc</code> with <code>Arc::try_unwrap</code>, if this fails, we know that it has more than one reference. Unforunately, this method requires moving the <code>Arc</code> out of the vector, which is not ideal if we want to use <code>Vec::retain</code>.</li>
+<li><code>Arc::strong_count</code> - this is currently marked as unstable. Looks like what we might want to use though.</li>
+<li><code>Arc::get_mut</code> could possibly be used the same way we would use <code>Arc::try_unwrap</code>, without moving the <code>Arc</code> containing in the vector unless we want to remove it.</li>
+</ul>
+
+<p>
+We don't have lots of options, so I'm going to go ahead and use <code>Arc::strong_count</code>.
+This is (for now) the most natural way to solve the problem:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust">pool.retain(|<span class="org-variable-name">e</span>: <span class="org-type">Arc</span>&lt;_&gt;| {
+    <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(&amp;e) {
+        <span class="org-keyword">return</span> <span class="org-keyword">true</span>
+    } <span class="org-keyword">else</span> {
+        <span class="org-keyword">return</span> <span class="org-keyword">false</span>
+    }
+})
+</pre>
+</div>
+
+<p>
+Let's move on to <code>new</code>.
+The <code>new</code> method needs to start new thread which will run the <code>pool.retain</code> thing every once and a while.
+We also need to hold on to a thread handle so that we can eventually join the thread.
+The join handle is wrapped in an <code>Option</code>, we will see why quite a bit later.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<span class="org-keyword">struct</span> <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+    <span class="org-variable-name">pool</span>: <span class="org-type">Vec</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;,
+    <span class="org-variable-name">thread</span>: <span class="org-type">Option</span>&lt;<span class="org-constant">thread</span>::<span class="org-type">JoinHandle</span>&lt;()&gt;&gt;,
+}
+
+<span class="org-keyword">impl</span>&lt;<span class="org-type">T</span>&gt; <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">private. cleans up any dead pointers in a pool</span>
+    <span class="org-keyword">fn</span> <span class="org-function-name">cleanup</span>(<span class="org-variable-name">pool</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Vec</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;) {
+        pool.retain(|<span class="org-variable-name">e</span>: &amp;<span class="org-type">Arc</span>&lt;_&gt;| {
+            <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(&amp;e) &gt; 1 {
+                <span class="org-keyword">return</span> <span class="org-keyword">true</span>
+            } <span class="org-keyword">else</span> {
+                <span class="org-keyword">return</span> <span class="org-keyword">false</span>
+            }
+        });
+    }
+
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">new</span>() -&gt; <span class="org-type">Self</span> {
+        <span class="org-keyword">let</span> <span class="org-variable-name">pool</span> = <span class="org-type">Vec</span>::new();
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">create a closure which will become a new thread</span>
+        <span class="org-keyword">let</span> <span class="org-variable-name">gc</span> = || {
+            <span class="org-keyword">loop</span> {
+                <span class="org-type">GC</span>::cleanup(&amp;<span class="org-keyword">mut</span> pool);
+
+                <span class="org-comment-delimiter">// </span><span class="org-comment">wait for 100 milliseconds, then scan again</span>
+                <span class="org-keyword">let</span> <span class="org-variable-name">sleep</span> = <span class="org-constant">std</span>::<span class="org-constant">time</span>::<span class="org-type">Duration</span>::from_millis(100);
+                <span class="org-constant">thread</span>::sleep(sleep);
+            }
+        };
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">spawns a new thread and returns a handle to the thread</span>
+        <span class="org-keyword">let</span> <span class="org-variable-name">gc_thread</span> = <span class="org-constant">thread</span>::spawn(gc);
+
+        <span class="org-type">GC</span> {
+            <span class="org-variable-name">pool</span>:   pool,
+            <span class="org-variable-name">thread</span>: <span class="org-type">Some</span>(gc_thread),
+        }
+    }
+
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
+        <span class="org-keyword">self</span>.pool.push(t);
+    }
+}
+
+<span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
+    <span class="org-keyword">let</span> (tx, rx) = <span class="org-constant">mpsc</span>::sync_channel(0);
+    <span class="org-keyword">let</span> <span class="org-variable-name">rt</span> = <span class="org-type">RealtimeThread</span>::new(rx);
+    <span class="org-keyword">let</span> <span class="org-variable-name">ui</span> = <span class="org-type">UIThread</span>::new(tx);
+    run_threads(rt, ui);
+}
+</pre>
+</div>
+
+<p>
+We've written a bunch of new code, better make sure it compiles (<a href="https://play.rust-lang.org/?gist=0740c7896b0dd8c37e1d57aa9e53ca0b&amp;version=stable&amp;backtrace=0">Rust playground</a>):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust">error[<span class="org-type">E0277</span>]: the <span class="org-keyword">trait</span> bound `<span class="org-variable-name">T</span>: <span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` is not satisfied
+   --&gt; &lt;anon&gt;:<span class="org-variable-name">154</span>:25
+    |
+154 |         <span class="org-keyword">let</span> <span class="org-variable-name">gc_thread</span> = <span class="org-constant">thread</span>::spawn(gc);
+    |                         ^^^^^^^^^^^^^ the <span class="org-keyword">trait</span> `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` is not implemented <span class="org-keyword">for</span> `<span class="org-type">T</span>`
+    |
+    = <span class="org-variable-name">help</span>: consider adding a `<span class="org-keyword">where</span> <span class="org-variable-name">T</span>: <span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` bound
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;`
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-constant">std</span>::<span class="org-constant">ptr</span>::<span class="org-type">Unique</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">alloc</span>::<span class="org-constant">raw_vec</span>::<span class="org-type">RawVec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `[closure@&lt;anon&gt;:<span class="org-variable-name">143</span>:1<span class="org-variable-name">8</span>: <span class="org-variable-name">151</span>:10 <span class="org-variable-name">pool</span>:&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;]`
+    = <span class="org-variable-name">note</span>: required by `<span class="org-constant">std</span>::<span class="org-constant">thread</span>::spawn`
+
+error[<span class="org-type">E0277</span>]: the <span class="org-keyword">trait</span> bound `<span class="org-variable-name">T</span>: <span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Sync</span>` is not satisfied
+   --&gt; &lt;anon&gt;:<span class="org-variable-name">154</span>:25
+    |
+154 |         <span class="org-keyword">let</span> <span class="org-variable-name">gc_thread</span> = <span class="org-constant">thread</span>::spawn(gc);
+    |                         ^^^^^^^^^^^^^ the <span class="org-keyword">trait</span> `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Sync</span>` is not implemented <span class="org-keyword">for</span> `<span class="org-type">T</span>`
+    |
+    = <span class="org-variable-name">help</span>: consider adding a `<span class="org-keyword">where</span> <span class="org-variable-name">T</span>: <span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Sync</span>` bound
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;`
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-constant">std</span>::<span class="org-constant">ptr</span>::<span class="org-type">Unique</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">alloc</span>::<span class="org-constant">raw_vec</span>::<span class="org-type">RawVec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `[closure@&lt;anon&gt;:<span class="org-variable-name">143</span>:1<span class="org-variable-name">8</span>: <span class="org-variable-name">151</span>:10 <span class="org-variable-name">pool</span>:&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;]`
+    = <span class="org-variable-name">note</span>: required by `<span class="org-constant">std</span>::<span class="org-constant">thread</span>::spawn`
+
+<span class="org-variable-name">error</span>: aborting due to 2 previous errors
+</pre>
+</div>
+
+<p>
+Oops, this isn't good.
+This error makes it feel sort of like Rust hates us, but the compiler is actually doing us a massive favor.
+</p>
+
+<p>
+In Rust, there are a few thread safety "marker traits" called <code>Send</code> and <code>Sync</code>.
+The compiler is telling us that our generic type <code>T</code> doesn't implement either of them.
+</p>
+
+<p>
+Put very loosely, if something implements <code>Send</code>, it is safe to send it between threads.
+<code>Sync</code> is considerably more subtle and quite difficult to wrap your head around, but we can sort of say that, if something implements <code>Sync</code>, we can <b>access</b> the same instance of it from multiple threads.
+For more info, you can read <a href="http://huonw.github.io/blog/2015/02/some-notes-on-send-and-sync/">this blog post</a>, but you shouldn't need any more than what I've given to get through the rest of my post.
+</p>
+
+<p>
+So anyway, Rust is telling us that we have a thread safety problem, but we haven't guaranteed that we can safely copy and access values of our type <code>T</code> between the garbage collector thread and any other threads.
+</p>
+
+<p>
+I know that <code>T</code> must be <code>Send</code>, because it has to be sent between threads, so let's go ahead and add that restriction:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<span class="org-keyword">struct</span> <span class="org-type">GC</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span>&gt; {
+    <span class="org-variable-name">pool</span>: <span class="org-type">Vec</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;,
+    <span class="org-variable-name">thread</span>: <span class="org-type">Option</span>&lt;<span class="org-constant">thread</span>::<span class="org-type">JoinHandle</span>&lt;()&gt;&gt;,
+}
+
+<span class="org-keyword">impl</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span>&gt; <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+<span class="org-comment-delimiter">// </span><span class="org-comment">....</span>
+</pre>
+</div>
+
+<p>
+<a href="https://play.rust-lang.org/?gist=4f718d3a1795409d67894a8f4f86f010&amp;version=stable&amp;backtrace=0">Rust playground link</a>
+</p>
+
+<p>
+Hoorary, the <code>Send</code> error is gone!
+Unfortunately, we still have the issue with <code>Sync</code>.
+Let's look more closely at the error we are getting:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust">error[<span class="org-type">E0277</span>]: the <span class="org-keyword">trait</span> bound `<span class="org-variable-name">T</span>: <span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Sync</span>` is not satisfied
+   --&gt; &lt;anon&gt;:<span class="org-variable-name">154</span>:25
+    |
+154 |         <span class="org-keyword">let</span> <span class="org-variable-name">gc_thread</span> = <span class="org-constant">thread</span>::spawn(gc);
+    |                         ^^^^^^^^^^^^^ the <span class="org-keyword">trait</span> `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Sync</span>` is not implemented <span class="org-keyword">for</span> `<span class="org-type">T</span>`
+    |
+    = <span class="org-variable-name">help</span>: consider adding a `<span class="org-keyword">where</span> <span class="org-variable-name">T</span>: <span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Sync</span>` bound
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;`
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-constant">std</span>::<span class="org-constant">ptr</span>::<span class="org-type">Unique</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">alloc</span>::<span class="org-constant">raw_vec</span>::<span class="org-type">RawVec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `[closure@&lt;anon&gt;:<span class="org-variable-name">143</span>:1<span class="org-variable-name">8</span>: <span class="org-variable-name">151</span>:10 <span class="org-variable-name">pool</span>:&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;]`
+    = <span class="org-variable-name">note</span>: required by `<span class="org-constant">std</span>::<span class="org-constant">thread</span>::spawn`
+
+<span class="org-variable-name">error</span>: aborting due to previous error
+</pre>
+</div>
+
+<p>
+This error is really confusing, and my solution for it is not going to be much better, but stick with me.
+</p>
+
+<p>
+The origin of this error is the <code>Arc&lt;T&gt;</code>.
+If we want an <code>Arc&lt;T&gt;</code> to implement <code>Send</code>, the <code>T</code> contained in it must implement BOTH <code>Send</code> and <code>Sync</code>.
+It makes sense that <code>T</code> would need to implement <code>Send</code>, but why does <code>T</code> need to be <code>Sync</code>?
+Basically, this is because the data the <code>Arc&lt;T&gt;</code> is holding will be shared by anyone who can access the <code>Arc&lt;T&gt;</code>.
+An <code>Arc</code> can be =clone=ed at any time, so, if we are allowed to pass it to other threads, it must also be safe for multiple threads to access the underlying data at the same time.
+</p>
+
+<p>
+We could add the <code>Sync</code> constraint to our type <code>T</code> to resolve this problem, but does this really make any sense?
+Nowhere in our application will a message be accessible by more than one thread at a time.
+</p>
+
+<p>
+When the UI thread creates a new message, it immediately surrenders all access to the underlying data, by moving the value into the channel.
+Once the realtime thread has the data, it will be the only thread that actually accesses the data until the data needs to be freed.
+The GC also is holding a reference to data, but it will never actually touch the data in any way, until it frees it.
+When the GC thread frees the memory holding the data, we know that there will be no other references to the memory in the program.
+</p>
+
+<p>
+I might be wrong about this (please let me know if I am), but I think that we don't actually <b>need</b> the type <code>T</code> to be <code>Sync</code>.
+The compiler will never let us get away with this (because it doesn't know all of these properties) but we can let it know that it should trust us, with a new struct:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-keyword">struct</span> <span class="org-type">TrustMe</span>&lt;<span class="org-type">T</span>&gt; {
+    <span class="org-keyword">pub</span> <span class="org-variable-name">inner</span>: <span class="org-type">T</span>
+}
+
+<span class="org-rust-unsafe">unsafe</span> <span class="org-keyword">impl</span>&lt;<span class="org-type">T</span>&gt; <span class="org-type">Send</span> <span class="org-keyword">for</span> <span class="org-type">TrustMe</span>&lt;<span class="org-type">T</span>&gt; {}
+</pre>
+</div>
+
+<p>
+This will tell the compiler "yes, this thing is <code>Send</code>", even when it actually isn't, so the implementation of the trait <code>Send</code> is unsafe.
+</p>
+
+<p>
+Now, we can create a <code>Send=able =TrustMe&lt;Arc&lt;T&gt;&gt;</code>, and the compiler will trust us when we share these =Arc&lt;T&gt;=s between threads.
+</p>
+
+<p>
+Now, lets add this to our GC:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<span class="org-keyword">struct</span> <span class="org-type">GC</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span>&gt; {
+    <span class="org-variable-name">pool</span>: <span class="org-type">Vec</span>&lt;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;&gt;,
+    <span class="org-variable-name">thread</span>: <span class="org-type">Option</span>&lt;<span class="org-constant">thread</span>::<span class="org-type">JoinHandle</span>&lt;()&gt;&gt;,
+}
+
+<span class="org-keyword">impl</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span>&gt; <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">private. cleans up any dead pointers in a pool</span>
+    <span class="org-keyword">fn</span> <span class="org-function-name">cleanup</span>(<span class="org-variable-name">pool</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Vec</span>&lt;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;&gt;) {
+        pool.retain(|<span class="org-variable-name">e</span>: &amp;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;_&gt;&gt;| {
+            <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(&amp;e.inner) &gt; 1 {
+                <span class="org-keyword">return</span> <span class="org-keyword">true</span>
+            } <span class="org-keyword">else</span> {
+                <span class="org-keyword">return</span> <span class="org-keyword">false</span>
+            }
+        });
+    }
+
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">new</span>() -&gt; <span class="org-type">Self</span> {
+        <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">pool</span> = <span class="org-type">Vec</span>::new();
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">create a closure which will become a new thread</span>
+        <span class="org-keyword">let</span> <span class="org-variable-name">gc</span> = || {
+            <span class="org-keyword">loop</span> {
+                <span class="org-type">GC</span>::cleanup(&amp;<span class="org-keyword">mut</span> pool);
+
+                <span class="org-comment-delimiter">// </span><span class="org-comment">wait for 100 milliseconds, then scan again</span>
+                <span class="org-keyword">let</span> <span class="org-variable-name">sleep</span> = <span class="org-constant">std</span>::<span class="org-constant">time</span>::<span class="org-type">Duration</span>::from_millis(100);
+                <span class="org-constant">thread</span>::sleep(sleep);
+            }
+        };
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">spawns a new thread and returns a handle to the thread</span>
+        <span class="org-keyword">let</span> <span class="org-variable-name">gc_thread</span> = <span class="org-constant">thread</span>::spawn(gc);
+
+        <span class="org-type">GC</span> {
+            <span class="org-variable-name">pool</span>:   pool,
+            <span class="org-variable-name">thread</span>: <span class="org-type">Some</span>(gc_thread),
+        }
+    }
+
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
+        <span class="org-keyword">let</span> <span class="org-variable-name">t</span> = <span class="org-type">TrustMe</span> { <span class="org-variable-name">inner</span>: t };
+        <span class="org-keyword">self</span>.pool.push(t);
+    }
+}
+</pre>
+</div>
+
+<p>
+<a href="https://play.rust-lang.org/?gist=b23d5e7a7541eda3096daac685d309bf&amp;version=stable&amp;backtrace=0">Rust playground link</a>
+</p>
+
+<p>
+When we try to compile this, we get YET ANOTHER compiler error.
+This time, the compiler is whining at us with "the parameter type <code>T</code> may not live long enough".
+This error message is frustrating, but, we are using Rust because we want to be very careful with memory safety, so lets try to keep going.
+</p>
+
+<p>
+The new thread that we have created could run until the termination of the program, so any data which the thread might be holding onto also must be able to live until the termination of the program.
+</p>
+
+<p>
+The compiler is telling us that we need to add a "lifetime specifier" to our type <code>T</code>.
+In this case, it is telling us that the lifetime of any <code>T</code> which is managed by the GC must be <code>'static</code>.
+The <code>'static</code> lifetime indicates that values of type <code>T + 'static</code> <b>might</b> live for the entire duration of the program.
+</p>
+
+<p>
+This might seem excessive, but, it is not possible for the compiler to determine when in the program our thread will terminate (if it could we would have solved the halting problem), so the maximum lifetime MUST potentially be the entire duration of the program.
+Note that, this doesn't mean that all the values stored in the GC will necessarily live for the entire lifetime of the program (if they did, we wouldn't be cleaning up garbage).
+This condition just means that they might live that long.
+</p>
+
+<p>
+Anyway, we can now add the <code>+ 'static</code> specifier the compiler has asked us to add, and try to compile this one more time.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<span class="org-keyword">struct</span> <span class="org-type">GC</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span> + '<span class="org-keyword">static</span>&gt; {
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+
+<span class="org-keyword">impl</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span> + '<span class="org-keyword">static</span>&gt; <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+</pre>
+</div>
+
+<p>
+GUESS WHAT IT DIDN'T WORK.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust">error[<span class="org-type">E0373</span>]: closure may outlive the current function, but it borrows `pool`, which is owned by the current function
+   --&gt; &lt;anon&gt;:<span class="org-variable-name">149</span>:18
+    |
+149 |         <span class="org-keyword">let</span> <span class="org-variable-name">gc</span> = || {
+    |                  ^^ may outlive borrowed value `pool`
+150 |             <span class="org-keyword">loop</span> {
+151 |                 <span class="org-type">GC</span>::cleanup(&amp;<span class="org-keyword">mut</span> pool);
+    |                                  ---- `pool` is borrowed here
+    |
+<span class="org-variable-name">help</span>: to force the closure to take ownership of `pool` (and any other referenced variables), <span class="org-keyword">use</span> <span class="org-constant">the</span> `<span class="org-keyword">move</span>` keyword, <span class="org-keyword">as</span> <span class="org-variable-name">shown</span>:
+    |         <span class="org-keyword">let</span> <span class="org-variable-name">gc</span> = <span class="org-keyword">move</span> || {
+
+<span class="org-variable-name">error</span>: aborting due to previous error
+</pre>
+</div>
+
+<p>
+Once again, this is a good thing, I promise!
+Now, the compiler is trying to tell us that the vector named <code>pool</code> is being accessed from two different places.
+The compiler wants us to have the new thread take ownership of the vector, but this highlights an interesting problem.
+We need to allow both the GC thread, and any other non-realtime thread, to access the vector, at the same time.
+</p>
+
+<p>
+The compiler has prevented us from accessing the same data from multiple threads.
+</p>
+
+<p>
+To solve this, we can just wrap the vector in a <code>Mutex</code> <b><b>and</b></b> an <code>Arc</code>.
+The <code>Arc</code> allows us to create one instance of the vector on the heap, and the <code>Mutex</code> makes sure that only one thread can access the heap allocated vector at any given time.
+</p>
+
+<p>
+Here are most of the changes:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-comment-delimiter">// </span><span class="org-comment">introduce some news type aliases to make life a little bit easier</span>
+<span class="org-keyword">type</span> <span class="org-type">TrustedArc</span>&lt;<span class="org-type">T</span>&gt; = <span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;;
+<span class="org-keyword">type</span> <span class="org-type">ArcPool</span>&lt;<span class="org-type">T</span>&gt; = <span class="org-type">Vec</span>&lt;<span class="org-type">TrustedArc</span>&lt;<span class="org-type">T</span>&gt;&gt;;
+
+<span class="org-doc">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<span class="org-keyword">struct</span> <span class="org-type">GC</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span> + '<span class="org-keyword">static</span>&gt; {
+    <span class="org-variable-name">pool</span>: <span class="org-type">Mutex</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">ArcPool</span>&lt;<span class="org-type">T</span>&gt;&gt;&gt;,
+    <span class="org-variable-name">thread</span>: <span class="org-type">Option</span>&lt;<span class="org-constant">thread</span>::<span class="org-type">JoinHandle</span>&lt;()&gt;&gt;,
+}
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+
+<span class="org-keyword">impl</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span> + '<span class="org-keyword">static</span>&gt; <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">new</span>() -&gt; <span class="org-type">Self</span> {
+        <span class="org-keyword">let</span> <span class="org-variable-name">pool</span> = <span class="org-type">Arc</span>::new(<span class="org-type">Mutex</span>::new(<span class="org-type">Vec</span>::new()));
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">create a copy of the pool. The GC thread will own this clone</span>
+        <span class="org-comment-delimiter">// </span><span class="org-comment">and the reference count will be incremented by one</span>
+        <span class="org-keyword">let</span> <span class="org-variable-name">thread_arc_copy</span> = pool.clone();
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">create a closure which will become a new thread</span>
+        <span class="org-keyword">let</span> <span class="org-variable-name">gc</span> = <span class="org-keyword">move</span> || {
+            <span class="org-keyword">loop</span> {
+                <span class="org-comment-delimiter">// </span><span class="org-comment">lock the mutex, then let go of it.</span>
+                <span class="org-comment-delimiter">// </span><span class="org-comment">If we hold the mutex, the UI thread will be blocked every time it asks the</span>
+                <span class="org-comment-delimiter">// </span><span class="org-comment">collector to track something.</span>
+                {
+                    <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">pool</span> = thread_arc_copy.lock().unwrap();
+                    <span class="org-type">GC</span>::cleanup(&amp;<span class="org-keyword">mut</span> pool);
+                }
+
+                <span class="org-comment-delimiter">// </span><span class="org-comment">wait for a bit, then scan again</span>
+                <span class="org-keyword">let</span> <span class="org-variable-name">sleep</span> = <span class="org-constant">std</span>::<span class="org-constant">time</span>::<span class="org-type">Duration</span>::from_millis(5);
+                <span class="org-constant">thread</span>::sleep(sleep);
+
+            }
+        };
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">....</span>
+    }
+
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
+        <span class="org-keyword">let</span> <span class="org-variable-name">t</span> = <span class="org-type">TrustMe</span> { <span class="org-variable-name">inner</span>: t };
+        <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">pool</span> = <span class="org-keyword">self</span>.pool.lock().unwrap();
+        pool.push(t);
+    }
+}
+</pre>
+</div>
+
+<p>
+We can finally compile this!
+Here's a link to the <a href="https://play.rust-lang.org/?gist=7f41622e104d07f9b106495c2a5373a7&amp;version=nightly&amp;backtrace=0">Rust playground</a>.
+Note that you will need to make sure you compile with the "Nightly" channel.
+</p>
+
+<p>
+There are only a few things left to do.
+</p>
+</div>
+
+<div id="outline-container-org482af00" class="outline-3">
+<h3 id="org482af00">Start and Stop the GC</h3>
+<div class="outline-text-3" id="text-org482af00">
+<p>
+The GC thread that we have created will never terminate.
+</p>
+
+<p>
+Ideally, when the GC goes out of scope, it will shut down the GC thread and clean up any tracked memory (if it can).
+Any <code>Arc</code>  which can't be freed when the GC is shut down will not be freed, but (this is important) the reference count will drop by one.
+Now, if one of the previously tracked <code>Arc</code> s goes out of scope, it will be freed on whatever thread drops it (this could be the realtime thread!)
+</p>
+
+<p>
+So, as long as the realtime thread keeps running, we must keep the GC thread running.
+</p>
+
+<p>
+First, edit main:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">start the collector</span>
+    <span class="org-keyword">let</span> <span class="org-variable-name">collector</span> = <span class="org-type">GC</span>::new();
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">create the channels</span>
+    <span class="org-keyword">let</span> (tx, rx) = <span class="org-constant">mpsc</span>::sync_channel(0);
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">set up both of the threads</span>
+    <span class="org-keyword">let</span> <span class="org-variable-name">rt</span> = <span class="org-type">RealtimeThread</span>::new(rx);
+    <span class="org-keyword">let</span> <span class="org-variable-name">ui</span> = <span class="org-type">UIThread</span>::new(tx);
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">start the threads</span>
+    run_threads(rt, ui);
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">GC thread will be shutdown here, where the GC goes out of scope</span>
+}
+</pre>
+</div>
+
+<p>
+Then, edit the <code>UIThread</code> struct appropriately.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust">
+<span class="org-keyword">struct</span> <span class="org-type">UIThread</span> {
+    <span class="org-variable-name">outgoing</span>: <span class="org-constant">mpsc</span>::<span class="org-type">SyncSender</span>&lt;<span class="org-type">Message</span>&gt;,
+    <span class="org-variable-name">collector</span>: <span class="org-type">GC</span>&lt;<span class="org-type">Samples</span>&gt;
+}
+
+<span class="org-keyword">impl</span> <span class="org-type">UIThread</span> {
+    <span class="org-keyword">fn</span> <span class="org-function-name">new</span>(<span class="org-variable-name">outgoing</span>: <span class="org-constant">mpsc</span>::<span class="org-type">SyncSender</span>&lt;<span class="org-type">Message</span>&gt;, <span class="org-variable-name">collector</span>: <span class="org-type">GC</span>&lt;<span class="org-type">Samples</span>&gt;) -&gt; <span class="org-type">Self</span> {
+        <span class="org-type">UIThread</span> { <span class="org-variable-name">outgoing</span>: outgoing, <span class="org-variable-name">collector</span>: collector }
+    }
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+}
+</pre>
+</div>
+
+<p>
+Next, update the <code>UIThread::run</code> method:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// All of the UI thread code</span>
+<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">create 5 "ui events"</span>
+    <span class="org-keyword">for</span> <span class="org-variable-name">i</span> <span class="org-keyword">in</span> 0..5 {
+        <span class="org-keyword">let</span> <span class="org-variable-name">volume</span> = i <span class="org-keyword">as</span> <span class="org-type">f32</span> / 5.0;
+        <span class="org-keyword">let</span> <span class="org-variable-name">samples</span> = <span class="org-type">Arc</span>::new(<span class="org-keyword">self</span>.compute_samples(volume));
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">tell the GC thread to track our list of samples</span>
+        <span class="org-keyword">self</span>.collector.track(samples.clone());
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">send the samples to the other thread</span>
+        <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[ui] sending new samples. Second sample: </span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, samples[1]);
+        <span class="org-keyword">self</span>.outgoing.send(<span class="org-type">Message</span>::<span class="org-type">NewSamples</span>(samples)).unwrap();
+    }
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">tell the other thread to shutdown</span>
+    <span class="org-keyword">self</span>.outgoing.send(<span class="org-type">Message</span>::<span class="org-type">Shutdown</span>).unwrap();
+}
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org21b6688" class="outline-3">
+<h3 id="org21b6688">Drop the GC</h3>
+<div class="outline-text-3" id="text-org21b6688">
+<p>
+Rust will make sure that <code>Drop</code> is called when the struct goes out of scope.
+This gives us a change to shut down the GC thread.
+We also set up a shared atomic boolean to indicate when the GC thread should shut down.
+</p>
+
+<p>
+Here is most of that:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-doc">/// A garbage collector for Arc&lt;T&gt; pointers</span>
+<span class="org-keyword">struct</span> <span class="org-type">GC</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span> + '<span class="org-keyword">static</span>&gt; {
+    <span class="org-variable-name">pool</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">Mutex</span>&lt;<span class="org-type">ArcPool</span>&lt;<span class="org-type">T</span>&gt;&gt;&gt;,
+    <span class="org-variable-name">thread</span>: <span class="org-type">Option</span>&lt;<span class="org-constant">thread</span>::<span class="org-type">JoinHandle</span>&lt;()&gt;&gt;,
+    <span class="org-variable-name">running</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">AtomicBool</span>&gt;,
+}
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">initialize the running flag to false in GC::new</span>
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">....</span>
+
+<span class="org-keyword">impl</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span> + '<span class="org-keyword">static</span>&gt; <span class="org-type">Drop</span> <span class="org-keyword">for</span> <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
+    <span class="org-keyword">fn</span> <span class="org-function-name">drop</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+        <span class="org-keyword">self</span>.running.store(<span class="org-keyword">false</span>, <span class="org-type">Ordering</span>::<span class="org-type">Relaxed</span>);
+        <span class="org-keyword">match</span> <span class="org-keyword">self</span>.thread.take() {
+            <span class="org-type">Some</span>(t) =&gt; t.join().unwrap(),
+            <span class="org-type">None</span>    =&gt; ()
+        };
+    }
+}
+</pre>
+</div>
+
+<p>
+And, here's the <a href="https://play.rust-lang.org/?gist=c33dec5b9aad44864035de4c81c1f492&amp;version=nightly&amp;backtrace=0">Rust playground link</a>.
+You may have some trouble getting this to run (timeouts occur), but I promise it works sometimes.
+</p>
+
+<p>
+Example output:
+</p>
+
+<pre class="example">
+[realtime] thread started
+[ui] thread started
+[ui] sending new samples. Second sample: 0
+[ui] sending new samples. Second sample: 0.01960343
+[realtime] received new samples. Second sample: 0
+[ui] sending new samples. Second sample: 0.03920686
+[realtime] received new samples. Second sample: 0.01960343
+[realtime] received new samples. Second sample: 0.03920686
+[ui] thread shutting down
+[realtime] thread shutting down
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgcce3e4a" class="outline-3">
+<h3 id="orgcce3e4a">Proof</h3>
+<div class="outline-text-3" id="text-orgcce3e4a">
+<p>
+Let's add some logging so we can see when things are getting freed:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span class="org-comment-delimiter">// </span><span class="org-comment">private. cleans up any dead pointers in a pool</span>
+<span class="org-keyword">fn</span> <span class="org-function-name">cleanup</span>(<span class="org-variable-name">pool</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Vec</span>&lt;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;&gt;) {
+    pool.retain(|<span class="org-variable-name">e</span>: &amp;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;_&gt;&gt;| {
+        <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(&amp;e.inner) &gt; 1 {
+            <span class="org-keyword">return</span> <span class="org-keyword">true</span>
+        } <span class="org-keyword">else</span> {
+            <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[gc] dropping a value!"</span>);
+            <span class="org-keyword">return</span> <span class="org-keyword">false</span>
+        }
+    });
+}
+</pre>
+</div>
+
+<p>
+The completed code lives at <a href="https://play.rust-lang.org/?gist=7c48a9e595463cb4b8a2c155feb50234&amp;version=nightly&amp;backtrace=0">this Rust playground link</a>.
+</p>
+
+<p>
+Example Output:
+</p>
+<pre class="example">
+[realtime] thread started
+[ui] thread started
+[ui] sending new samples. Second sample: 0
+[realtime] received new samples. Second sample: 0
+[ui] sending new samples. Second sample: 0.01960343
+[realtime] received new samples. Second sample: 0.01960343
+[gc] dropping a value!
+[ui] sending new samples. Second sample: 0.03920686
+[realtime] received new samples. Second sample: 0.03920686
+[gc] dropping a value!
+[ui] sending new samples. Second sample: 0.058810286
+[realtime] received new samples. Second sample: 0.058810286
+[gc] dropping a value!
+[ui] sending new samples. Second sample: 0.07841372
+[realtime] received new samples. Second sample: 0.07841372
+[gc] dropping a value!
+[ui] thread shutting down
+[realtime] thread shutting down
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orga545c14" class="outline-2">
+<h2 id="orga545c14">Conclusion</h2>
+<div class="outline-text-2" id="text-orga545c14">
+<p>
+We did it!
+</p>
+
+<p>
+For me, this post exemplifies the reasons I am so excited about Rust.
+The realtime audio world places us into a world where many programming languages are simply not usable.
+Languages with runtimes that may behave unpredictably cannot meet the extremely strict requirements we must meet for correct realtime operation.
+Rust allows us to meet all of those requirements and gives us some nice abstractions.
+</p>
+
+<p>
+On top of that, the Rust compiler meticulously checks for thread safety violations and memory safety violations.
+While writing this post, some of the issues the compiler threw at me (<code>'static</code>, for example), are issues I never considered.
+The compiler caught me and told me "no," so I had to think about what was actually going on.
+</p>
+
+<p>
+These checks are absolutely irritating, and sometimes we might want to work around them (like we did with <code>TrustMe</code>).
+I'm glad to be exposed to potential issues, even if I have to work around the compiler sometimes (so far).
+</p>
+
+<p>
+If you made it this far, thank you for reading.
+I hope you've learned something interesting (maybe even useful).
+</p>
+
+<p>
+Discussion on <a href="https://www.reddit.com/r/rust/comments/5qxqo8/show_and_ask_rrust_garbage_collection_for_rust/">reddit</a>.
+</p>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2017-01-23-rust-arc-gc-realtime.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
+</div>
+</body>
+</html>
