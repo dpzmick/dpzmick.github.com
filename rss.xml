@@ -14,8 +14,8 @@
   <link>http://dpzmick.com/</link>
   <description><![CDATA[]]></description>
   <language>en</language>
-  <pubDate>Tue, 26 Nov 2019 16:35:42 -0600</pubDate>
-  <lastBuildDate>Tue, 26 Nov 2019 16:35:42 -0600</lastBuildDate>
+  <pubDate>Fri, 10 Jan 2020 23:24:30 -0600</pubDate>
+  <lastBuildDate>Fri, 10 Jan 2020 23:24:30 -0600</lastBuildDate>
   <generator>Emacs 26.3 Org-mode 9.1.9</generator>
   <webMaster>dpzmick@gmail.com (David Zmick)</webMaster>
   <image>
@@ -26,10 +26,20 @@
 
 
   <item>
-    <title>Nov 26, 2019 - Rust for C/C++ developers</title>
-    <link>http://dpzmick.com//posts/2019-11-26-pin-rs-cpp.html</link>
+    <title>Jan 09, 2020 - Homelab Act 1: VPNs</title>
+    <link>http://dpzmick.com//posts/2020-01-09-vpn.html</link>
     <author>dpzmick@gmail.com (David Zmick)</author>
-    <guid isPermaLink="false">http://dpzmick.com//posts/2019-11-26-pin-rs-cpp.html</guid>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2020-01-09-vpn.html</guid>
+    <pubDate>Thu, 09 Jan 2020 00:00:00 -0600</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>Nov 26, 2019 - Rust for C/C++ developers</title>
+    <link>http://dpzmick.com//posts/2019-11-26-rust-tips.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2019-11-26-rust-tips.html</guid>
     <pubDate>Tue, 26 Nov 2019 00:00:00 -0600</pubDate>
 
     <description><![CDATA[]]></description>
