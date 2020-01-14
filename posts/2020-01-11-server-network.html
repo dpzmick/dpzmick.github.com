@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 2020-01-14 Tue 00:32 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homelab Act 2: Servers and 10GbE</title>
+<meta name="generator" content="Org mode">
+<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+</head>
+<body>
+<div id="preamble" class="status">
+<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
+</div>
+<div id="content">
+<header>
+<h1 class="title">Homelab Act 2: Servers and 10GbE</h1>
+</header><p>
+For the last 171 days (according to uptime on one my routers), I've been setting up a small homelab.
+Homelabs are kind of cool, and, the setup has been <i>interesting</i>.
+I'll be writing a few posts explaining the steps I took.
+</p>
+
+<ul class="org-ul">
+<li>Part 1 <a href="./2020-01-09-vpn.html">VPN setup</a></li>
+<li>Part 2 (this post)</li>
+<li>Part 3 <a href="./2020-01-12-nas.html">NAS, ZFS, and NFS</a></li>
+<li>Part 4 Services and Applications (coming soon)</li>
+</ul>
+
+<p>
+Since I could access my system remotely, I had started <a href="../static/homelab/desktop_under_desk.jpg">sticking interesting network cards into my desktop</a> around this time and working on projects remotely.
+Unfortunately, I didn't have enough PCIe slots, or PCIe lanes, to keep all of these plugged in at the same time.
+Plugging and unplugging stuff all the time was a bit of a pain.
+</p>
+
+<p>
+Since part of this was running in the cloud, I figured I'd also start setting up the cool stuff.
+I was hoping to set up small cloud instances to run:
+</p>
+<ul class="org-ul">
+<li><a href="https://www.influxdata.com/">influx</a> and <a href="https://grafana.com/">grafana</a>
+<ul class="org-ul">
+<li>Having a place to blast metrics and make plots is tremendously useful, even for personal projects.</li>
+</ul></li>
+<li>Some sort of NFS server or cloud syncing server
+<ul class="org-ul">
+<li>I've been trying out <a href="https://orgmode.org/">orgmode</a> and was looking for a way to sync files between devices</li>
+<li>I also have a large photo collection, a few ripped CDs that can't be streamed, some home videos, etc</li>
+</ul></li>
+<li>IRC bouncer/or headless weechat with <a href="https://weechat.org/files/doc/stable/weechat_relay_protocol.en.html">remoting enabled</a></li>
+<li>Maybe a self-hosted RSS reader?</li>
+<li>Perhaps a sql server for <a href="https://www.digikam.org/news/2010-10-15_using_digikam_with_mysql/">digikam's remote database</a> (if I can find a place to store the files)</li>
+<li><a href="https://github.com/awesome-selfhosted/awesome-selfhosted">lots of stuff</a></li>
+</ul>
+
+<div id="outline-container-org023e4dd" class="outline-2">
+<h2 id="org023e4dd">Cloud Cost</h2>
+<div class="outline-text-2" id="text-org023e4dd">
+<p>
+A single, low ram, shared CPU, tiny storage cloud instance can cost something like $3.50 a month.
+If you want a real CPU, or some real storage, the prices go up quite a bit.
+I wanted to run, at a minumum, influx, grafana, weechat, and an NFS (or owncloud) server with 20-30gigs of space.
+Influx (or a SQL server) needs real-ish servers, with real-ish CPUs.
+Neither should need much storage for my workload.
+</p>
+
+<p>
+A single core (real core, not shared core) server costs like $10 a month (ish kindof), so, if I wanted two of them, I'd be paying $240 a year for 2 cores.
+This is sort of okay, but this won't come close to addressing my photo problem.
+I'd also still be swapping PCIe cards back and forth for my other projects (annoying!).
+</p>
+
+<p>
+I know I've seen used rackmount servers on eBay for about this price, so I thought it might be worthwhile to put a server in my apartment.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgf9301fa" class="outline-2">
+<h2 id="orgf9301fa">eBay time</h2>
+<div class="outline-text-2" id="text-orgf9301fa">
+<p>
+The first order of business was finding a "quiet, low power, expandable, powerful server."
+I eventually settled on a Dell R720 with 2.5 inch drive bays.
+Specs:
+</p>
+<ul class="org-ul">
+<li>2x xeon E5-2650 v2 (8 physical cores per socket)</li>
+<li>32 gig ECC ram</li>
+<li>2x 10k SAS drives (300gigs each)</li>
+<li>H710p controller (this was the upgraded choice, seemed wise in case I wanted to do RAID. This was very wrong, see <a href="./2020-01-12-nas.html">NAS, ZFS, and NFS</a>)</li>
+<li>4 ports of gigabit ethernet</li>
+<li>Dell's iDRAC remote management system</li>
+</ul>
+
+<p>
+This was a $379 server.
+Passmark gives the dual xeons an <a href="https://www.cpubenchmark.net/cpu.php?cpu=Intel+Xeon+E5-2650+v2+%40+2.60GHz&amp;id=2042&amp;cpuCount=2">18813</a>.
+A new 2016 i7 (the one I used until RYZEN happened) sells in 2020 for $300 and passmarks at <a href="https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i7-6700K+%40+4.00GHz&amp;id=2565">11108</a>.
+The RYZEN chip I have now blows them both away at <a href="https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+3800X&amp;id=3499">24503</a> on passmark, but this isn't an AMD fanboy post.
+The Xeon is a 2013 CPU, so the performance/power isn't going to be as good as newer cpus, but the performance/dollar pretty much blows away the cloud deal, if you only consider CPU cores.
+</p>
+
+<p>
+This decision wasn't easy, but after reading almost every post on <a href="https://www.reddit.com/r/homelab/">r/homelab</a> I decided I'd give this a try.
+</p>
+</div>
+
+<div id="outline-container-org805eead" class="outline-3">
+<h3 id="org805eead">Barebones server setup</h3>
+<div class="outline-text-3" id="text-org805eead">
+</div>
+<div id="outline-container-org87351df" class="outline-4">
+<h4 id="org87351df">Setup a RAID 0 array across the two drives</h4>
+<div class="outline-text-4" id="text-org87351df">
+<p>
+For testing, I just stuck a RAID 0 array across the two drives.
+This is done using the remote management web ui, or by booting the machine and tweaking settings from the remote management virtual display.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgf9d8db0" class="outline-4">
+<h4 id="orgf9d8db0">Install an operating system</h4>
+<div class="outline-text-4" id="text-orgf9d8db0">
+<p>
+Again, super straightforward.
+I mounted an arch ISO using the remote management tools, booted the box, and installed arch the standard way.
+</p>
+
+<p>
+While the server is booting, the fans spin at something like 75% their max RPM.
+This is loud enough to be heard through a closed door.
+</p>
+
+<p>
+Once an OS is installed and booted, the fans in the server will spin down to a pretty reasonably low volume.
+I can still hear the machine when the room is silent, but, if I'm typing, playing music, or doing pretty much anything else, I can't really tell it is there anymore.
+If I put a large amount of load on the machine, the fans will spin up, but that's expected and doesn't really bother me.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org79900e1" class="outline-4">
+<h4 id="org79900e1">Adding PCIe cards</h4>
+<div class="outline-text-4" id="text-org79900e1">
+<p>
+To install PCIe cards, all you have to do is lift the lid, pop out a little tool-less bay and plop the card in.
+Its useful to read the server documentation to make sure each card is installed is attached to the appropriate socket, if you are installing multiple cards.
+</p>
+
+<p>
+After installing new cards, the machine booted, fans spun at max (as expected), but, they never spun down.
+Apparently Dell doesn't like it when you install "non-certified" cards in the server, since they are not aware of the thermal requirements of the card.
+</p>
+
+<p>
+The internet gave two pieces of advice:
+</p>
+<ol class="org-ol">
+<li>Update to the latest iDRAC.</li>
+<li>Issue some magical incantations that tell the server to chill out about certification.</li>
+</ol>
+
+<p>
+I tried (1), but it didn't make any difference.
+For (2), I found the solution <a href="https://serverfault.com/questions/715387/how-do-i-stop-dell-r730xd-fans-from-going-full-speed-when-broadcom-qlogic-netxtr/733064#733064">here</a>, reposted for longevity:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span class="org-comment-delimiter"># </span><span class="org-comment">check if the fans will get loud (do this first to make sure these instructions actually work)</span>
+$ ipmitool raw 0x30 0xce 0x01 0x16 0x05 0x00 0x00 0x00
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">response like below means Disabled (fans will not get loud)</span>
+16 05 00 00 00 05 00 01 00 00
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">response like below means Enabled (fans will get loud)</span>
+16 05 00 00 00 05 00 00 00 00
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">if that worked, you can Disable the "Default Cooling Response Logic" with</span>
+$ ipmitool raw 0x30 0xce 0x00 0x16 0x05 0x00 0x00 0x00 0x05 0x00 0x01 0x00 0x00
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">to turn it back on</span>
+$ ipmitool raw 0x30 0xce 0x00 0x16 0x05 0x00 0x00 0x00 0x05 0x00 0x00 0x00 0x00
+</pre>
+</div>
+
+<p>
+To connect to my server, I needed to run <code>ipmitool</code> like this (use the idrac user/password):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span class="org-comment-delimiter"># </span><span class="org-comment">at this point, server hostname was `worf` and idrac hostname was `idrac-worf`</span>
+$ ipmitool -I lanplus -H idrac-worf -U root raw 0x30 0xce 0x01 0x16 0x05 0x00 0x00 0x00
+Password:
+ 16 05 00 00 00 05 00 01 00 00
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orga102aa4" class="outline-2">
+<h2 id="orga102aa4">Networking</h2>
+<div class="outline-text-2" id="text-orga102aa4">
+<p>
+As discussed in my <a href="./2020-01-09-vpn.html">previous post</a>, I already had a small TP-Link switch sitting behind the VPN/router box.
+Four ports was getting tight (I was unplugging my smart light hub to play with a network card).
+</p>
+
+<p>
+I had some project ideas that might benefit from having fast ethernet, and, I really wanted statistics from the switches.
+To keep a long story short, I've ended up with a combination of a few different network cards and two Mikrotik switches:
+</p>
+<ul class="org-ul">
+<li>CSS326-24G-2S+RM: 24 port 1gib, 2 SFP+ 10gib. My primary network lives on this switch</li>
+<li>CRS309-1G-8S+IN: 8 SFP+ 10gib, 1x 1gib for managment. A secondary experimental network lives here.</li>
+</ul>
+
+<p>
+Buying this networking gear (especially the 10 GbE switch), pushed me a little bit over the "saving money over cloud" limit if I'm only planning on running a small number of services.
+However, as I'll discuss in my <a href="./2020-01-12-nas.html">next post</a>, I'm also pushing a lot of bandwidth over this network and I'm not sure what that would cost on AWS.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgbaea604" class="outline-2">
+<h2 id="orgbaea604">Rack</h2>
+<div class="outline-text-2" id="text-orgbaea604">
+<p>
+I wired a bunch of stuff up and threw it under my desk:
+</p>
+
+
+<figure>
+<img src="../static/homelab/server_desktop_wire_mess.jpg" alt="server_desktop_wire_mess.jpg">
+
+</figure>
+
+<p>
+That wasn't going to work, so I threw all of this into a small rack, moved my desktop to a (crappy) rack mount case, and here we are:
+</p>
+
+
+<figure>
+<img src="../static/homelab/battlestation.jpg" alt="battlestation.jpg">
+
+</figure>
+</div>
+</div>
+
+<div id="outline-container-org81e3c21" class="outline-2">
+<h2 id="org81e3c21">Do something with it</h2>
+<div class="outline-text-2" id="text-org81e3c21">
+<p>
+At first I used this server mostly to poke at the network and write kernel bypass drivers for an Intel I350-T4 quad-gigabit-port network card.
+Side note: The <a href="https://github.com/emmericp/ixy">ixy</a> project is pretty neat and 100% worth poking at if you are interested in networking.
+I was able to get a driver working for the previously mentioned intel card by reading intel's documentation, ixy's other drivers, and <a href="https://spdk.io/">spdk</a> in 500 lines of code.
+</p>
+
+<p>
+I've also used this as a bunch of CPUs for some brute forcing I tried on a few advent of code problems (I also solved them the right way) and for a few other projects where I wanted a quiet system to benchmark on.
+</p>
+
+<p>
+Having a large, remotely managable server available has been pretty convenient (even though the hardware is a little old).
+Also, it looks really cool.
+</p>
+
+<p>
+Currently, this machine is NAS and runs a handful of services.
+See my <a href="./2020-01-12-nas.html">next post</a> for the continuation of this series.
+</p>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2020-01-11-server-network.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
+</div>
+</body>
+</html>

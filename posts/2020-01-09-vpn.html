@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-01-10 Fri 23:24 -->
+<!-- 2020-01-14 Tue 00:32 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Homelab Act 1: VPNs</title>
@@ -20,6 +20,13 @@ For the last 170 days (according to uptime on one my routers), I've been setting
 Homelabs are kind of cool, and, the setup has been <i>interesting</i>.
 I'll be writing a few posts explaining the steps I took.
 </p>
+
+<ul class="org-ul">
+<li>Part 1 (this post)</li>
+<li>Part 2 <a href="./2020-01-11-server-network.html">Servers and 10GbE</a></li>
+<li>Part 3 <a href="./2020-01-12-nas.html">NAS, ZFS, and NFS</a></li>
+<li>Part 4 Services and Applications (coming soon)</li>
+</ul>
 
 <div id="outline-container-org7e642bc" class="outline-2">
 <h2 id="org7e642bc">VPNs</h2>
@@ -546,6 +553,16 @@ In the cloud.me.com dnsmasq config:
 <span class="org-variable-name">server</span>=172.16.2.1@wg0
 </pre>
 </div>
+</div>
+</div>
+
+<div id="outline-container-org8c5789f" class="outline-3">
+<h3 id="org8c5789f">Plug it all in</h3>
+<div class="outline-text-3" id="text-org8c5789f">
+<p>
+I plugged the new router box into the wall (on port 0), and plugged a small 4-port TP-link switch into port 1.
+Everything else is plugged into the TP-link switch.
+</p>
 </div>
 </div>
 </div>

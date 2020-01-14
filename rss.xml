@@ -14,8 +14,8 @@
   <link>http://dpzmick.com/</link>
   <description><![CDATA[]]></description>
   <language>en</language>
-  <pubDate>Fri, 10 Jan 2020 23:24:30 -0600</pubDate>
-  <lastBuildDate>Fri, 10 Jan 2020 23:24:30 -0600</lastBuildDate>
+  <pubDate>Tue, 14 Jan 2020 00:32:17 -0600</pubDate>
+  <lastBuildDate>Tue, 14 Jan 2020 00:32:17 -0600</lastBuildDate>
   <generator>Emacs 26.3 Org-mode 9.1.9</generator>
   <webMaster>dpzmick@gmail.com (David Zmick)</webMaster>
   <image>
@@ -24,6 +24,26 @@
     <link>http://dpzmick.com/</link>
   </image>
 
+
+  <item>
+    <title>Jan 11, 2020 - Homelab Act 2: Servers and Networking</title>
+    <link>http://dpzmick.com//posts/2020-01-11-server-network.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2020-01-11-server-network.html</guid>
+    <pubDate>Sat, 11 Jan 2020 00:00:00 -0600</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>Jan 11, 2020 - Homelab Act 2: Servers and Networking</title>
+    <link>http://dpzmick.com//posts/2020-01-12-nas.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2020-01-12-nas.html</guid>
+    <pubDate>Sat, 11 Jan 2020 00:00:00 -0600</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
 
   <item>
     <title>Jan 09, 2020 - Homelab Act 1: VPNs</title>
