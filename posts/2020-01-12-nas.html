@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-01-14 Tue 00:32 -->
+<!-- 2020-01-29 Wed 22:17 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Homelab Act 3: NAS, ZFS, and NFS</title>
@@ -39,14 +39,19 @@ I'll add more discussion on the usability of something like this in the 4th part
 <div class="outline-text-2" id="text-org64adad2">
 <p>
 I recently had an old SSD fail.
-I had no idea it was going bad until I tried to open a handful of old photos and found that they were lost.
+I had no idea it was going bad until I tried to open a handful of old photos and found that they were corrupt.
 Some of the smart counters for the drive apparently had ticked up, but I never had set up anything automated to monitor this, so it was missed.
+Of course, the files were all backed up, but this still isn't a great experience to have.
 </p>
 
 <p>
 I wanted a safe place to store some important files.
-I didn't want to use a cloud service for this, since I've been trying to scale back my cloud dependence and vendor lock-in problem.
-For local disk, I would certainly need some form of RAID array, and be I needed reliable backups.
+I wanted these files to be available on all of my devices.
+I didn't really want to use a cloud service for this, since I've been trying to scale back my cloud dependence and vendor lock-in problem (but maybe I should have).
+</p>
+
+<p>
+For a local disk, I would certainly need some form of RAID array (and of course backups, but that's for a later post).
 </p>
 
 <p>
@@ -65,17 +70,12 @@ Currently in the root of the <code>/nas</code> contains:
 </ul>
 
 <p>
-Currently this is only using about 500 gigs of space.
+Right now, all of this is is only using about 500 gigs of space.
 </p>
 
 <p>
-Most of this used to live in either a spinning rust drive on my desktop, or my home directory (but not really synced other than occasional rsyncs).
-These files were all backed up by CrashPlan.
-Recently CrashPlan's restores got super slow, so this was an opportunity to try something new.
-</p>
-
-<p>
-This post will discuss setting up the ZFS, mounting it as a NAS, backups, and my experience actually trying to use this system.
+These files used to live on either 1) a spinning rust drive on my desktop or 2) my home directories on multiple machines (not really synced other occasional rsyncs of subsets of the data).
+This post will discuss setting up the ZFS and mounting it as a NAS.
 </p>
 </div>
 </div>
@@ -84,8 +84,8 @@ This post will discuss setting up the ZFS, mounting it as a NAS, backups, and my
 <h2 id="org4d55c94">Setup and Planning</h2>
 <div class="outline-text-2" id="text-org4d55c94">
 <p>
-Since I was only using about 500 gigs of space, I wasn't going to need some super high density system.
-I decided to instead try and build something that would be 1) low power, 2) pretty "fast", 3) "fun".
+Since I was only using about 500 gigs of space, I wasn't going to need some super high capacity system.
+I decided to instead try and build something that would be 1) lowish power (spinning rust is power hungry), 2) pretty "fast", 3) "fun".
 </p>
 
 <p>
@@ -138,14 +138,8 @@ Since this is all going into my only server, I'd also need some space for all of
 
 <p>
 The server has 16 2.5 inch SAS/SATA drive bays connected to a "SAS backplane."
-The backplane is connected to a Dell-Rebranded LSI hardware RAID controller card.
-The RAID controller card is connected to the CPU via PCIe (in a Dell-proprietary form factor slot).
-</p>
-
-<p>
-The good thing about all of this is that the backplane/RAID controller are well integrated into Dell's remote management tools.
-The bad thing is of course that many of these parts are proprietary, but more on that later.
-The RAID controlled uses 8 gen 3 PCIe lanes.
+The backplane is connected to a Dell-rebranded LSI hardware RAID controller card.
+The RAID controller card is connected to the CPU via 8 Gen 3 PCIe lanes (in a Dell-proprietary form factor slot).
 </p>
 
 <p>
@@ -155,8 +149,13 @@ This is well matched with the PCIe bandwidth, which is theoretically around 7.9 
 </p>
 
 <p>
-Given the speed constraints, the redundancy desire, and the low space requirements, I decided to try and build this entire thing with SSDs.
-SAS SSDs designed for servers aren't cheap, so I decided to look at crappy SATA consumer SSDs.
+The good thing about all of this is that the backplane/RAID controller were well integrated into Dell's remote management tools.
+The bad thing is of course that many of these parts are proprietary and have strange feature sets, but more on that later.
+</p>
+
+<p>
+Thinking about the bandwidth capabilities of the server, my redundancy desires, and my low capacity requirements, I decided to try and build this entire thing with SSDs.
+SAS SSDs designed for servers aren't cheap, so I decided to look at low-end consumer SATA SSDs.
 </p>
 
 <p>
@@ -176,7 +175,7 @@ I ended up with 4 disks from 4 different vendors (reduce risk of all of them fai
 
 <p>
 From amazon, this ended up costing like $800, which is, uh, not very cheap.
-I also had to get some disk enclosures on eBay to install these disk into the server.
+I also had to grab some disk enclosures on eBay to install these disk into the server.
 </p>
 </div>
 </div>
@@ -194,9 +193,9 @@ Next thing up, I needed to pick a filesystem/RAID scheme to run on these drives.
 <div class="outline-text-3" id="text-org8ee05f1">
 <p>
 I bought the "upgraded" RAID controller when purchasing the server, since I wanted to keep my options open.
-After tinking about harder about it, hardware RAID doesn't really seem that interesting to me.
+After thinking a bit harder about hardware RAID, it doesn't really seem that interesting to me.
 Hardware RAID might be a win if I didn't have tons of RAM to spare, or if I was very CPU constrained.
-Since neither of those are the case, it seems wise to use powerful CPUs and large amount of RAM available on the server to do fs checksumming and for caching purposes.
+Since neither of those are the case, it seems wiser to use my powerful Xeon CPUs and the large amount of ECC RAM available on the server to do fs checksumming and for caching purposes.
 </p>
 </div>
 </div>
@@ -216,6 +215,7 @@ Awesome ZFS features:
 <li>Great reviews online</li>
 <li>Great arch-wiki documentation</li>
 <li>Apparently no <a href="http://www.raid-recovery-guide.com/raid5-write-hole.aspx">RAID write hole problems</a> despite not having a dedicated write-flush backup battery like HW would have</li>
+<li>many more</li>
 </ul>
 </div>
 </div>
@@ -278,7 +278,7 @@ Apparently, the lower end model is, but only if you flash the thing with some sp
 Regardless, I booted the machine with some of the drives installed to see what would happen.
 The dell controller was not happy with the consumer drives.
 It marked a number of them as degraded, and thought that the kingston drives were SAS drives (maybe they actually are? never figured this out).
-Fortunately, it seemed like all of the drives were working.
+Fortunately, it seemed like all of the drives were at least working.
 </p>
 </div>
 </div>
@@ -292,21 +292,26 @@ The IT mode firmware is supposed to allow you to just pass the disks through to 
 </p>
 
 <p>
+Standard flashing procedures won't work though, because Dell looks for some special "I'm a Dell Special Thing" from the device at boot time.
+If you flash the board incorrectly, the server will refuse to boot in any way when the board is installed (so you can't reflash it).
+</p>
+
+<p>
 There's a guy on eBay who will sell you on of these pre-flashed.
-Search for "Dell H310 mini monolithic K09CJ with LSI 9211-8i P20 IT Mode" then just buy one from him.
+Search for "Dell H310 mini monolithic K09CJ with LSI 9211-8i P20 IT Mode" then just buy one from him if you want to do this.
 </p>
 
 <p>
 I of course didn't go down this path.
 Instead, I found some PDF file on archive.org that contained some instructions for flashing the controller.
 Since references to this file seem to all go stale, I'm mirroring it <a href="../static/homelab/h310_it.pdf">here</a>, although I keep redoing my blog so this link will probably go stale too.
+I booted an Arch Linux iso through the remote managment interface and configured everything from Arch.
 </p>
 
 <p>
-I booted an Arch Linux iso through the remote managment interface and configured everything from Arch.
 To follow these instructions, you'll have to find the LSI firmware files.
-Since LSI has been acquired like 30 times, its not entirely clear where to go.
-To find these file names, I had to read a bunch of other blog posts with a bunch of references to the files you need to download.
+Since LSI has been acquired like 30 times, its not entirely clear where to find them.
+To find these file names, figure out who owns LSI now and go look for their firmware downloads page.
 </p>
 
 <p>
@@ -318,6 +323,10 @@ You're looking for:
 </ul>
 
 <p>
+Once you have these, you should be able to follow the remaining instructions in the PDF.
+</p>
+
+<p>
 There's a note in the PDF that says:
 </p>
 <blockquote>
@@ -327,8 +336,8 @@ Should you want to boot off a drive attached to the H310MM, you will also have t
 </blockquote>
 
 <p>
-This is a very true statement and you'll be stuck scrathing your head for a long time if you miss it.
-Make sure to also flash the efi firmware to the device.
+This is a very true statement and you'll be stuck scrathing your head for a long time if you miss/ignore it.
+<b>Make sure to also flash the efi firmware to the device.</b>
 </p>
 </div>
 </div>
@@ -344,6 +353,7 @@ For some reason, the activity LEDs won't light up on the ADAT disks, so I just p
 
 <p>
 All of the serial numbers and slot assignments are saved in a safe place.
+This is probably important to have when disks need replacing.
 </p>
 </div>
 </div>
@@ -361,7 +371,10 @@ From the Arch iso, I partioned the disk in the 0th slot, and installed Arch usin
 <h3 id="org6aa1a35">rootdelay</h3>
 <div class="outline-text-3" id="text-org6aa1a35">
 <p>
-The OS install when smoothly so I thought I was done with this ordeal.
+The OS install when smoothly, so I thought I was finally done with this ordeal once Arch finished bootstrapping the system.
+</p>
+
+<p>
 Wrong!
 </p>
 
@@ -372,13 +385,13 @@ The root partition was on the same drive as GRUB, so this doesn't really make se
 </p>
 
 <p>
-Apparently, when booting, the EFI system initializes the controller to get the bootloader, Linux init ram disk, etc.
+Apparently, when booting, the EFI system initializes the controller to get the bootloader, Linux initrd, etc.
 But then, when the initrd starts, something in Linux's drivers causes the SAS controller to reinit.
 The controller takes a long time to initialize, so Linux will have a hard time finding it's boot disk.
 </p>
 
 <p>
-Adding <code>rootdelay=600</code> to my kernel command line got me passed this problem; now Linux waits for root partition to show up for 5 minutes before failing to boot.
+Adding <code>rootdelay=600</code> to my kernel command line got me passed this problem; now Linux waits for root partition to show up for 5 minutes before giving up on the filesystem.
 </p>
 </div>
 </div>
@@ -405,7 +418,6 @@ These are mounted, creatively, at <code>/nas</code> and <code>/server</code>.
 For the <code>nas</code> zpool, I'm using 12 disk with data striped across two RAIDZ2 zpools.
 In other words, each of the RAIDZ2 pools can loose two disk without failing.
 All of my data is striped across these two pools.
-I have no idea if this is a good idea.
 </p>
 
 <p>
@@ -418,9 +430,13 @@ For performance on random IOPS, each RAID-Z group has approximately the performa
 </blockquote>
 
 <p>
-So, the performance isn't going to be fantastic on the <code>nas</code> array.
-I'll pretty much only be aggregating across the two stripes, so, assuming read/write of 500mb/s on a standard SATA ssd, I should expect read/write spees around a gig a second for the pool.
+So, the performance isn't going to be fantastic on the <code>nas</code> array, if I set it up like this.
+I'll pretty only be aggregating across the two stripes, so, assuming read/write of 500mb/s on a standard SATA ssd, I should expect read/write speeds around a gig a second for the pool.
 Fortunately, that's exactly what I'm getting.
+</p>
+
+<p>
+I have no idea if this striping/raidz combination is a good idea or not, but it seems like a reasonable safety/performance tradeoff.
 </p>
 </div>
 </div>
@@ -434,14 +450,19 @@ This array isn't that interesting and I haven't tried to push it very hard yet.
 </p>
 
 <p>
-Contiguous reads/writes run at ~400-500mb/s, as expected, since this is about the rate I'd expect from a single drive in the array.
+Contiguous reads/writes run at a blistering ~400-500mb/s, as expected.
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgd2d7f91" class="outline-4">
-<h4 id="orgd2d7f91">Perfomance</h4>
-<div class="outline-text-4" id="text-orgd2d7f91">
+<div id="outline-container-org765182e" class="outline-4">
+<h4 id="org765182e">Perfomance Testing</h4>
+<div class="outline-text-4" id="text-org765182e">
+<p>
+Here's some <i>naive</i> <code>dd</code> performance tests on the disk arrays.
+These tests are all performed on the server.
+</p>
+
 <p>
 For the <code>nas</code> array:
 </p>
@@ -452,19 +473,19 @@ $ dd <span class="org-variable-name">if</span>=/tmp/test <span class="org-variab
 2560+0 records out
 5368709120 bytes (5.4 GB, 5.0 GiB) copied, 5.51472 s, 974 MB/s
 
-<span class="org-comment-delimiter"># </span><span class="org-comment">on the server, read the file we just copied to nowhere (immediately after writing)</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">read the file we just copied to nowhere (immediately after writing)</span>
 $ dd <span class="org-variable-name">if</span>=test <span class="org-variable-name">of</span>=/dev/null <span class="org-variable-name">bs</span>=2M
 2560+0 records<span class="org-keyword"> in</span>
 2560+0 records out
 5368709120 bytes (5.4 GB, 5.0 GiB) copied, 2.96748 s, 1.8 GB/s
 
-<span class="org-comment-delimiter"># </span><span class="org-comment">same thing again</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">same thing again (should get some caching effects, sort of getting that)</span>
 $ dd <span class="org-variable-name">if</span>=test <span class="org-variable-name">of</span>=/dev/null <span class="org-variable-name">bs</span>=2M
 2560+0 records<span class="org-keyword"> in</span>
 2560+0 records out
 5368709120 bytes (5.4 GB, 5.0 GiB) copied, 2.2822 s, 2.4 GB/s
 
-<span class="org-comment-delimiter"># </span><span class="org-comment">drop page cache and zfs arc cache, reread same file</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">drop page cache and zfs arc cache, then reread same file</span>
 $ dd <span class="org-variable-name">if</span>=test <span class="org-variable-name">of</span>=/dev/null <span class="org-variable-name">bs</span>=2M
 2560+0 records<span class="org-keyword"> in</span>
 2560+0 records out
@@ -503,7 +524,8 @@ $ dd <span class="org-variable-name">if</span>=test <span class="org-variable-na
 </div>
 
 <p>
-One NVMe/PCIe drive is destroying this expensive array.
+One NVMe/PCIe drive is destroying this expensive array, but that's expected.
+If you are going for raw performance, get the NVMe drives and skip the server.
 </p>
 
 <p>
@@ -522,11 +544,10 @@ Trivial NFS is easy to setup with ZFS.
 You can simply install the right NFS servers, then tell ZFS to export the mount point.
 </p>
 </div>
-</div>
 
-<div id="outline-container-org1d8f98e" class="outline-2">
-<h2 id="org1d8f98e">NFS performance</h2>
-<div class="outline-text-2" id="text-org1d8f98e">
+<div id="outline-container-org1d8f98e" class="outline-3">
+<h3 id="org1d8f98e">NFS performance</h3>
+<div class="outline-text-3" id="text-org1d8f98e">
 <p>
 Unfortunately, NFS over my 10 GbE network doesn't perform as well as you'd hope.
 </p>
@@ -575,6 +596,7 @@ Trivial network tests with <code>iperf3</code> and some custom code indicate tha
 I can trivally saturate gigabit with these rates, which means I'm also trivialy saturating the uplink through my <a href="./2020-01-09-vpn.html">VPN</a> as well.
 Since I'm currently spending more of my time connected to the VPN from remote places (with less than gigabit bw), optimizing the NFS has not been a priority.
 </p>
+</div>
 </div>
 </div>
 
