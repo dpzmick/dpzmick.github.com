@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-01-29 Wed 22:17 -->
+<!-- 2020-01-29 Wed 22:19 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Org Configuration</title>
@@ -77,7 +77,6 @@ Started from <a href="https://explog.in/config.org.html">explog</a> and tried to
                            (concat <span class="org-string">"/posts/"</span> <span class="org-comment-delimiter">;; </span><span class="org-comment">cheating on path</span>
                                    (file-name-base entry)
                                    <span class="org-string">".html"</span>))
-        (insert-file-contents entry)
         (buffer-string))))
 
 (<span class="org-keyword">defun</span> <span class="org-function-name">org-blog-sitemap-function</span> (title list)
