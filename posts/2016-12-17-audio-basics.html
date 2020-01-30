@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-01-29 Wed 22:19 -->
+<!-- 2020-01-29 Wed 22:26 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audio programming 101</title>
@@ -26,9 +26,9 @@ To start off this series, here's a short article about audio
 programming.
 </p>
 
-<div id="outline-container-orgdd4ab93" class="outline-2">
-<h2 id="orgdd4ab93">Digital audio</h2>
-<div class="outline-text-2" id="text-orgdd4ab93">
+<div id="outline-container-orge79ac2c" class="outline-2">
+<h2 id="orge79ac2c">Digital audio</h2>
+<div class="outline-text-2" id="text-orge79ac2c">
 <p>
 To generate audio, audio software sends some digital audio signals to
 the audio card. Digital audio signals are just lists of floating point
@@ -57,9 +57,9 @@ audio, which is then played through the speakers.
 </p>
 </div>
 
-<div id="outline-container-org2665ae7" class="outline-3">
-<h3 id="org2665ae7">Types of audio software</h3>
-<div class="outline-text-3" id="text-org2665ae7">
+<div id="outline-container-orgfd156b0" class="outline-3">
+<h3 id="orgfd156b0">Types of audio software</h3>
+<div class="outline-text-3" id="text-orgfd156b0">
 <p>
 Next let's think about a few different kinds of audio software (this
 list is by no means complete):
@@ -132,9 +132,9 @@ developers use to develop audio applications.
 </div>
 </div>
 
-<div id="outline-container-orgdc63897" class="outline-2">
-<h2 id="orgdc63897">Software audio systems</h2>
-<div class="outline-text-2" id="text-orgdc63897">
+<div id="outline-container-org251d7a6" class="outline-2">
+<h2 id="org251d7a6">Software audio systems</h2>
+<div class="outline-text-2" id="text-org251d7a6">
 <p>
 Most software audio systems (as far as I know) tend to work the same
 way. There is a realtime thread that generates samples and a bunch of
@@ -145,9 +145,9 @@ audio card.
 </p>
 </div>
 
-<div id="outline-container-org3324f22" class="outline-3">
-<h3 id="org3324f22">How fast is realtime?</h3>
-<div class="outline-text-3" id="text-org3324f22">
+<div id="outline-container-org573a91d" class="outline-3">
+<h3 id="org573a91d">How fast is realtime?</h3>
+<div class="outline-text-3" id="text-org573a91d">
 <p>
 In the previous section, I claimed that, at 44.1 kHz (the standard CD
 sample rate), we need to take one audio sample approximately every 23
@@ -244,9 +244,9 @@ milliseconds can slow everyone else down.
 </div>
 </div>
 
-<div id="outline-container-orgbc31681" class="outline-3">
-<h3 id="orgbc31681">Time keeps on ticking</h3>
-<div class="outline-text-3" id="text-orgbc31681">
+<div id="outline-container-orgb59864d" class="outline-3">
+<h3 id="orgb59864d">Time keeps on ticking</h3>
+<div class="outline-text-3" id="text-orgb59864d">
 <p>
 If our callback function fails to generate samples quickly enough (or
 uses up all of the CPU time), the audio system will produce crackles,
@@ -352,9 +352,9 @@ allocators</a> which do not violate our realtime constraints.
 </div>
 </div>
 
-<div id="outline-container-org90ca604" class="outline-2">
-<h2 id="org90ca604">What do we do?</h2>
-<div class="outline-text-2" id="text-org90ca604">
+<div id="outline-container-org30cd952" class="outline-2">
+<h2 id="org30cd952">What do we do?</h2>
+<div class="outline-text-2" id="text-org30cd952">
 <p>
 In general, there are a few cool tricks we can use to design around
 these problems, but I'm not going to discuss any of them in this post.

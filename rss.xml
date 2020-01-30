@@ -14,8 +14,8 @@
   <link>http://dpzmick.com/</link>
   <description><![CDATA[]]></description>
   <language>en</language>
-  <pubDate>Wed, 29 Jan 2020 22:19:45 -0600</pubDate>
-  <lastBuildDate>Wed, 29 Jan 2020 22:19:45 -0600</lastBuildDate>
+  <pubDate>Wed, 29 Jan 2020 22:26:26 -0600</pubDate>
+  <lastBuildDate>Wed, 29 Jan 2020 22:26:26 -0600</lastBuildDate>
   <generator>Emacs 26.3 Org-mode 9.1.9</generator>
   <webMaster>dpzmick@gmail.com (David Zmick)</webMaster>
   <image>
@@ -26,20 +26,20 @@
 
 
   <item>
-    <title>Jan 11, 2020 - Homelab Act 2: Servers and Networking</title>
-    <link>http://dpzmick.com//posts/2020-01-11-server-network.html</link>
+    <title>Jan 12, 2020 - Homelab Act 3: NAS, ZFS, and NFS</title>
+    <link>http://dpzmick.com//posts/2020-01-12-nas.html</link>
     <author>dpzmick@gmail.com (David Zmick)</author>
-    <guid isPermaLink="false">http://dpzmick.com//posts/2020-01-11-server-network.html</guid>
-    <pubDate>Sat, 11 Jan 2020 00:00:00 -0600</pubDate>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2020-01-12-nas.html</guid>
+    <pubDate>Sun, 12 Jan 2020 00:00:00 -0600</pubDate>
 
     <description><![CDATA[]]></description>
   </item>
 
   <item>
-    <title>Jan 11, 2020 - Homelab Act 2: Servers and Networking</title>
-    <link>http://dpzmick.com//posts/2020-01-12-nas.html</link>
+    <title>Jan 11, 2020 - Homelab Act 2: Servers and 10GbE</title>
+    <link>http://dpzmick.com//posts/2020-01-11-server-network.html</link>
     <author>dpzmick@gmail.com (David Zmick)</author>
-    <guid isPermaLink="false">http://dpzmick.com//posts/2020-01-12-nas.html</guid>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2020-01-11-server-network.html</guid>
     <pubDate>Sat, 11 Jan 2020 00:00:00 -0600</pubDate>
 
     <description><![CDATA[]]></description>
