@@ -14,8 +14,8 @@
   <link>http://dpzmick.com/</link>
   <description><![CDATA[]]></description>
   <language>en</language>
-  <pubDate>Wed, 29 Jan 2020 22:26:26 -0600</pubDate>
-  <lastBuildDate>Wed, 29 Jan 2020 22:26:26 -0600</lastBuildDate>
+  <pubDate>Sun, 23 Feb 2020 02:16:25 -0600</pubDate>
+  <lastBuildDate>Sun, 23 Feb 2020 02:16:25 -0600</lastBuildDate>
   <generator>Emacs 26.3 Org-mode 9.1.9</generator>
   <webMaster>dpzmick@gmail.com (David Zmick)</webMaster>
   <image>
@@ -24,6 +24,16 @@
     <link>http://dpzmick.com/</link>
   </image>
 
+
+  <item>
+    <title>Feb 01, 2020 - Homelab Act 4: Services and Applications</title>
+    <link>http://dpzmick.com//posts/2020-02-01-homelab4-cloud.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2020-02-01-homelab4-cloud.html</guid>
+    <pubDate>Sat, 01 Feb 2020 00:00:00 -0600</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
 
   <item>
     <title>Jan 12, 2020 - Homelab Act 3: NAS, ZFS, and NFS</title>
