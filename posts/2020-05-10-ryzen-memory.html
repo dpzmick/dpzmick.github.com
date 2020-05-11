@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 2020-05-10 Sun 20:20 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMD Zen Memory Latency/Bandwidth Considerations</title>
+<meta name="generator" content="Org mode">
+<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+</head>
+<body>
+<div id="preamble" class="status">
+<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
+</div>
+<div id="content">
+<header>
+<h1 class="title">AMD Zen Memory Latency/Bandwidth Considerations</h1>
+</header><p>
+I&rsquo;ve built a micro-benchmark which sends data between CPU 2 cpu cores.
+On my single AMD 3800X desktop CPU, I have crafted a microbenchmark which has different performance characteristics depending on pair of cores I select for testing.
+</p>
+
+<p>
+Results like this should not be surprising on a multi-socket system, but this system has only a single processor.
+I believe this micro-benchmark is highlighting some of the features of the novel architecture on the new AMD chips.
+</p>
+
+<div id="outline-container-org98e3afb" class="outline-2">
+<h2 id="org98e3afb">Caches</h2>
+<div class="outline-text-2" id="text-org98e3afb">
+<p>
+Before diving in to Zen, I&rsquo;d like to talk briefly CPU memory-caching systems.
+</p>
+
+<p>
+Modern CPUs contain a variety of fast memory which cache accesses to the larger more expensive RAM.
+Usually we call the fastest, smallest cache L1, the next fastest L2, and the largest, but slowest cache L3.
+These caches communicate with each other to move data around (see <a href="https://en.wikipedia.org/wiki/MESI_protocol">MESI protocol</a>).
+</p>
+
+<p>
+Assume for simplification that the L3 cache knows how to get data from main memory or from the L1 and L2 caches.
+Also assume that the L3 cache is the only part of the memory system which is able to talk main memory.
+</p>
+
+<p>
+If Core 0 wants to read from memory, it will ask the local L1 cache to perform the read.
+If the data is in the L1 cache, the cache sends the data to the CPU registers.
+If the data is not in the L1 cache, the cache asks L2.
+Finally, the L2 cache asks L3 and the L3 cache goes and fetches the data.
+</p>
+
+<p>
+Next, assume that all data is written into the L1 cache then propagated out to other caches or main memory as needed.
+When the L1 cache is out of space, it will evict the data into the L2 cache.
+When the L2 cache is out of space, it will event the data into the L3 cache.
+Finally, if L3 runs out of space, it will evict the data back to main memory.
+</p>
+
+<p>
+Generally, each CPU has it&rsquo;s own L1 and L2 cache, but the L3 cache is shared by all of the cores.
+Something like this:
+</p>
+
+
+<figure>
+<img src="../static/ryzen_numa/unified_l3.png" alt="unified_l3.png">
+
+</figure>
+
+<p>
+This style of L1/L2/L3 cache has been common in CPU designs for many years.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgd3bf921" class="outline-2">
+<h2 id="orgd3bf921">Ryzen Architecture</h2>
+<div class="outline-text-2" id="text-orgd3bf921">
+<p>
+To talk about AMD&rsquo;s Zen architecture, there&rsquo;s a few terms we need to define:
+</p>
+<ul class="org-ul">
+<li>CCX: Core Complex. Contains a max of 4 cores and a slice of the L3 cache.</li>
+<li>CCD: Core Chiplet Die: A single die which contains 2 CCX (on Ryzen 3/5/7)</li>
+<li>IO controller: A separate die containing DDR controllers, PCIe controllers. Also the hub for the &ldquo;Infinity Fabric&rdquo;</li>
+<li>Infinity Fabric: High performance interconnect connecting CCXs</li>
+</ul>
+
+<p>
+Each Ryzen processor has one IO controller and some number of CCD dies.
+This CCD/CCX/IO controller strategy allows AMD to mass produce CCD chips, performance/correctness test the cores (this is called &ldquo;binning&rdquo;), then build a wide variety of different processor configurations.
+</p>
+
+<p>
+The particular Ryzen 3800X I own has a single IO controller and a single CCD.
+The CCD contains two CCXs.
+Each CCX in my particular CPU has all 4 physical cores enabled.
+Each of those physical cores is capable of running two threads (<a href="https://en.wikipedia.org/wiki/Simultaneous_multithreading">see Simultaneous Multithreading (SMT)</a>).
+</p>
+
+<p>
+Here&rsquo;s how this looks in <a href="https://www.open-mpi.org/projects/hwloc/">hwloc</a>&rsquo;s <code>lstopo</code> output:
+<img src="../static/ryzen_numa/topo.png" alt="topo.png">
+</p>
+
+<p>
+Interpreting the output, we can see that:
+</p>
+<ul class="org-ul">
+<li>CCX1 contains the cores that the OS calls 0, 1, 2, 3, 4, 5, 6, and 7</li>
+<li>CCX2 contains the cores that the OS calls 8, 9, 10, 11, 12, 13, 14, and 15</li>
+</ul>
+
+<p>
+This likely means that cores in the same CCX can communicate with each other by reading and writing to their shared L3 cache.
+If cores from different CCXs need to communicate, they will have to use the infinity interconnect.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org8a5faa6" class="outline-2">
+<h2 id="org8a5faa6">Latency Test</h2>
+<div class="outline-text-2" id="text-org8a5faa6">
+<p>
+To verify my hypothesis, lets start with a classic pingpong roundtrip latency test.
+</p>
+
+<p>
+This test runs two threads.
+The first thread flips a value in memory to some value &ldquo;Ping&rdquo;, then waits to see another value &ldquo;Pong.&rdquo;
+The second thread waits to see &ldquo;Ping&rdquo;, then flips the value to &ldquo;Pong.&rdquo;
+</p>
+
+<p>
+The first thread starts timing right before sending &ldquo;Ping&rdquo;, and stops timing once it sees &ldquo;Pong.&rdquo;
+</p>
+
+<p>
+I&rsquo;ve plotted the mean core-to-core pingpong round-trip time for all pairs of cores (including the SMT cores).
+Latency for A-&gt;B and B-&gt;A were both tested (for no particular reason).
+</p>
+
+<p>
+That is:
+</p>
+<div class="org-src-container">
+<pre class="src src-python"><span class="org-keyword">for</span> core1 <span class="org-keyword">in</span> cores:
+    <span class="org-keyword">for</span> core2 <span class="org-keyword">in</span> cores:
+        <span class="org-keyword">if</span> core1 == core2: <span class="org-keyword">continue</span> <span class="org-comment-delimiter"># </span><span class="org-comment">skip self, both threads spin</span>
+        <span class="org-variable-name">results</span>[ (core1, core2) ] = mean_of_many_tests( core1, core2 )
+</pre>
+</div>
+
+<p>
+This plot is a heatmap of core-&gt;core pingpong roundtrip time, in nanoseconds:
+<img src="../static/ryzen_numa/pingpong.png" alt="pingpong.png">
+</p>
+
+<p>
+As we can see, there&rsquo;s a clear difference in round-trip latency between pairs of cores in the same CCX and pairs of cores in a different CCX.
+For example, core 0-&gt;core 3 round-trip latency is pinkish, but core 0-&gt;core 4 latency is dark blueish.
+The actual values I got around ~96ns for 0-&gt;3 and ~196ns for 0-&gt;4.
+</p>
+
+<p>
+I do not have a good explanation for the upper and lower diagonal lines (at around 48ish ns), but, we can clearly see that pairs of cores for which latency was low share a common L3 cache (they are in the same CCX).
+</p>
+
+<p>
+For full details about this benchmark, please see the source and my results <a href="https://gitlab.com/dpzmick/ryzen-numa/-/tree/master/latency">here</a>.
+</p>
+
+<p>
+So, we know that there is a difference in latencies, but, does this really matter?
+Few applications actually have any reason to bounce a single value back and forth between cores.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org805c62c" class="outline-2">
+<h2 id="org805c62c">Bandwidth Test</h2>
+<div class="outline-text-2" id="text-org805c62c">
+<p>
+When discussing latency, programmers who are more bandwidth focused will often (rightly) say something like &ldquo;the latency doesn&rsquo;t matter, I only care about bandwidth.&rdquo;
+Most programmers are more focused on bandwidth than latency, because generally we care a lot more about throughput than latency.
+</p>
+</div>
+
+<div id="outline-container-org3c2cd20" class="outline-3">
+<h3 id="org3c2cd20">Baseline with large core-to-core copies</h3>
+<div class="outline-text-3" id="text-org3c2cd20">
+<p>
+Let&rsquo;s start by proving that, when moving around large chunks of data, none of this matters.
+</p>
+
+<p>
+I&rsquo;ve created a small tester which:
+</p>
+<ul class="org-ul">
+<li>binds to a core</li>
+<li>allocates memory on the core</li>
+<li>writes to every byte of the memory on the core</li>
+<li>binds to another core</li>
+<li>copies all of the memory into a new region of memory</li>
+</ul>
+
+<p>
+The region of memory that I am copying is 4 gigs large.
+This is much larger than any of the local caches.
+We should be able fire off a <code>memcpy</code> then sit back while the hardware prefetchers and cache hierarchy work their latency-hiding magic.
+</p>
+
+<p>
+Here&rsquo;s the plot:
+<img src="../static/ryzen_numa/bw_baseline.png" alt="bw_baseline.png">
+</p>
+
+<p>
+As we can see, we&rsquo;re pretty much getting a ~14.5-15 GiB/s copy rate regardless of the cores selected.
+This is good news.
+The new AMD core layout makes no difference when copying around 4 gig chunks of data.
+</p>
+
+<p>
+For full details about this benchmark, please see the source and my results <a href="https://gitlab.com/dpzmick/ryzen-numa/-/tree/master/bw_baseline">here</a>.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org452686e" class="outline-3">
+<h3 id="org452686e">When might it matter?</h3>
+<div class="outline-text-3" id="text-org452686e">
+<p>
+We are often able to amortize high latency operations over large transfers or by work on something else to hide the costs of high latency.
+However, as data sizes shrink, it becomes harder and harder to hide latency.
+</p>
+
+<p>
+Recently, it seems like (anecdotally) there has been a trend of using queues to move data/send commands in throughput-oriented applications.
+</p>
+
+<ul class="org-ul">
+<li>The <a href="https://jackaudio.org/">Jack</a> audio system uses ring buffers to transfer audio samples between multiple communicating applications</li>
+<li>A number of async IO libraries use thread pools, event queues, and work stealing scheduling</li>
+<li>Go&rsquo;s channels are fundamentally just queues between concurrent (sometimes running in parallel) threads</li>
+<li>Erlang&rsquo;s fundamental abstraction is threads that communicate over queues</li>
+<li>etc..</li>
+</ul>
+
+<p>
+When messages sent over these queues are small, we might be able to observe Ryzen&rsquo;s latency characteristics as a drop in throughput.
+</p>
+
+<p>
+I&rsquo;ve built a simple microbenchmark to test this.
+The benchmark runs a writer thread and some number of reader threads.
+The threads share a region of memory that contains a bunch of &ldquo;chunks&rdquo;.
+The array of chunks looks sort of a like a single producer, single consumer queue:
+</p>
+<div class="org-src-container">
+<pre class="src src-c"><span class="org-keyword">typedef</span> <span class="org-keyword">struct</span> {
+  <span class="org-type">uint64_t</span> <span class="org-variable-name">ready</span>;          
+  <span class="org-type">char</span>     <span class="org-variable-name">padding</span>[ <span class="org-constant">CACHE_LINE_SIZE</span> - <span class="org-keyword">sizeof</span>( <span class="org-type">uint64_t</span> ) ];
+  <span class="org-type">char</span>     <span class="org-variable-name">data</span>[ <span class="org-constant">N_DATA_LINES</span>*<span class="org-constant">CACHE_LINE_SIZE</span> ];
+} <span class="org-type">chunk_t</span>;
+</pre>
+</div>
+
+<p>
+The <code>ready</code> marker acts like a boolean.
+The <code>ready</code> marker always sits at the start of a cache line.
+The size <code>data</code> of the data region is always some multiple of the cache line size.
+Padding is introduced to ensure that the data region and the <code>ready</code> marker are not ever in the same cache line.
+</p>
+
+<p>
+In pseudocode, the writer looks something like this:
+</p>
+<div class="org-src-container">
+<pre class="src src-c"><span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = <span class="org-highlight-numbers-number">0</span>; i &lt; <span class="org-constant">N_CHUNKS</span>; ++i ) {
+  populate_chunk_data( &amp;chunks[i] );
+  <span class="org-comment-delimiter">// </span><span class="org-comment">signal that the reader should read the data</span>
+  atomic_store( &amp;chunks[i].ready, <span class="org-constant">true</span> );
+}
+</pre>
+</div>
+
+<p>
+The reader looks something like this:
+</p>
+<div class="org-src-container">
+<pre class="src src-c"><span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = <span class="org-highlight-numbers-number">0</span>; i &lt; <span class="org-constant">N_CHUNKS</span>; ++i ) {
+  <span class="org-comment-delimiter">// </span><span class="org-comment">Wait for the chunk to be ready</span>
+  <span class="org-keyword">while</span>( <span class="org-negation-char">!</span>atomic_load( &amp;chunks[i].ready ) ) { }
+  read_and_discard_data( &amp;chunks[i] );
+}
+</pre>
+</div>
+
+<p>
+In theory, chunk transfer will occur one at a time when the reader and the writer are running at more or less the same speed.
+If the reader falls behind the writer, the writer should be able to plow ahead with its writes and the reader should be able to continue reading until it catches up or finishes.
+</p>
+
+<p>
+In the benchmark, I&rsquo;ve placed the array of chunks into a 2 megabyte <a href="https://kerneltalks.com/services/what-is-huge-pages-in-linux/">huge page</a>.
+I created a region containing 8192 chunks, and each chunk&rsquo;s data segment contains 8 cache lines (512 bytes) of data.
+The number of chunks doesn&rsquo;t seem to affect the benchmark much, but the size of the data segment does.
+I&rsquo;ve kept the size low to highlight the effects I&rsquo;m looking for, but, these effects seem to still be present for data sizes up to a few KiB.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orga508961" class="outline-3">
+<h3 id="orga508961">Results</h3>
+<div class="outline-text-3" id="text-orga508961">
+<p>
+Using the same style of plots that we&rsquo;ve already see, let&rsquo;s first look at bandwidth reported by the writer.
+This plot shows the write rate when Y-axis core is sending data to X-axis core (rate is in GiB/s, I&rsquo;ve again included the SMT cores):
+</p>
+
+
+<figure>
+<img src="../static/ryzen_numa/writerplot.png" alt="writerplot.png">
+
+</figure>
+
+<ul class="org-ul">
+<li>When core 0 (CCX1) writes to core 2 (CCX2), writer rate is ~14.2 GiB/s</li>
+<li>When core 0 (CCX1) writes to core 4 (CCX2), writer rate is ~13.9 GiB/s</li>
+<li>When core 0 (CCX1) writes to core 5 (CCX2), writer rate is ~14.0 GiB/s</li>
+</ul>
+
+<p>
+There&rsquo;s some patterns in this plot that I have not been able to explain, but, there doesn&rsquo;t seem to be any significant variation in write rate when the reader core is on a different CCX.
+I&rsquo;m reasonably confident claiming that the writer is unaffected by choice of core.
+</p>
+
+<p>
+Here&rsquo;s the rates that the reader reported:
+<img src="../static/ryzen_numa/readerplot.png" alt="readerplot.png">
+</p>
+
+<p>
+From the reader&rsquo;s perspective, the differences are stark.
+When the reader and writer share an L3 cache (are in the same CCX), we consistently see a read rate around 13-14 GiB/s.
+When the reader and writer do not share the L3 cache (are in different CCX), the read rates are consistently lower, around 10-11 GiB/s.
+</p>
+
+<p>
+This is a significant enough difference to warrant careful attention when building high performance software.
+</p>
+
+<p>
+For full details about this benchmark, please see the source and my results <a href="https://gitlab.com/dpzmick/ryzen-numa/-/tree/master/q">here</a>.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org5ac1238" class="outline-2">
+<h2 id="org5ac1238">Conclusions</h2>
+<div class="outline-text-2" id="text-org5ac1238">
+<p>
+This sort of behavior will not come as a surprised for programmers used to programming for multi-socket (multiple physical CPU) server systems (see <a href="https://en.wikipedia.org/wiki/Non-uniform_memory_access">NUMA</a>).
+However, for those writing parallel applications, I feel like this effect is still notable and warrants slightly different considerations than traditional NUMA.
+</p>
+
+<p>
+In a traditional multi-socket/multiple-physical CPU system, RAM is physically connected to only one of the many CPUS.
+If core0 of cpu0 needs to access memory physically attached to cpu1, it will pay a latency penalty to access this memory (this is NUMA - Non-Uniform Memory Access).
+However, we&rsquo;ve also generally assumed that core0 can access any part of memory attached to cpu0 with the same latency.
+Therefore, applications built for NUMA architectures often focused on getting their data into the memory CPU attached to a CPU, then using the cores on that CPU to process the data.
+</p>
+
+<p>
+For platforms like AMD&rsquo;s (and recent Intel, see <a href="https://itpeernetwork.intel.com/intel-mesh-architecture-data-center/">Intel Mesh</a>) we have to now make NUMA-style considerations any time we are operating over a piece of data on multiple cores, not just when dealing with multiple sockets.
+</p>
+
+<p>
+Consider the specs for the EPYC 7542:
+</p>
+<ul class="org-ul">
+<li>32 cores</li>
+<li>512 KiB L2 d-cache per core</li>
+<li>128 MiB L3 cache for the entire chip</li>
+</ul>
+
+<p>
+On the 7542, we have to divide this 128 MiB of L3 cache up into CCX cache slices.
+Assuming each CCX has 4 cores (which I think is correct), we&rsquo;d have 32/4=8 CCXs on this CPU.
+Therefore, each CCX (4 cores) only has 16 MiB of &ldquo;close L3 cache memory,&rdquo; accessing the rest of the cache will incur a small amount of extra latency.
+</p>
+
+<p>
+For comparison, a 2016 Intel Broadwell Xeon could be configured with 22 cores and 55 MiB of L3 cache.
+This means that the AMD has a core/fast-shared-l3 ratio of 0.25 MiB/core and the Broadwell has a core/fast-shared-l3 ratio of 2.5 MiB/core.
+Building high performance code with 2.5 MiB of super fast shared memory per core is a slightly different game than building high performance applications with only 0.25 MiB of super fast shared memory per core.
+</p>
+
+<p>
+I suspect that &ldquo;networked&rdquo; cpu architectures will become the new normal in the next few years.
+These new platforms are going probably going to be increasingly more and more sensitive to data access and data movement than the systems of the past.
+</p>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2020-05-10-ryzen-memory.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
+</div>
+</body>
+</html>

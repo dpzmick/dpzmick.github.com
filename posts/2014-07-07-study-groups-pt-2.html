@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-02-23 Sun 02:16 -->
+<!-- 2020-05-10 Sun 20:20 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Study Groups Pt. 2</title>
@@ -40,21 +40,21 @@
 </header><p>
 This post is intended to be a continuation of the previous post
 discussing study groups. You can probably find that post pretty easily
-on this site. If you haven't seen it, go back and read it!
+on this site. If you haven&rsquo;t seen it, go back and read it!
 </p>
 
 <p>
 I would also like to say that I am quite interested in criticism of this
-little article. I don't intend to go much farther with this project, but
+little article. I don&rsquo;t intend to go much farther with this project, but
 discussion about it could be quite interesting. And of course if you
 find errors, let me know!
 </p>
 
-<div id="outline-container-orgeef499e" class="outline-2">
-<h2 id="orgeef499e">Simulation</h2>
-<div class="outline-text-2" id="text-orgeef499e">
+<div id="outline-container-orgfcdb120" class="outline-2">
+<h2 id="orgfcdb120">Simulation</h2>
+<div class="outline-text-2" id="text-orgfcdb120">
 <p>
-I've expanded the model a bit for this one. Here is what happens:
+I&rsquo;ve expanded the model a bit for this one. Here is what happens:
 </p>
 
 <ol class="org-ol">
@@ -69,7 +69,7 @@ fitness of the group
 they can join without hurting them, they will have to join normally</li>
 </ul></li>
 
-<li>After a member has joined, for every group, if the group's size is
+<li>After a member has joined, for every group, if the group&rsquo;s size is
 greater than the optimal group size, there is some chance the group
 will split
 
@@ -90,7 +90,7 @@ differential equation:
 </p>
 
 <p>
-where $ &alpha; $ is an individual member's contribution (every member is
+where $ &alpha; $ is an individual member&rsquo;s contribution (every member is
 assumed to have the same contribution) and $ &beta; $ is the amount the
 member will detract from the group (also assumed the same for all
 members).
@@ -110,7 +110,7 @@ exceeded the optimal size, is another percentage.
 One more detail, in the simulation, I have set a fixed number of
 available groups. All groups start with 0 members. As long as the number
 of available groups is substantially larger than the number of people to
-join the groups, this fact doesn't seem to have an effect on the
+join the groups, this fact doesn&rsquo;t seem to have an effect on the
 results. However, if we do something like try and cram 16 people into 10
 groups, that can get kind of interesting.
 </p>
@@ -122,9 +122,9 @@ the simulation to get results.
 </div>
 </div>
 
-<div id="outline-container-orgbdce484" class="outline-2">
-<h2 id="orgbdce484">Criticism of the model</h2>
-<div class="outline-text-2" id="text-orgbdce484">
+<div id="outline-container-orgda80490" class="outline-2">
+<h2 id="orgda80490">Criticism of the model</h2>
+<div class="outline-text-2" id="text-orgda80490">
 <p>
 There are a couple obvious problems with this model.
 </p>
@@ -137,14 +137,14 @@ selflessness.
 <ul class="org-ul">
 <li>However, I did a small test to see how much of an impact this has
 and I (weakly) concluded that for large $ n $ this effect goes
-away. Unfortunatley, I'm not really testing with large $ n $, so we
+away. Unfortunatley, I&rsquo;m not really testing with large $ n $, so we
 will have to take this fact into consideration in our
 interpretation of the results.</li>
 </ul></li>
 
 <li>The selflessness idea is fairly unrealistic. In reality an individual
-can't determine if their joining will damage the fitness of the
-group, because they have no concrete way to compute the group's
+can&rsquo;t determine if their joining will damage the fitness of the
+group, because they have no concrete way to compute the group&rsquo;s
 fitness. However, because this is done by chance, if we keep the
 chance low we can approximate the effect of this optimal size
 uncertainty. To explain what I mean, consider this. Assume an
@@ -152,10 +152,10 @@ individual can only estimate whether or not they will hurt a group,
 and lets say they are only right 50 percent of the time. Then, lets
 say that this person has a 50 percent chance of being selfless. So
 essentially, given a group above optimal size, there is a 25 percent
-chance the person won't join it. We can consider this when setting
+chance the person won&rsquo;t join it. We can consider this when setting
 the selflessness parameter.</li>
 <li>The way groups split is fairly unrealistic. Groups, like individuals,
-can't say for sure if they are above optimal size. However, using the
+can&rsquo;t say for sure if they are above optimal size. However, using the
 same argument as the previous, I think we can get away with this.</li>
 </ol>
 
@@ -166,9 +166,9 @@ kind of experiment I plan to run lessens the impact of this problem.
 </div>
 </div>
 
-<div id="outline-container-orgfcd89f4" class="outline-2">
-<h2 id="orgfcd89f4">The Experiment</h2>
-<div class="outline-text-2" id="text-orgfcd89f4">
+<div id="outline-container-org01e24e0" class="outline-2">
+<h2 id="org01e24e0">The Experiment</h2>
+<div class="outline-text-2" id="text-org01e24e0">
 <p>
 I intend to try and figure out if group splitting or individual
 selflessness will do a better job at keeping groups close to optimal
@@ -183,8 +183,8 @@ percent increments. So every pair is tested.
 </p>
 
 <p>
-I've created some plots to demonstrate my results. I'm also kind of
-lazy, so I didn't label them, but, I'll give you a badly labeled example
+I&rsquo;ve created some plots to demonstrate my results. I&rsquo;m also kind of
+lazy, so I didn&rsquo;t label them, but, I&rsquo;ll give you a badly labeled example
 here just to be nice.
 </p>
 
@@ -202,26 +202,26 @@ for various values of selflessness and group split chance.
 
 <p>
 All of the images from here on out are essentially the same, although
-they grayness may have a different meaning, I'll be careful to explain
-what you are looking at in the file names and in this document, but I'm
+they grayness may have a different meaning, I&rsquo;ll be careful to explain
+what you are looking at in the file names and in this document, but I&rsquo;m
 not going to go back all the images, sorry!
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgbc04af6" class="outline-2">
-<h2 id="orgbc04af6">Results</h2>
-<div class="outline-text-2" id="text-orgbc04af6">
+<div id="outline-container-org6be6b9c" class="outline-2">
+<h2 id="org6be6b9c">Results</h2>
+<div class="outline-text-2" id="text-org6be6b9c">
 <p>
 First test we are going to look at.
 </p>
 
 <pre class="example">
-member_contrib=1.000000
-member_detriment=0.500000
-num_joiners=5
-max_groups=50
-trials=1000
+  member_contrib=1.000000
+  member_detriment=0.500000
+  num_joiners=5
+  max_groups=50
+  trials=1000
 </pre>
 
 <p>
@@ -229,9 +229,9 @@ Here are the images for all the results:
 </p>
 </div>
 
-<div id="outline-container-orge8fd86d" class="outline-5">
-<h5 id="orge8fd86d">Percentage of groups at optimal size</h5>
-<div class="outline-text-5" id="text-orge8fd86d">
+<div id="outline-container-org7648939" class="outline-5">
+<h5 id="org7648939">Percentage of groups at optimal size</h5>
+<div class="outline-text-5" id="text-org7648939">
 
 <figure>
 <img src="../static/study_groups/2/5_optimal.png" alt="5_optimal.png">
@@ -241,9 +241,9 @@ Here are the images for all the results:
 </div>
 </div>
 
-<div id="outline-container-orgee2960c" class="outline-5">
-<h5 id="orgee2960c">Percentage of groups above optimal size</h5>
-<div class="outline-text-5" id="text-orgee2960c">
+<div id="outline-container-org17481b6" class="outline-5">
+<h5 id="org17481b6">Percentage of groups above optimal size</h5>
+<div class="outline-text-5" id="text-org17481b6">
 
 <figure>
 <img src="../static/study_groups/2/5_above_optimal.png" alt="5_above_optimal.png">
@@ -253,9 +253,9 @@ Here are the images for all the results:
 </div>
 </div>
 
-<div id="outline-container-org8b6fe75" class="outline-5">
-<h5 id="org8b6fe75">Percentage of groups below optimal size</h5>
-<div class="outline-text-5" id="text-org8b6fe75">
+<div id="outline-container-orgc3910da" class="outline-5">
+<h5 id="orgc3910da">Percentage of groups below optimal size</h5>
+<div class="outline-text-5" id="text-orgc3910da">
 
 <figure>
 <img src="../static/study_groups/2/5_below_optimal.png" alt="5_below_optimal.png">
@@ -265,9 +265,9 @@ Here are the images for all the results:
 </div>
 </div>
 
-<div id="outline-container-org72b8a28" class="outline-5">
-<h5 id="org72b8a28">Average fitness of groups</h5>
-<div class="outline-text-5" id="text-org72b8a28">
+<div id="outline-container-orga38d494" class="outline-5">
+<h5 id="orga38d494">Average fitness of groups</h5>
+<div class="outline-text-5" id="text-orga38d494">
 
 <figure>
 <img src="../static/study_groups/2/5_avg_fit.png" alt="5_avg_fit.png">
@@ -291,7 +291,7 @@ optimal size, then the other members get a chance to go join other
 groups. These members are likely to join small groups, close to their
 optimal size, bringing the number of small groups down. We can end up
 with a decent number of groups above optimal size because splitting
-doesn't happen all that often (the split percent in the region we are
+doesn&rsquo;t happen all that often (the split percent in the region we are
 investigating is only 30%).
 </p>
 
@@ -312,7 +312,7 @@ than it improves as we increase the chance of selflessness.
 
 <p>
 Also, something strange seems to be happening with the average fitness
-graph. I can't really explain that or form much of a conclusion about
+graph. I can&rsquo;t really explain that or form much of a conclusion about
 it. Nothing else grabbed my attention.
 </p>
 
@@ -322,11 +322,11 @@ results.
 </p>
 
 <pre class="example">
-member_contrib=1.000000
-member_detriment=0.500000
-num_joiners=10
-max_groups=50
-trials=1000
+  member_contrib=1.000000
+  member_detriment=0.500000
+  num_joiners=10
+  max_groups=50
+  trials=1000
 </pre>
 
 <p>
@@ -337,11 +337,11 @@ trials=1000
 </p>
 
 <pre class="example">
-member_contrib=1.000000
-member_detriment=0.500000
-num_joiners=15
-max_groups=50
-trials=1000
+  member_contrib=1.000000
+  member_detriment=0.500000
+  num_joiners=15
+  max_groups=50
+  trials=1000
 </pre>
 
 <p>
@@ -352,11 +352,11 @@ trials=1000
 </p>
 
 <pre class="example">
-member_contrib=1.000000
-member_detriment=0.500000
-num_joiners=20
-max_groups=50
-trials=1000
+  member_contrib=1.000000
+  member_detriment=0.500000
+  num_joiners=20
+  max_groups=50
+  trials=1000
 </pre>
 
 <p>
@@ -374,11 +374,11 @@ consistent across my tests.
 </div>
 </div>
 
-<div id="outline-container-org8e10794" class="outline-2">
-<h2 id="org8e10794">Conclusion</h2>
-<div class="outline-text-2" id="text-org8e10794">
+<div id="outline-container-org3bd6d61" class="outline-2">
+<h2 id="org3bd6d61">Conclusion</h2>
+<div class="outline-text-2" id="text-org3bd6d61">
 <p>
-It would seem that selflessness doesn't much help, but group splitting
+It would seem that selflessness doesn&rsquo;t much help, but group splitting
 does. If you are shooting to find the optimal group size, have a
 moderate to low percent chance of splitting, and if you want to maximize
 the average fitness of all the study groups in you meta-study-group
@@ -391,32 +391,32 @@ the group, which seems somewhat intuitive.
 <p>
 To briefly consider the real world, consider that some people damage the
 group more than others, or help the group more. I think that this effect
-doesn't really damage the strength of my conclusion, because I am simply
+doesn&rsquo;t really damage the strength of my conclusion, because I am simply
 proposing that splitting groups when they seem to be becoming
 unproductive may be an effective way to increase study group
 effectiveness. When splitting the groups in real life, it is probably a
-good idea to consider who's who, and of course, if a major productivity
+good idea to consider who&rsquo;s who, and of course, if a major productivity
 killer person decides to not join a group, that will help the group out
 quite a bit more than choosing to split later.
 </p>
 
 <p>
-Hopefully this was interesting to you! If you've seen anything I haven't
+Hopefully this was interesting to you! If you&rsquo;ve seen anything I haven&rsquo;t
 please tell me!!
 </p>
 </div>
 </div>
 
-<div id="outline-container-org22ad19f" class="outline-2">
-<h2 id="org22ad19f">A bit about implementation</h2>
-<div class="outline-text-2" id="text-org22ad19f">
+<div id="outline-container-org6fda0d8" class="outline-2">
+<h2 id="org6fda0d8">A bit about implementation</h2>
+<div class="outline-text-2" id="text-org6fda0d8">
 <p>
 I wrote this code a couple of different ways, but eventually settled on
 Haskell as the language for the simulation. I also chose to leave
 randomness in the simulation, instead of finding all possible outcomes
 for some given set of parameters and computing percentages from that
 (the number of cases seems quite large, although performance of what I
-came up with isn't phenomenal). I also wrote a python script to run
+came up with isn&rsquo;t phenomenal). I also wrote a python script to run
 multiple instances of the simulation (which is single threaded), and
 collect the results. The, finally, I used R to spit out the rather
 unpolished graphics I used.

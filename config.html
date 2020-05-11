@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-02-23 Sun 02:16 -->
+<!-- 2020-05-10 Sun 20:20 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Org Configuration</title>
@@ -20,143 +20,146 @@ The org configuration used to generate this site.
 Started from <a href="https://explog.in/config.org.html">explog</a> and tried to customize things a bit.
 </p>
 
-<div id="outline-container-org1292afd" class="outline-2">
-<h2 id="org1292afd">Code</h2>
-<div class="outline-text-2" id="text-org1292afd">
+<div id="outline-container-org8a8f307" class="outline-2">
+<h2 id="org8a8f307">Code</h2>
+<div class="outline-text-2" id="text-org8a8f307">
 <div class="org-src-container">
-<pre class="src src-emacs-lisp">  (<span class="org-keyword">require</span> '<span class="org-constant">ox-publish</span>)
-  (<span class="org-keyword">require</span> '<span class="org-constant">ox-rss</span>)
+<pre class="src src-emacs-lisp">    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">require</span> <span class="org-highlight-quoted-quote">'</span><span class="org-constant">ox-publish</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">require</span> <span class="org-highlight-quoted-quote">'</span><span class="org-constant">ox-rss</span><span class="org-rainbow-delimiters-depth-1">)</span>
 
-  <span class="org-comment-delimiter">;; </span><span class="org-comment">cache invalidation doesn't seem to be working properly</span>
-  (<span class="org-keyword">setq</span> org-confirm-babel-evaluate nil)
-  <span class="org-comment-delimiter">;; </span><span class="org-comment">(org-publish-write-cache-file t) ;; free the on disk cache too</span>
-  (org-publish-initialize-cache <span class="org-string">"dpzmick"</span>)
-  (org-publish-initialize-cache <span class="org-string">"dpzmick-notes"</span>)
-  (org-publish-initialize-cache <span class="org-string">"dpzmick-static"</span>)
+    <span class="org-comment-delimiter">;; </span><span class="org-comment">cache invalidation doesn't seem to be working properly</span>
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">setq</span> <span class="org-variable-name">org-confirm-babel-evaluate</span> nil<span class="org-rainbow-delimiters-depth-1">)</span>
+    <span class="org-comment-delimiter">;; </span><span class="org-comment">(org-publish-write-cache-file t) ;; free the on disk cache too</span>
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-function-name">org-publish-initialize-cache</span> <span class="org-string">"dpzmick"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-function-name">org-publish-initialize-cache</span> <span class="org-string">"dpzmick-notes"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-function-name">org-publish-initialize-cache</span> <span class="org-string">"dpzmick-static"</span><span class="org-rainbow-delimiters-depth-1">)</span>
 
-  <span class="org-comment-delimiter">;; </span><span class="org-comment">Don't do much with the theme. We'll generate the entire theme using</span>
-  <span class="org-comment-delimiter">;; </span><span class="org-comment">css from our emacs color scheme. This tells htmlize to use css</span>
-  <span class="org-comment-delimiter">;; </span><span class="org-comment">classes to annotate the stuff it would have generated colors for.</span>
-  (<span class="org-keyword">setq</span> org-html-htmlize-output-type 'css)
-  (<span class="org-keyword">setq</span> org-export-with-sub-superscripts nil)
+    <span class="org-comment-delimiter">;; </span><span class="org-comment">Don't do much with the theme. We'll generate the entire theme using</span>
+    <span class="org-comment-delimiter">;; </span><span class="org-comment">css from our emacs color scheme. This tells htmlize to use css</span>
+    <span class="org-comment-delimiter">;; </span><span class="org-comment">classes to annotate the stuff it would have generated colors for.</span>
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">setq</span> <span class="org-variable-name">org-html-htmlize-output-type</span> <span class="org-highlight-quoted-quote">'</span><span class="org-highlight-quoted-symbol">css</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">setq</span> <span class="org-variable-name">org-export-with-sub-superscripts</span> nil<span class="org-rainbow-delimiters-depth-1">)</span>
 
-  (<span class="org-keyword">setq</span> header
-        (concat
-         <span class="org-string">"&lt;script type='text/javascript' src='/static/scripts.js'&gt;&lt;/script&gt;"</span>
-         <span class="org-string">"&lt;link rel='stylesheet' type='text/css' href='/static/base.css' /&gt;"</span>
-         <span class="org-string">"&lt;link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' /&gt;"</span>))
+    <span class="org-comment-delimiter">;; </span><span class="org-comment">use the actual width of images</span>
+    <span class="org-comment-delimiter">;; </span><span class="org-comment">(setq org-image-actual-width 't)</span>
 
-  <span class="org-comment-delimiter">;; </span><span class="org-comment">this looks silly</span>
-  <span class="org-comment-delimiter">;; </span><span class="org-comment">"&lt;div id='bulb' class='need-js' style='display: none'&gt;&lt;a href='#/' onclick='switchModes()'&gt;&lt;img class='light-invert' src='/static/icons/bulb.png' /&gt;&lt;/a&gt;&lt;/div&gt;"))</span>
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">setq</span> header
+          <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">concat</span>
+           <span class="org-string">"&lt;script type='text/javascript' src='/static/scripts.js'&gt;&lt;/script&gt;"</span>
+           <span class="org-string">"&lt;link rel='stylesheet' type='text/css' href='/static/base.css' /&gt;"</span>
+           <span class="org-string">"&lt;link rel='stylesheet' type='text/css' id='theme-css' href='/static/</span><span class="org-string"><span class="org-hl-fill-column">b</span></span><span class="org-string">ase16-tomorrow-night.css' /&gt;"</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
 
-  (<span class="org-keyword">defun</span> <span class="org-function-name">create-preamble</span> (options)
-    (concat
-     <span class="org-string">"&lt;div id='#preamble'&gt;&lt;h1&gt;&lt;a href='/'&gt;dpzmick.com&lt;/a&gt;&lt;/h1&gt;&lt;/div&gt;"</span>))
+    <span class="org-comment-delimiter">;; </span><span class="org-comment">this looks silly</span>
+    <span class="org-comment-delimiter">;; </span><span class="org-comment">"&lt;div id='bulb' class='need-js' style='display: none'&gt;&lt;a href='#/' onclic</span><span class="org-comment"><span class="org-hl-fill-column">k</span></span><span class="org-comment">='switchModes()'&gt;&lt;img class='light-invert' src='/static/icons/bulb.png' /&gt;&lt;/a&gt;&lt;/div&gt;"))</span>
 
-  (<span class="org-keyword">defun</span> <span class="org-function-name">create-postamble</span> (options)
-    (concat
-     <span class="org-string">"&lt;div id='#postamble'&gt;&lt;a href='/'&gt;home&lt;/a&gt;"</span>
-     <span class="org-string">"&lt;a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/"</span>
-     (file-relative-name (plist-get options <span class="org-builtin">:input-file</span>)
-                         (file-name-directory fname))
-     <span class="org-string">"&gt;view-source&lt;/a&gt;"</span>
-     <span class="org-string">"&lt;a class='need-js' href='#/' onclick='switchModes()'&gt;switch-color-mode&lt;/a&gt;"</span>
-     <span class="org-string">"&lt;/div&gt;"</span>))
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">defun</span> <span class="org-function-name">create-preamble</span> <span class="org-rainbow-delimiters-depth-2">(</span>options<span class="org-rainbow-delimiters-depth-2">)</span>
+      <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">concat</span>
+       <span class="org-string">"&lt;div id='#preamble'&gt;&lt;h1&gt;&lt;a href='/'&gt;dpzmick.com&lt;/a&gt;&lt;/h1&gt;&lt;/div&gt;"</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
 
-  (<span class="org-keyword">defun</span> <span class="org-function-name">org-blog-sitemap-format-entry</span> (entry _style project)
-    (<span class="org-keyword">when</span> (s-starts-with-p <span class="org-string">"posts/"</span> entry)
-      (<span class="org-keyword">with-temp-buffer</span>
-        (insert
-         (format <span class="org-string">"* %s - %s"</span>
-                 (format-time-string <span class="org-string">"%h %d, %Y"</span> (org-publish-find-date entry project))
-                 (org-publish-find-title entry project)))
-         (org-set-property <span class="org-string">"PUBDATE"</span>
-                           (format-time-string <span class="org-string">"%Y-%m-%d"</span>
-                                               (org-publish-find-date entry project)))
-         (org-set-property <span class="org-string">"RSS_PERMALINK"</span>
-                           (concat <span class="org-string">"/posts/"</span> <span class="org-comment-delimiter">;; </span><span class="org-comment">cheating on path</span>
-                                   (file-name-base entry)
-                                   <span class="org-string">".html"</span>))
-        (buffer-string))))
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">defun</span> <span class="org-function-name">create-postamble</span> <span class="org-rainbow-delimiters-depth-2">(</span>options<span class="org-rainbow-delimiters-depth-2">)</span>
+      <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">concat</span>
+       <span class="org-string">"&lt;div id='#postamble'&gt;&lt;a href='/'&gt;home&lt;/a&gt;"</span>
+       <span class="org-string">"&lt;a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/"</span>
+       <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-function-name">file-relative-name</span> <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">plist-get</span> options <span class="org-builtin">:input-file</span><span class="org-rainbow-delimiters-depth-1">)</span>
+                           <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">file-name-directory</span> fname<span class="org-rainbow-delimiters-depth-1">)</span><span class="org-rainbow-delimiters-depth-3">)</span>
+       <span class="org-string">"&gt;view-source&lt;/a&gt;"</span>
+       <span class="org-string">"&lt;a class='need-js' href='#/' onclick='switchModes()'&gt;switch-color-mode&lt;/</span><span class="org-string"><span class="org-hl-fill-column">a</span></span><span class="org-string">&gt;"</span>
+       <span class="org-string">"&lt;/div&gt;"</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
 
-(<span class="org-keyword">defun</span> <span class="org-function-name">org-blog-sitemap-function</span> (title list)
-  <span class="org-doc">"Return sitemap using TITLE and LIST returned by `</span><span class="org-doc"><span class="org-constant">org-blog-sitemap-format-entry</span></span><span class="org-doc">'."</span>
-  (concat <span class="org-string">"#+TITLE: "</span> title <span class="org-string">"\n\n"</span>
-          (mapconcat (<span class="org-keyword">lambda</span> (li)
-                       (format <span class="org-string">"%s"</span> (car li)))
-                     (seq-filter #'car (cdr list))
-                     <span class="org-string">"\n"</span>)))
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">defun</span> <span class="org-function-name">org-blog-sitemap-format-entry</span> <span class="org-rainbow-delimiters-depth-2">(</span>entry _style project<span class="org-rainbow-delimiters-depth-2">)</span>
+      <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-keyword">when</span> <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-function-name">s-starts-with-p</span> <span class="org-string">"posts/"</span> entry<span class="org-rainbow-delimiters-depth-3">)</span>
+        <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-keyword">with-temp-buffer</span>
+          <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">insert</span>
+           <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">format</span> <span class="org-string">"* %s - %s"</span>
+                   <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-constant">format-time-string</span> <span class="org-string">"%h %d, %Y"</span> <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-function-name">org-publish-find-date</span> entry <span class="org-hl-fill-column">p</span>roject<span class="org-rainbow-delimiters-depth-1">)</span><span class="org-rainbow-delimiters-depth-3">)</span>
+                   <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-function-name">org-publish-find-title</span> entry project<span class="org-rainbow-delimiters-depth-3">)</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
+           <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-function-name">org-set-property</span> <span class="org-string">"PUBDATE"</span>
+                             <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">format-time-string</span> <span class="org-string">"%Y-%m-%d"</span>
+                                                 <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-function-name">org-publish-find-date</span> entry pr<span class="org-hl-fill-column">o</span>ject<span class="org-rainbow-delimiters-depth-3">)</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
+           <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-function-name">org-set-property</span> <span class="org-string">"RSS_PERMALINK"</span>
+                             <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">concat</span> <span class="org-string">"/posts/"</span> <span class="org-comment-delimiter">;; </span><span class="org-comment">cheating on path</span>
+                                     <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-function-name">file-name-base</span> entry<span class="org-rainbow-delimiters-depth-3">)</span>
+                                     <span class="org-string">".html"</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
+          <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">buffer-string</span><span class="org-rainbow-delimiters-depth-1">)</span><span class="org-rainbow-delimiters-depth-3">)</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
 
-  (<span class="org-keyword">setq</span> org-publish-project-alist
-        `(
-          (<span class="org-string">"dpzmick-notes"</span>
-           <span class="org-builtin">:author</span> <span class="org-string">"David Zmick"</span>
-           <span class="org-builtin">:email</span> <span class="org-string">"dpzmick@gmail.com"</span>
-           <span class="org-builtin">:base-directory</span> ,(file-name-directory fname)
-           <span class="org-builtin">:publishing-directory</span> ,(concat (file-name-directory fname) <span class="org-string">"_site"</span>)
-           <span class="org-builtin">:base-extension</span> <span class="org-string">"org"</span>
-           <span class="org-builtin">:recursive</span> t
-           <span class="org-builtin">:publishing-function</span> org-html-publish-to-html
-           <span class="org-builtin">:with-author</span> nil
-           <span class="org-builtin">:section-numbers</span> nil
-           <span class="org-builtin">:with-toc</span> nil
-           <span class="org-builtin">:with-date</span> t
-           <span class="org-builtin">:headline-levels</span> 4
-           <span class="org-builtin">:html-validation-link</span> nil
-           <span class="org-builtin">:html-head-include-scripts</span> nil
-           <span class="org-builtin">:html-head-include-default-style</span> nil
-           <span class="org-builtin">:html-doctype</span> <span class="org-string">"html5"</span>
-           <span class="org-builtin">:html-html5-fancy</span> t
-           <span class="org-builtin">:htmlized-source</span> t
+  <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">defun</span> <span class="org-function-name">org-blog-sitemap-function</span> <span class="org-rainbow-delimiters-depth-2">(</span>title list<span class="org-rainbow-delimiters-depth-2">)</span>
+    <span class="org-doc">"Return sitemap using TITLE and LIST returned by `</span><span class="org-doc"><span class="org-constant">org-blog-sitemap-format-en</span></span><span class="org-doc"><span class="org-constant"><span class="org-hl-fill-column">t</span></span></span><span class="org-doc"><span class="org-constant">ry</span></span><span class="org-doc">'."</span>
+    <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">concat</span> <span class="org-string">"#+TITLE: "</span> title <span class="org-string">"\n\n"</span>
+            <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-constant">mapconcat</span> <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">lambda</span> <span class="org-rainbow-delimiters-depth-2">(</span>li<span class="org-rainbow-delimiters-depth-2">)</span>
+                         <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">format</span> <span class="org-string">"%s"</span> <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-constant">car</span> li<span class="org-rainbow-delimiters-depth-3">)</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
+                       <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-function-name">seq-filter</span> <span class="org-highlight-quoted-quote">#'</span><span class="org-highlight-quoted-symbol">car</span> <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">cdr</span> list<span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
+                       <span class="org-string">"\n"</span><span class="org-rainbow-delimiters-depth-3">)</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
 
-           <span class="org-comment-delimiter">;; </span><span class="org-comment">add some custom HTML</span>
-           <span class="org-builtin">:html-head-extra</span> ,header
-           <span class="org-builtin">:html-preamble</span>  ,'create-preamble
-           <span class="org-builtin">:html-postamble</span> ,'create-postamble
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">setq</span> <span class="org-variable-name">org-publish-project-alist</span>
+          <span class="org-highlight-quoted-quote">`</span><span class="org-rainbow-delimiters-depth-2">(</span>
+            <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-string">"dpzmick-notes"</span>
+             <span class="org-builtin">:author</span> <span class="org-string">"David Zmick"</span>
+             <span class="org-builtin">:email</span> <span class="org-string">"dpzmick@gmail.com"</span>
+             <span class="org-builtin">:base-directory</span> ,<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">file-name-directory</span> fname<span class="org-rainbow-delimiters-depth-1">)</span>
+             <span class="org-builtin">:publishing-directory</span> ,<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">concat</span> <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">file-name-directory</span> fname<span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-string">"_site"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+             <span class="org-builtin">:base-extension</span> <span class="org-string">"org"</span>
+             <span class="org-builtin">:recursive</span> t
+             <span class="org-builtin">:publishing-function</span> org-html-publish-to-html
+             <span class="org-builtin">:with-author</span> nil
+             <span class="org-builtin">:section-numbers</span> nil
+             <span class="org-builtin">:with-toc</span> nil
+             <span class="org-builtin">:with-date</span> t
+             <span class="org-builtin">:headline-levels</span> <span class="org-highlight-numbers-number">4</span>
+             <span class="org-builtin">:html-validation-link</span> nil
+             <span class="org-builtin">:html-head-include-scripts</span> nil
+             <span class="org-builtin">:html-head-include-default-style</span> nil
+             <span class="org-builtin">:html-doctype</span> <span class="org-string">"html5"</span>
+             <span class="org-builtin">:html-html5-fancy</span> t
+             <span class="org-builtin">:htmlized-source</span> t
 
-           <span class="org-comment-delimiter">;; </span><span class="org-comment">sitemap for rss</span>
-           <span class="org-builtin">:auto-sitemap</span> t
-           <span class="org-builtin">:sitemap-filename</span> <span class="org-string">"rss.org"</span>
-           <span class="org-builtin">:sitemap-title</span> <span class="org-string">"dpzmick.com blog posts"</span>
-           <span class="org-builtin">:sitemap-style</span> list
-           <span class="org-builtin">:sitemap-sort-files</span> anti-chronologically
-           <span class="org-builtin">:sitemap-format-entry</span> org-blog-sitemap-format-entry
-           <span class="org-builtin">:sitemap-function</span> org-blog-sitemap-function)
+             <span class="org-comment-delimiter">;; </span><span class="org-comment">add some custom HTML</span>
+             <span class="org-builtin">:html-head-extra</span> ,header
+             <span class="org-builtin">:html-preamble</span>  ,<span class="org-highlight-quoted-quote">'</span><span class="org-highlight-quoted-symbol">create-preamble</span>
+             <span class="org-builtin">:html-postamble</span> ,<span class="org-highlight-quoted-quote">'</span><span class="org-highlight-quoted-symbol">create-postamble</span>
 
-          (<span class="org-string">"dpzmick-rss"</span>
-           <span class="org-builtin">:author</span> <span class="org-string">"David Zmick"</span>
-           <span class="org-builtin">:email</span> <span class="org-string">"dpzmick@gmail.com"</span>
-           <span class="org-builtin">:base-directory</span> ,(file-name-directory fname)
-           <span class="org-builtin">:publishing-directory</span> ,(concat (file-name-directory fname) <span class="org-string">"_site"</span>)
-           <span class="org-builtin">:publishing-function</span> org-rss-publish-to-rss
-           <span class="org-builtin">:recursive</span> nil
-           <span class="org-builtin">:base-extension</span> <span class="org-string">"org"</span>
-           <span class="org-builtin">:with-author</span> t
-           <span class="org-builtin">:rss-extension</span> <span class="org-string">"xml"</span>
-           <span class="org-builtin">:section-numbers</span> nil
-           <span class="org-builtin">:with-toc</span> nil
-           <span class="org-builtin">:html-link-home</span> <span class="org-string">"http://dpzmick.com/"</span>
-           <span class="org-builtin">:html-link-use-abs-url</span> t
-           <span class="org-builtin">:include</span> (<span class="org-string">"rss.org"</span>)
-           <span class="org-builtin">:exclude</span> <span class="org-string">".*"</span>)
+             <span class="org-comment-delimiter">;; </span><span class="org-comment">sitemap for rss</span>
+             <span class="org-builtin">:auto-sitemap</span> t
+             <span class="org-builtin">:sitemap-filename</span> <span class="org-string">"rss.org"</span>
+             <span class="org-builtin">:sitemap-title</span> <span class="org-string">"dpzmick.com blog posts"</span>
+             <span class="org-builtin">:sitemap-style</span> list
+             <span class="org-builtin">:sitemap-sort-files</span> anti-chronologically
+             <span class="org-builtin">:sitemap-format-entry</span> org-blog-sitemap-format-entry
+             <span class="org-builtin">:sitemap-function</span> org-blog-sitemap-function<span class="org-rainbow-delimiters-depth-3">)</span>
 
-          (<span class="org-string">"dpzmick-static"</span>
-           <span class="org-builtin">:base-directory</span> ,(concat (file-name-directory fname) <span class="org-string">"static"</span>)
-           <span class="org-builtin">:publishing-directory</span> ,(concat
-                                   (file-name-as-directory (concat
-                                                            (file-name-directory fname)
-                                                            <span class="org-string">"_site"</span>))
-                                   <span class="org-string">"static"</span>)
-           <span class="org-builtin">:base-extension</span> any
-           <span class="org-builtin">:recursive</span> t
-           <span class="org-builtin">:publishing-function</span> org-publish-attachment)
+            <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-string">"dpzmick-rss"</span>
+             <span class="org-builtin">:author</span> <span class="org-string">"David Zmick"</span>
+             <span class="org-builtin">:email</span> <span class="org-string">"dpzmick@gmail.com"</span>
+             <span class="org-builtin">:base-directory</span> ,<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">file-name-directory</span> fname<span class="org-rainbow-delimiters-depth-1">)</span>
+             <span class="org-builtin">:publishing-directory</span> ,<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">concat</span> <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">file-name-directory</span> fname<span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-string">"_site"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+             <span class="org-builtin">:publishing-function</span> org-rss-publish-to-rss
+             <span class="org-builtin">:recursive</span> nil
+             <span class="org-builtin">:base-extension</span> <span class="org-string">"org"</span>
+             <span class="org-builtin">:with-author</span> t
+             <span class="org-builtin">:rss-extension</span> <span class="org-string">"xml"</span>
+             <span class="org-builtin">:section-numbers</span> nil
+             <span class="org-builtin">:with-toc</span> nil
+             <span class="org-builtin">:html-link-home</span> <span class="org-string">"http://dpzmick.com/"</span>
+             <span class="org-builtin">:html-link-use-abs-url</span> t
+             <span class="org-builtin">:include</span> <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"rss.org"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+             <span class="org-builtin">:exclude</span> <span class="org-string">".*"</span><span class="org-rainbow-delimiters-depth-3">)</span>
 
-          (<span class="org-string">"dpzmick"</span> <span class="org-builtin">:components</span> (<span class="org-string">"dpzmick-notes"</span>
-                                  <span class="org-string">"dpzmick-rss"</span>
-                                  <span class="org-string">"dpzmick-static"</span>))))
+            <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-string">"dpzmick-static"</span>
+             <span class="org-builtin">:base-directory</span> ,<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">concat</span> <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">file-name-directory</span> fname<span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-string">"static"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+             <span class="org-builtin">:publishing-directory</span> ,<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">concat</span>
+                                     <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-constant">file-name-as-directory</span> <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-constant">concat</span>
+                                                              <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">file-name-directo</span><span class="org-constant"><span class="org-hl-fill-column">r</span></span><span class="org-constant">y</span> fname<span class="org-rainbow-delimiters-depth-1">)</span>
+                                                              <span class="org-string">"_site"</span><span class="org-rainbow-delimiters-depth-3">)</span><span class="org-rainbow-delimiters-depth-2">)</span>
+                                     <span class="org-string">"static"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+             <span class="org-builtin">:base-extension</span> any
+             <span class="org-builtin">:recursive</span> t
+             <span class="org-builtin">:publishing-function</span> org-publish-attachment<span class="org-rainbow-delimiters-depth-3">)</span>
+
+            <span class="org-rainbow-delimiters-depth-3">(</span><span class="org-string">"dpzmick"</span> <span class="org-builtin">:components</span> <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"dpzmick-notes"</span>
+                                    <span class="org-string">"dpzmick-rss"</span>
+                                    <span class="org-string">"dpzmick-static"</span><span class="org-rainbow-delimiters-depth-1">)</span><span class="org-rainbow-delimiters-depth-3">)</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
 
 
-  (org-publish <span class="org-string">"dpzmick"</span> t)
+    <span class="org-rainbow-delimiters-depth-1">(</span><span class="org-function-name">org-publish</span> <span class="org-string">"dpzmick"</span> t<span class="org-rainbow-delimiters-depth-1">)</span>
 </pre>
 </div>
 </div>

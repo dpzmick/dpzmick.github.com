@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0"
-     xmlns:content="http://purl.org/rss/1.0/modules/content/"
-     xmlns:wfw="http://wellformedweb.org/CommentAPI/"
-     xmlns:dc="http://purl.org/dc/elements/1.1/"
-     xmlns:atom="http://www.w3.org/2005/Atom"
-     xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
-     xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
-     xmlns:georss="http://www.georss.org/georss"
+	 xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	 xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	 xmlns:dc="http://purl.org/dc/elements/1.1/"
+	 xmlns:atom="http://www.w3.org/2005/Atom"
+	 xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	 xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	 xmlns:georss="http://www.georss.org/georss"
      xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
      xmlns:media="http://search.yahoo.com/mrss/"><channel>
   <title>dpzmick.com blog posts</title>
@@ -14,9 +14,9 @@
   <link>http://dpzmick.com/</link>
   <description><![CDATA[]]></description>
   <language>en</language>
-  <pubDate>Sun, 23 Feb 2020 02:16:25 -0600</pubDate>
-  <lastBuildDate>Sun, 23 Feb 2020 02:16:25 -0600</lastBuildDate>
-  <generator>Emacs 26.3 Org-mode 9.1.9</generator>
+  <pubDate>Sun, 10 May 2020 20:20:20 -0500</pubDate>
+  <lastBuildDate>Sun, 10 May 2020 20:20:20 -0500</lastBuildDate>
+  <generator>Emacs 26.3 Org-mode 9.4</generator>
   <webMaster>dpzmick@gmail.com (David Zmick)</webMaster>
   <image>
     <url>https://orgmode.org/img/org-mode-unicorn-logo.png</url>
@@ -26,11 +26,21 @@
 
 
   <item>
-    <title>Feb 01, 2020 - Homelab Act 4: Services and Applications</title>
+    <title>May 10, 2020 - AMD Zen Memory Latency/Bandwidth Considerations</title>
+    <link>http://dpzmick.com//posts/2020-05-10-ryzen-memory.html</link>
+    <author>dpzmick@gmail.com (David Zmick)</author>
+    <guid isPermaLink="false">http://dpzmick.com//posts/2020-05-10-ryzen-memory.html</guid>
+    <pubDate>Sun, 10 May 2020 00:00:00 -0500</pubDate>
+
+    <description><![CDATA[]]></description>
+  </item>
+
+  <item>
+    <title>Feb 23, 2020 - Homelab Act 4: Services and Applications</title>
     <link>http://dpzmick.com//posts/2020-02-01-homelab4-cloud.html</link>
     <author>dpzmick@gmail.com (David Zmick)</author>
     <guid isPermaLink="false">http://dpzmick.com//posts/2020-02-01-homelab4-cloud.html</guid>
-    <pubDate>Sat, 01 Feb 2020 00:00:00 -0600</pubDate>
+    <pubDate>Sun, 23 Feb 2020 00:00:00 -0600</pubDate>
 
     <description><![CDATA[]]></description>
   </item>
