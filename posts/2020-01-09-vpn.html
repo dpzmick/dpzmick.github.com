@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-05-10 Sun 21:04 -->
+<!-- 2020-09-21 Mon 21:55 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Homelab Act 1: VPNs</title>
@@ -28,9 +28,9 @@ I&rsquo;ll be writing a few posts explaining the steps I took.
 <li>Part 4 <a href="./2020-02-01-homelab4-cloud.html">Services and Applications</a></li>
 </ul>
 
-<div id="outline-container-org4ba85e1" class="outline-2">
-<h2 id="org4ba85e1">VPNs</h2>
-<div class="outline-text-2" id="text-org4ba85e1">
+<div id="outline-container-orga7781cc" class="outline-2">
+<h2 id="orga7781cc">VPNs</h2>
+<div class="outline-text-2" id="text-orga7781cc">
 <p>
 Unfortunately, I don&rsquo;t have a public IP in my building, so setting up remote access had to be a little more involved than just opening a port for ssh.
 I found a tiny, passively cooled, quad-port <b>intel</b> NIC, celeron box <a href="https://www.amazon.com/Firewall-Gigabit-Celeron-AES-NI-Barebone/dp/B07G7H4M73">on amazon</a>, and figured I&rsquo;d try setting up my own linux router and run my own VPN server in AWS or something.
@@ -41,9 +41,9 @@ This took a bit of work.
 </p>
 </div>
 
-<div id="outline-container-org0a8386a" class="outline-3">
-<h3 id="org0a8386a">Networking</h3>
-<div class="outline-text-3" id="text-org0a8386a">
+<div id="outline-container-org31555e0" class="outline-3">
+<h3 id="org31555e0">Networking</h3>
+<div class="outline-text-3" id="text-org31555e0">
 <p>
 Before diving in, I needed to decide how to layout my network and what VPN tools to use.
 I read a ton about best practices, but this wasn&rsquo;t super helpful, so instead, I just started spinning up VMs and messing with VPN software and playing with my network settings.
@@ -100,17 +100,17 @@ Unfortunately, a local coffee shop I frequent uses an IP range that clashes with
 </div>
 </div>
 
-<div id="outline-container-orgdb4eae8" class="outline-3">
-<h3 id="orgdb4eae8">Install <a href="https://alpinelinux.org/">alpine linux</a> on local router</h3>
-<div class="outline-text-3" id="text-orgdb4eae8">
+<div id="outline-container-orgc87ee46" class="outline-3">
+<h3 id="orgc87ee46">Install <a href="https://alpinelinux.org/">alpine linux</a> on local router</h3>
+<div class="outline-text-3" id="text-orgc87ee46">
 <p>
 The official install guides are good and more up to date than anything I&rsquo;d have to say about this.
 </p>
 </div>
 
-<div id="outline-container-org65f90c9" class="outline-4">
-<h4 id="org65f90c9">Setup Basic Networking</h4>
-<div class="outline-text-4" id="text-org65f90c9">
+<div id="outline-container-orgaca2647" class="outline-4">
+<h4 id="orgaca2647">Setup Basic Networking</h4>
+<div class="outline-text-4" id="text-orgaca2647">
 <p>
 In <code>/etc/network/interfaces</code>:
 </p>
@@ -133,9 +133,9 @@ iface eth1 inet static
 </div>
 </div>
 
-<div id="outline-container-orga6ea2f7" class="outline-4">
-<h4 id="orga6ea2f7">Firewall and NAT</h4>
-<div class="outline-text-4" id="text-orga6ea2f7">
+<div id="outline-container-org2670822" class="outline-4">
+<h4 id="org2670822">Firewall and NAT</h4>
+<div class="outline-text-4" id="text-org2670822">
 <p>
 After spending time banging my head against the <code>iptable</code>, I gave up and tried using a this thing built into alpine called <a href="https://wiki.alpinelinux.org/wiki/How-To_Alpine_Wall">awall</a>.
 There&rsquo;s a pretty good <a href="https://wiki.alpinelinux.org/wiki/Zero-To-Awall">Zero to Awall</a> guide available which can get you started.
@@ -146,9 +146,9 @@ I don&rsquo;t want to explain a full example (the docs are again better than wha
 </p>
 </div>
 
-<div id="outline-container-orgf7dfc02" class="outline-5">
-<h5 id="orgf7dfc02">Enable packet forwarding</h5>
-<div class="outline-text-5" id="text-orgf7dfc02">
+<div id="outline-container-org9c80bf4" class="outline-5">
+<h5 id="org9c80bf4">Enable packet forwarding</h5>
+<div class="outline-text-5" id="text-org9c80bf4">
 <p>
 The linux kernel must be told that it is allowed to forward packets.
 Put <code>net.ipv4.ip_forward = 1</code> in a <code>sysctl.conf</code> file on alpine, see <a href="https://wiki.alpinelinux.org/wiki/Sysctl.conf">https://wiki.alpinelinux.org/wiki/Sysctl.conf</a>
@@ -157,9 +157,9 @@ This is probably needed for ipv6 as well, if you aren&rsquo;t a bad person who i
 </div>
 </div>
 
-<div id="outline-container-org3132f64" class="outline-5">
-<h5 id="org3132f64">Most (all?) for awalls config files can be written in <code>yaml</code></h5>
-<div class="outline-text-5" id="text-org3132f64">
+<div id="outline-container-orgdc925d5" class="outline-5">
+<h5 id="orgdc925d5">Most (all?) for awalls config files can be written in <code>yaml</code></h5>
+<div class="outline-text-5" id="text-orgdc925d5">
 <p>
 The Zero To Awall guide has this example:
 </p>
@@ -194,9 +194,9 @@ But, you could also create an equivelent <code>/etc/awall/private/custom-service
 </div>
 </div>
 
-<div id="outline-container-org324a89d" class="outline-4">
-<h4 id="org324a89d">Tricks</h4>
-<div class="outline-text-4" id="text-org324a89d">
+<div id="outline-container-orgb26248c" class="outline-4">
+<h4 id="orgb26248c">Tricks</h4>
+<div class="outline-text-4" id="text-orgb26248c">
 <p>
 In case the internet every goes down, I sometimes need to refresh my ISP DHCP lease to get it to come back up.
 I stuck a <code>checkinit.sh</code> script into my <code>$PATH</code> somewhere, then added it to <code>cron</code> to run once a minute:
@@ -243,9 +243,9 @@ I also:
 </div>
 </div>
 
-<div id="outline-container-orgca90f90" class="outline-3">
-<h3 id="orgca90f90">Setup <a href="http://www.thekelleys.org.uk/dnsmasq/doc.html">dnsmasq</a> as a DHCP server and DNS server</h3>
-<div class="outline-text-3" id="text-orgca90f90">
+<div id="outline-container-org15328c0" class="outline-3">
+<h3 id="org15328c0">Setup <a href="http://www.thekelleys.org.uk/dnsmasq/doc.html">dnsmasq</a> as a DHCP server and DNS server</h3>
+<div class="outline-text-3" id="text-org15328c0">
 <p>
 The arch wiki has wonderful docs for this. Just go read those.
 </p>
@@ -278,9 +278,9 @@ All I really had to do in the end was:
 </ul>
 </div>
 
-<div id="outline-container-orgb8443e3" class="outline-4">
-<h4 id="orgb8443e3">Download <a href="https://pi-hole.net/">pi-hole</a>&rsquo;s ad domain blacklist</h4>
-<div class="outline-text-4" id="text-orgb8443e3">
+<div id="outline-container-org6ca1a0e" class="outline-4">
+<h4 id="org6ca1a0e">Download <a href="https://pi-hole.net/">pi-hole</a>&rsquo;s ad domain blacklist</h4>
+<div class="outline-text-4" id="text-org6ca1a0e">
 <p>
 From <a href="https://github.com/notracking/hosts-blocklists">https://github.com/notracking/hosts-blocklists</a>.
 Put the tracking domain lists somewhere then just set:
@@ -299,9 +299,9 @@ See the dnsmasq docs for an explanation of the difference.
 </div>
 </div>
 
-<div id="outline-container-org05e1222" class="outline-3">
-<h3 id="org05e1222">Pay for and plug in some sort of Wireless Access Point</h3>
-<div class="outline-text-3" id="text-org05e1222">
+<div id="outline-container-org07d9d30" class="outline-3">
+<h3 id="org07d9d30">Pay for and plug in some sort of Wireless Access Point</h3>
+<div class="outline-text-3" id="text-org07d9d30">
 <p>
 I bought a Unifi AP and followed the instructions to set it up.
 It works.
@@ -309,18 +309,18 @@ It works.
 </div>
 </div>
 
-<div id="outline-container-orgb3ace47" class="outline-3">
-<h3 id="orgb3ace47">Setup alpine and DNS on a cloud server somewhere</h3>
-<div class="outline-text-3" id="text-orgb3ace47">
+<div id="outline-container-org59347b5" class="outline-3">
+<h3 id="org59347b5">Setup alpine and DNS on a cloud server somewhere</h3>
+<div class="outline-text-3" id="text-org59347b5">
 <p>
 Same as above mostly, just with a different made-up star trek themed subdomain.
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgbf338cf" class="outline-3">
-<h3 id="orgbf338cf">Wireguard</h3>
-<div class="outline-text-3" id="text-orgbf338cf">
+<div id="outline-container-orgd659fd4" class="outline-3">
+<h3 id="orgd659fd4">Wireguard</h3>
+<div class="outline-text-3" id="text-orgd659fd4">
 <p>
 Each device that can connect to the server needs a private/public key pair.
 The server contains a list of recognized public keys; only the devices in the server config can connect.
@@ -344,9 +344,9 @@ Once you are done copying the contents of these files into the wireguard configs
 </p>
 </div>
 
-<div id="outline-container-orgea36a08" class="outline-4">
-<h4 id="orgea36a08">On the VPN server (cloud instance)</h4>
-<div class="outline-text-4" id="text-orgea36a08">
+<div id="outline-container-orgd7ffcac" class="outline-4">
+<h4 id="orgd7ffcac">On the VPN server (cloud instance)</h4>
+<div class="outline-text-4" id="text-orgd7ffcac">
 <p>
 Create a wireguard server config at <code>/etc/wireguard/wg0.conf</code>.
 Note that I am not using the <code>wg-quick</code> interface for this or the apartment router.
@@ -410,9 +410,9 @@ iface wg0 inet static
 </div>
 </div>
 
-<div id="outline-container-orge111908" class="outline-4">
-<h4 id="orge111908">On the apartment <code>gateway</code></h4>
-<div class="outline-text-4" id="text-orge111908">
+<div id="outline-container-org006b500" class="outline-4">
+<h4 id="org006b500">On the apartment <code>gateway</code></h4>
+<div class="outline-text-4" id="text-org006b500">
 <p>
 The router in my apartment is a VPN client, maintaining a persistent connection to the VPN server.
 </p>
@@ -453,9 +453,9 @@ iface wg0 inet static
 </div>
 </div>
 
-<div id="outline-container-org9fabbd9" class="outline-4">
-<h4 id="org9fabbd9">On a &ldquo;dynamic&rdquo; VPN client</h4>
-<div class="outline-text-4" id="text-org9fabbd9">
+<div id="outline-container-org48de11e" class="outline-4">
+<h4 id="org48de11e">On a &ldquo;dynamic&rdquo; VPN client</h4>
+<div class="outline-text-4" id="text-org48de11e">
 <p>
 On machines like my laptop, I want to easily bring the VPN up and down.
 This is easy to do with the <code>wg-quick</code> tool.
@@ -493,9 +493,9 @@ Here&rsquo;s the config from my (arch linux/systemd) laptop:
 </div>
 </div>
 
-<div id="outline-container-orge6cdb09" class="outline-5">
-<h5 id="orge6cdb09">Laptop Lid</h5>
-<div class="outline-text-5" id="text-orge6cdb09">
+<div id="outline-container-org9dbf351" class="outline-5">
+<h5 id="org9dbf351">Laptop Lid</h5>
+<div class="outline-text-5" id="text-org9dbf351">
 <p>
 When my laptop lid closes, I kill the wireguard connection with a systemd unit file.
 This seems to minimize confusion when I close my laptop and take it somewhere.
@@ -522,9 +522,9 @@ In <code>/etc/systemd/system/wg-down.service</code>:
 </div>
 </div>
 
-<div id="outline-container-orgd8f2c66" class="outline-3">
-<h3 id="orgd8f2c66">Tweak dnsmasq config again</h3>
-<div class="outline-text-3" id="text-orgd8f2c66">
+<div id="outline-container-org0e4bc83" class="outline-3">
+<h3 id="org0e4bc83">Tweak dnsmasq config again</h3>
+<div class="outline-text-3" id="text-org0e4bc83">
 <p>
 Make sure that the DNS servers know how to send queries to each other:
 </p>
@@ -556,9 +556,9 @@ In the cloud.me.com dnsmasq config:
 </div>
 </div>
 
-<div id="outline-container-orgc5ca0c2" class="outline-3">
-<h3 id="orgc5ca0c2">Plug it all in</h3>
-<div class="outline-text-3" id="text-orgc5ca0c2">
+<div id="outline-container-orgfa97cbd" class="outline-3">
+<h3 id="orgfa97cbd">Plug it all in</h3>
+<div class="outline-text-3" id="text-orgfa97cbd">
 <p>
 I plugged the new router box into the wall (on port 0), and plugged a small 4-port TP-link switch into port 1.
 Everything else is plugged into the TP-link switch.
@@ -567,13 +567,13 @@ Everything else is plugged into the TP-link switch.
 </div>
 </div>
 
-<div id="outline-container-org3be2535" class="outline-2">
-<h2 id="org3be2535">Finally: use the system</h2>
-<div class="outline-text-2" id="text-org3be2535">
+<div id="outline-container-orgfe725a2" class="outline-2">
+<h2 id="orgfe725a2">Finally: use the system</h2>
+<div class="outline-text-2" id="text-orgfe725a2">
 </div>
-<div id="outline-container-org9c4c0b1" class="outline-3">
-<h3 id="org9c4c0b1">Good</h3>
-<div class="outline-text-3" id="text-org9c4c0b1">
+<div id="outline-container-orgfeb56ec" class="outline-3">
+<h3 id="orgfeb56ec">Good</h3>
+<div class="outline-text-3" id="text-orgfeb56ec">
 <ul class="org-ul">
 <li>Wireguard is rock solid, even on my phone and from an airplane.</li>
 <li>My local network performance is incredible</li>
@@ -582,9 +582,9 @@ Everything else is plugged into the TP-link switch.
 </ul>
 </div>
 </div>
-<div id="outline-container-orgff47574" class="outline-3">
-<h3 id="orgff47574">Bad</h3>
-<div class="outline-text-3" id="text-orgff47574">
+<div id="outline-container-orgaad2cb7" class="outline-3">
+<h3 id="orgaad2cb7">Bad</h3>
+<div class="outline-text-3" id="text-orgaad2cb7">
 <ul class="org-ul">
 <li>DHCP lease refreshes are slow for me right now
 <ul class="org-ul">

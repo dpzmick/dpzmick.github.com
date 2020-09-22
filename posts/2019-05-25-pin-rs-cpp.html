@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-05-10 Sun 21:04 -->
+<!-- 2020-09-21 Mon 21:55 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Understaning Pin (for C and C++ Developers)</title>
@@ -63,9 +63,9 @@ Clearly moving is significant here, what does that mean exactly, and
 why is this such a big deal?
 </p>
 
-<div id="outline-container-org725fa68" class="outline-2">
-<h2 id="org725fa68">C++</h2>
-<div class="outline-text-2" id="text-org725fa68">
+<div id="outline-container-orge8f9160" class="outline-2">
+<h2 id="orge8f9160">C++</h2>
+<div class="outline-text-2" id="text-orge8f9160">
 <p>
 I&rsquo;m more familiar with C++ and my familiarity is probably where my
 misunderstandings are coming from. Let&rsquo;s start by understanding what
@@ -77,7 +77,7 @@ Consider the following <code>struct</code>:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="org5308c8d">  <span class="org-keyword">struct</span> <span class="org-type">Thing</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+<pre class="src src-cpp" id="org1c91843">  <span class="org-keyword">struct</span> <span class="org-type">Thing</span> <span class="org-rainbow-delimiters-depth-1">{</span>
     <span class="org-function-name">Thing</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">uint64_t</span> <span class="org-variable-name">id</span><span class="org-rainbow-delimiters-depth-2">)</span>
       : id<span class="org-rainbow-delimiters-depth-2">(</span>id<span class="org-rainbow-delimiters-depth-2">)</span>
     <span class="org-rainbow-delimiters-depth-2">{</span> <span class="org-rainbow-delimiters-depth-2">}</span>
@@ -162,7 +162,7 @@ Let&rsquo;s consider one last struct.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="org2646b91">  <span class="org-keyword">template</span> <span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span><span class="org-rainbow-delimiters-depth-1">&gt;</span>
+<pre class="src src-cpp" id="orgc41348e">  <span class="org-keyword">template</span> <span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span><span class="org-rainbow-delimiters-depth-1">&gt;</span>
   <span class="org-keyword">struct</span> <span class="org-type">ring_buffer</span> <span class="org-rainbow-delimiters-depth-1">{</span>
     <span class="org-constant">std</span>::<span class="org-type">array</span><span class="org-rainbow-delimiters-depth-2">&lt;</span><span class="org-type">T</span>, N+<span class="org-highlight-numbers-number">1</span><span class="org-rainbow-delimiters-depth-2">&gt;</span> <span class="org-variable-name">entries</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">use one extra element for easy book-keeping</span>
 
@@ -202,9 +202,9 @@ can take advantage of in some special places.
 </div>
 </div>
 
-<div id="outline-container-org7d10313" class="outline-2">
-<h2 id="org7d10313">Rust</h2>
-<div class="outline-text-2" id="text-org7d10313">
+<div id="outline-container-org1f7d5ce" class="outline-2">
+<h2 id="org1f7d5ce">Rust</h2>
+<div class="outline-text-2" id="text-org1f7d5ce">
 <p>
 Let&rsquo;s do the same exercises again in Rust, starting with the <code>Thing</code>
 struct.
@@ -392,9 +392,9 @@ following these rules, but that&rsquo;s a topic for another time.
 </div>
 </div>
 
-<div id="outline-container-org12e1384" class="outline-2">
-<h2 id="org12e1384">Futures/async.await</h2>
-<div class="outline-text-2" id="text-org12e1384">
+<div id="outline-container-org6a5d716" class="outline-2">
+<h2 id="org6a5d716">Futures/async.await</h2>
+<div class="outline-text-2" id="text-org6a5d716">
 <p>
 Hopefully now, we can understand why this is prerequisite for
 async.await support in Rust.

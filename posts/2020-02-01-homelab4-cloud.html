@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-05-10 Sun 21:04 -->
+<!-- 2020-09-21 Mon 21:55 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Homelab Act 4: Services and Applications</title>
@@ -32,13 +32,13 @@ I&rsquo;ll be writing a few posts explaining the steps I took.
 Now that I have a VPN, a server, a &ldquo;desktop computer&rdquo; connected to the server over a fast network, and fast storage, I should do something useful.
 </p>
 
-<div id="outline-container-org141667e" class="outline-2">
-<h2 id="org141667e">Administration Tools</h2>
-<div class="outline-text-2" id="text-org141667e">
+<div id="outline-container-org1b1133b" class="outline-2">
+<h2 id="org1b1133b">Administration Tools</h2>
+<div class="outline-text-2" id="text-org1b1133b">
 </div>
-<div id="outline-container-org0841f71" class="outline-3">
-<h3 id="org0841f71"><a href="https://www.influxdata.com/">InfluxDB</a>, <a href="https://grafana.com/">Grafana</a>, and <a href="https://www.influxdata.com/time-series-platform/telegraf/">Telegraf</a></h3>
-<div class="outline-text-3" id="text-org0841f71">
+<div id="outline-container-org9a9ef92" class="outline-3">
+<h3 id="org9a9ef92"><a href="https://www.influxdata.com/">InfluxDB</a>, <a href="https://grafana.com/">Grafana</a>, and <a href="https://www.influxdata.com/time-series-platform/telegraf/">Telegraf</a></h3>
+<div class="outline-text-3" id="text-org9a9ef92">
 <p>
 These tools are useful for general system monitoring.
 </p>
@@ -56,9 +56,9 @@ See <a href="https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMAT
 </div>
 </div>
 
-<div id="outline-container-org5f769bc" class="outline-3">
-<h3 id="org5f769bc"><a href="https://healthchecks.io">healthchecks.io</a> for alerting</h3>
-<div class="outline-text-3" id="text-org5f769bc">
+<div id="outline-container-org2f8f4ac" class="outline-3">
+<h3 id="org2f8f4ac"><a href="https://healthchecks.io">healthchecks.io</a> for alerting</h3>
+<div class="outline-text-3" id="text-org2f8f4ac">
 <p>
 <a href="https://healthchecks.io">healthchecks.io</a> is an altering service that sends alerts through email, slack, etc when it hasn&rsquo;t received a ping recently enough.
 You can run the open-source software yourself, or use a hosted version.
@@ -119,9 +119,9 @@ Sending start/{success,fail} messages is helpful because:
 </div>
 </div>
 
-<div id="outline-container-orgd835be7" class="outline-3">
-<h3 id="orgd835be7"><a href="https://duplicacy.com/">Duplicacy</a> and <a href="https://www.backblaze.com/b2/cloud-storage.html">Backblaze B2</a> for backups</h3>
-<div class="outline-text-3" id="text-orgd835be7">
+<div id="outline-container-orgaddb78f" class="outline-3">
+<h3 id="orgaddb78f"><a href="https://duplicacy.com/">Duplicacy</a> and <a href="https://www.backblaze.com/b2/cloud-storage.html">Backblaze B2</a> for backups</h3>
+<div class="outline-text-3" id="text-orgaddb78f">
 <p>
 Backups are tricky.
 </p>
@@ -191,9 +191,9 @@ Setting this up obviously takes more work than just downloading CrashPlan, but, 
 </div>
 </div>
 
-<div id="outline-container-org5ceda00" class="outline-3">
-<h3 id="org5ceda00">Logs</h3>
-<div class="outline-text-3" id="text-org5ceda00">
+<div id="outline-container-org060a7bc" class="outline-3">
+<h3 id="org060a7bc">Logs</h3>
+<div class="outline-text-3" id="text-org060a7bc">
 <p>
 Nothing.
 </p>
@@ -206,9 +206,9 @@ I don&rsquo;t need log searching/aggregation features for 3 computers.
 </div>
 </div>
 
-<div id="outline-container-org50c338a" class="outline-2">
-<h2 id="org50c338a">Developer Tools</h2>
-<div class="outline-text-2" id="text-org50c338a">
+<div id="outline-container-orgabac66e" class="outline-2">
+<h2 id="orgabac66e">Developer Tools</h2>
+<div class="outline-text-2" id="text-orgabac66e">
 <p>
 The personal software development projects I work on can also take advantage of this server/vpn setup.
 I&rsquo;m able to ssh into both of my home machines from anywhere (because of the VPN), so I always have access to the larger CPUs available there (very handy when compiling rust/c++ code).
@@ -237,13 +237,13 @@ I&rsquo;m also using the server for:
 </div>
 </div>
 
-<div id="outline-container-org841614e" class="outline-2">
-<h2 id="org841614e">Personal Tools that worked out</h2>
-<div class="outline-text-2" id="text-org841614e">
+<div id="outline-container-org8086681" class="outline-2">
+<h2 id="org8086681">Personal Tools that worked out</h2>
+<div class="outline-text-2" id="text-org8086681">
 </div>
-<div id="outline-container-orgbe68ce1" class="outline-3">
-<h3 id="orgbe68ce1">General Archival</h3>
-<div class="outline-text-3" id="text-orgbe68ce1">
+<div id="outline-container-orgf377873" class="outline-3">
+<h3 id="orgf377873">General Archival</h3>
+<div class="outline-text-3" id="text-orgf377873">
 <p>
 I have a small archive of:
 </p>
@@ -262,9 +262,9 @@ There&rsquo;s not a ton here, and there&rsquo;s not a ton that I want to keep re
 </div>
 </div>
 
-<div id="outline-container-org091a1a8" class="outline-3">
-<h3 id="org091a1a8">Samples and Music Projects</h3>
-<div class="outline-text-3" id="text-org091a1a8">
+<div id="outline-container-org04ded1b" class="outline-3">
+<h3 id="org04ded1b">Samples and Music Projects</h3>
+<div class="outline-text-3" id="text-org04ded1b">
 <p>
 I currently do all of my music projects from an actual computer, so I&rsquo;m storing all of the samples I&rsquo;ve collected and recordings I&rsquo;ve made on the NAS.
 Since I run linux everywhere, I can NFS mount this drive from anywhere in my apartment and access my samples.
@@ -272,9 +272,9 @@ Since I run linux everywhere, I can NFS mount this drive from anywhere in my apa
 </div>
 </div>
 
-<div id="outline-container-org2cc38e4" class="outline-3">
-<h3 id="org2cc38e4">Email/Contact backup</h3>
-<div class="outline-text-3" id="text-org2cc38e4">
+<div id="outline-container-org8afa374" class="outline-3">
+<h3 id="org8afa374">Email/Contact backup</h3>
+<div class="outline-text-3" id="text-org8afa374">
 <p>
 As part of an experiment to try moving from GMail to literally anything else, I started trying to backup my emails and contacts.
 I&rsquo;m using <a href="http://isync.sourceforge.net/">isync</a> to download my emails, because it is <b>extremely</b> configurable.
@@ -315,9 +315,9 @@ SyncState *
 </div>
 </div>
 
-<div id="outline-container-org60e0ad3" class="outline-3">
-<h3 id="org60e0ad3">RSS feeds</h3>
-<div class="outline-text-3" id="text-org60e0ad3">
+<div id="outline-container-org20ecbee" class="outline-3">
+<h3 id="org20ecbee">RSS feeds</h3>
+<div class="outline-text-3" id="text-org20ecbee">
 <p>
 I&rsquo;m running <a href="https://github.com/wking/rss2email/">rss2email</a> on the server to send RSS feeds to my email.
 Using a 32 core behemoth to run a python script daily is silly, but oh well.
@@ -331,9 +331,9 @@ My email is available on my phone, and I can make my email show up in emacs, so 
 </div>
 </div>
 
-<div id="outline-container-org2ac58f7" class="outline-3">
-<h3 id="org2ac58f7">WeeChat</h3>
-<div class="outline-text-3" id="text-org2ac58f7">
+<div id="outline-container-orgd0a2edd" class="outline-3">
+<h3 id="orgd0a2edd">WeeChat</h3>
+<div class="outline-text-3" id="text-orgd0a2edd">
 <p>
 WeeChat has a pretty nifty <a href="https://weechat.org/files/doc/devel/weechat_relay_protocol.en.html">relay protocol</a> that can be used to remotely access your WeeChat instance from a browser or mobile device.
 I&rsquo;ve been running WeeChat on my machine instead of figuring out how to configure ZNC or some other bouncer.
@@ -343,13 +343,13 @@ Im not super active on IRC, but I&rsquo;ve been happy with this approach and the
 </div>
 </div>
 
-<div id="outline-container-org4567a9e" class="outline-2">
-<h2 id="org4567a9e">Personal Tools that didn&rsquo;t work out</h2>
-<div class="outline-text-2" id="text-org4567a9e">
+<div id="outline-container-orgbb77d3f" class="outline-2">
+<h2 id="orgbb77d3f">Personal Tools that didn&rsquo;t work out</h2>
+<div class="outline-text-2" id="text-orgbb77d3f">
 </div>
-<div id="outline-container-orgec952d6" class="outline-3">
-<h3 id="orgec952d6">Photos</h3>
-<div class="outline-text-3" id="text-orgec952d6">
+<div id="outline-container-org2b29bf7" class="outline-3">
+<h3 id="org2b29bf7">Photos</h3>
+<div class="outline-text-3" id="text-org2b29bf7">
 <p>
 I have a large collection of RAW photos captured in a variety of vendor-specific RAW formats.
 Getting these onto storage I owned and controlled was the main reason I built my NAS server.
@@ -425,9 +425,9 @@ Maybe I&rsquo;ll even build my own editor/manager software that works perfectly 
 </div>
 </div>
 
-<div id="outline-container-orgc5e3868" class="outline-3">
-<h3 id="orgc5e3868">Movies/TV/Music</h3>
-<div class="outline-text-3" id="text-orgc5e3868">
+<div id="outline-container-org2c1f84f" class="outline-3">
+<h3 id="org2c1f84f">Movies/TV/Music</h3>
+<div class="outline-text-3" id="text-org2c1f84f">
 <p>
 I considered turning this into a media streaming box, but it&rsquo;s nearly impossible to legally obtain copies of most of the TV and movies I want to keep around.
 If I could easily get legal digital copies of the TV shows I want to watch, I&rsquo;d be happy to pay, download, and manage the storage myself.
@@ -440,9 +440,9 @@ For music, I&rsquo;ve been pretty happy keeping unique, hard to stream music sit
 </div>
 </div>
 
-<div id="outline-container-orgc71cc21" class="outline-3">
-<h3 id="orgc71cc21">Notes, Papers, TODO lists</h3>
-<div class="outline-text-3" id="text-orgc71cc21">
+<div id="outline-container-orgace1ab0" class="outline-3">
+<h3 id="orgace1ab0">Notes, Papers, TODO lists</h3>
+<div class="outline-text-3" id="text-orgace1ab0">
 <p>
 I&rsquo;m currently using:
 </p>
@@ -472,9 +472,9 @@ Again, none of this really requires a massive server.
 </div>
 </div>
 
-<div id="outline-container-orgc01378e" class="outline-3">
-<h3 id="orgc01378e">Everything Else</h3>
-<div class="outline-text-3" id="text-orgc01378e">
+<div id="outline-container-org6166236" class="outline-3">
+<h3 id="org6166236">Everything Else</h3>
+<div class="outline-text-3" id="text-org6166236">
 <p>
 Most of the things I use on a regular basis in my life outside of work aren&rsquo;t realistically replacable with self-hosted versions of things.
 </p>
@@ -494,9 +494,9 @@ I&rsquo;m not going to self-host a password manager because I&rsquo;ll be royall
 </div>
 </div>
 
-<div id="outline-container-org1d059d7" class="outline-2">
-<h2 id="org1d059d7">(false) Dichotomy?</h2>
-<div class="outline-text-2" id="text-org1d059d7">
+<div id="outline-container-org124b527" class="outline-2">
+<h2 id="org124b527">(false) Dichotomy?</h2>
+<div class="outline-text-2" id="text-org124b527">
 <p>
 Since I like to jam the world into neat little dichotomies, here&rsquo;s some attempts explain why some things worked well for me and some things did not.
 I&rsquo;ve come up with two ways to word this.
@@ -543,9 +543,9 @@ Reality is probably some combination of all of these.
 </div>
 </div>
 
-<div id="outline-container-orga6b605a" class="outline-2">
-<h2 id="orga6b605a">Closing Rant</h2>
-<div class="outline-text-2" id="text-orga6b605a">
+<div id="outline-container-orgd1fc439" class="outline-2">
+<h2 id="orgd1fc439">Closing Rant</h2>
+<div class="outline-text-2" id="text-orgd1fc439">
 <p>
 Having an always-on machine, that I can get a virtual terminal on for adminstration has been convenient.
 Running my own DNS server with ad-blocking baked in has been fantastic.

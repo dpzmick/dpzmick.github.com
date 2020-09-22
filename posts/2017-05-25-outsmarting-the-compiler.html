@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-05-10 Sun 21:04 -->
+<!-- 2020-09-21 Mon 21:55 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Outsmarting the Compiler</title>
@@ -201,9 +201,9 @@ Hooray, no conditional generated, exactly as we desired.
 We&rsquo;ve outsmarted the compiler!
 </p>
 
-<div id="outline-container-org826c25a" class="outline-5">
-<h5 id="org826c25a">Assertion Failed: smarter_than_compiler</h5>
-<div class="outline-text-5" id="text-org826c25a">
+<div id="outline-container-orgc63520f" class="outline-5">
+<h5 id="orgc63520f">Assertion Failed: smarter_than_compiler</h5>
+<div class="outline-text-5" id="text-orgc63520f">
 <p>
 Let&rsquo;s set <code>PADDING1 = 16</code> and <code>PADDING2 = 17</code>.
 The code generated on clang-4.0 for <code>write(Wrapper*)</code> looks quite interesting:
@@ -265,9 +265,9 @@ The code has changed slightly to account for the new potential values of <code>W
 </div>
 </div>
 
-<div id="outline-container-org6a0cc34" class="outline-4">
-<h4 id="org6a0cc34">Meaner PADDING</h4>
-<div class="outline-text-4" id="text-org6a0cc34">
+<div id="outline-container-orgb99b01c" class="outline-4">
+<h4 id="orgb99b01c">Meaner PADDING</h4>
+<div class="outline-text-4" id="text-orgb99b01c">
 <p>
 Reminder: In the previous examples <code>PADDING1 = 16</code> and <code>PADDING2 = 17</code>.
 What happens to the generated code if we make the paddings completely wacky?
@@ -315,13 +315,13 @@ The answer to that depends on which compiler you ask.
 </div>
 </div>
 
-<div id="outline-container-orge3290f9" class="outline-4">
-<h4 id="orge3290f9">gcc 7.1 (&#x2013;std=c++1z -O3)</h4>
-<div class="outline-text-4" id="text-orge3290f9">
+<div id="outline-container-orgfb84f03" class="outline-4">
+<h4 id="orgfb84f03">gcc 7.1 (&#x2013;std=c++1z -O3)</h4>
+<div class="outline-text-4" id="text-orgfb84f03">
 </div>
-<div id="outline-container-org3ab3ea5" class="outline-5">
-<h5 id="org3ab3ea5"><code>PADDING1</code> <code>= =PADDING2</code></h5>
-<div class="outline-text-5" id="text-org3ab3ea5">
+<div id="outline-container-orgb6df234" class="outline-5">
+<h5 id="orgb6df234"><code>PADDING1</code> <code>= =PADDING2</code></h5>
+<div class="outline-text-5" id="text-orgb6df234">
 <div class="org-src-container">
 <pre class="src src-asm"><span class="org-function-name">writeLessSafe</span>(WrapperWithOffset*):
         <span class="org-keyword">mov</span>     rax, QWORD PTR [rdi+8]
@@ -348,9 +348,9 @@ That&rsquo;s a little odd.
 </div>
 </div>
 
-<div id="outline-container-org4ed19c6" class="outline-5">
-<h5 id="org4ed19c6"><code>PADDING1 = 16</code> and <code>PADDING2 = 17</code></h5>
-<div class="outline-text-5" id="text-org4ed19c6">
+<div id="outline-container-org657b00c" class="outline-5">
+<h5 id="org657b00c"><code>PADDING1 = 16</code> and <code>PADDING2 = 17</code></h5>
+<div class="outline-text-5" id="text-org657b00c">
 <div class="org-src-container">
 <pre class="src src-asm"><span class="org-function-name">write</span>(Wrapper*):
         <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
@@ -368,9 +368,9 @@ That&rsquo;s a little odd.
 </div>
 </div>
 
-<div id="outline-container-org6c83ac8" class="outline-5">
-<h5 id="org6c83ac8"><code>PADDING1 = 16</code> and <code>PADDING2 = 173</code></h5>
-<div class="outline-text-5" id="text-org6c83ac8">
+<div id="outline-container-orgc56fbc8" class="outline-5">
+<h5 id="orgc56fbc8"><code>PADDING1 = 16</code> and <code>PADDING2 = 173</code></h5>
+<div class="outline-text-5" id="text-orgc56fbc8">
 <div class="org-src-container">
 <pre class="src src-asm"><span class="org-function-name">write</span>(Wrapper*):
         <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
@@ -395,9 +395,9 @@ At the moment I&rsquo;m not convinced that it hurts much.
 </div>
 </div>
 
-<div id="outline-container-org7324018" class="outline-2">
-<h2 id="org7324018">Conclusion</h2>
-<div class="outline-text-2" id="text-org7324018">
+<div id="outline-container-orgcd84398" class="outline-2">
+<h2 id="orgcd84398">Conclusion</h2>
+<div class="outline-text-2" id="text-orgcd84398">
 <p>
 No conclusion.
 None of my benchmarks have managed to detect any convincing cost for this branch (even when variants are randomly chosen inside of a loop in an attempt to confuse branch predictor) so none of this actually matters (probably).

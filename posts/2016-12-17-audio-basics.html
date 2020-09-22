@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-05-10 Sun 21:04 -->
+<!-- 2020-09-21 Mon 21:55 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audio programming 101</title>
@@ -26,9 +26,9 @@ To start off this series, here&rsquo;s a short article about audio
 programming.
 </p>
 
-<div id="outline-container-org8d64505" class="outline-2">
-<h2 id="org8d64505">Digital audio</h2>
-<div class="outline-text-2" id="text-org8d64505">
+<div id="outline-container-org82c4995" class="outline-2">
+<h2 id="org82c4995">Digital audio</h2>
+<div class="outline-text-2" id="text-org82c4995">
 <p>
 To generate audio, audio software sends some digital audio signals to
 the audio card. Digital audio signals are just lists of floating point
@@ -57,9 +57,9 @@ audio, which is then played through the speakers.
 </p>
 </div>
 
-<div id="outline-container-orgc244a6b" class="outline-3">
-<h3 id="orgc244a6b">Types of audio software</h3>
-<div class="outline-text-3" id="text-orgc244a6b">
+<div id="outline-container-orgce4d6c2" class="outline-3">
+<h3 id="orgce4d6c2">Types of audio software</h3>
+<div class="outline-text-3" id="text-orgce4d6c2">
 <p>
 Next let&rsquo;s think about a few different kinds of audio software (this
 list is by no means complete):
@@ -132,9 +132,9 @@ developers use to develop audio applications.
 </div>
 </div>
 
-<div id="outline-container-org8dd7765" class="outline-2">
-<h2 id="org8dd7765">Software audio systems</h2>
-<div class="outline-text-2" id="text-org8dd7765">
+<div id="outline-container-org6dbc3de" class="outline-2">
+<h2 id="org6dbc3de">Software audio systems</h2>
+<div class="outline-text-2" id="text-org6dbc3de">
 <p>
 Most software audio systems (as far as I know) tend to work the same
 way. There is a realtime thread that generates samples and a bunch of
@@ -145,9 +145,9 @@ audio card.
 </p>
 </div>
 
-<div id="outline-container-org39e26ca" class="outline-3">
-<h3 id="org39e26ca">How fast is realtime?</h3>
-<div class="outline-text-3" id="text-org39e26ca">
+<div id="outline-container-org79ad9b9" class="outline-3">
+<h3 id="org79ad9b9">How fast is realtime?</h3>
+<div class="outline-text-3" id="text-org79ad9b9">
 <p>
 In the previous section, I claimed that, at 44.1 kHz (the standard CD
 sample rate), we need to take one audio sample approximately every 23
@@ -244,9 +244,9 @@ milliseconds can slow everyone else down.
 </div>
 </div>
 
-<div id="outline-container-org452e770" class="outline-3">
-<h3 id="org452e770">Time keeps on ticking</h3>
-<div class="outline-text-3" id="text-org452e770">
+<div id="outline-container-org4b5c2f9" class="outline-3">
+<h3 id="org4b5c2f9">Time keeps on ticking</h3>
+<div class="outline-text-3" id="text-org4b5c2f9">
 <p>
 If our callback function fails to generate samples quickly enough (or
 uses up all of the CPU time), the audio system will produce crackles,
@@ -290,7 +290,7 @@ the following code perform I/O?
 </p>
 
 <div class="org-src-container">
-<pre class="src src-C++">  <span class="org-type">int</span> <span class="org-function-name">callback</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-comment-delimiter">/* </span><span class="org-comment">args */</span><span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+<pre class="src src-C++">  <span class="org-type">int</span> <span class="org-function-name">callback</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-comment-delimiter">/* </span><span class="org-comment">args</span><span class="org-comment-delimiter"> */</span><span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-rainbow-delimiters-depth-1">{</span>
     <span class="org-type">float</span>* <span class="org-variable-name">samples</span> = <span class="org-comment-delimiter">// </span><span class="org-comment">get a contiguous array of samples in a nonblocking way</span>
     <span class="org-keyword">for</span> <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">size_t</span> <span class="org-variable-name">i</span> = <span class="org-highlight-numbers-number">0</span>; i &lt; N; i++<span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-2">{</span>
       output_sample<span class="org-rainbow-delimiters-depth-3">(</span> samples<span class="org-rainbow-delimiters-depth-1">[</span>i<span class="org-rainbow-delimiters-depth-1">]</span> <span class="org-rainbow-delimiters-depth-3">)</span>;
@@ -352,9 +352,9 @@ allocators</a> which do not violate our realtime constraints.
 </div>
 </div>
 
-<div id="outline-container-org9270481" class="outline-2">
-<h2 id="org9270481">What do we do?</h2>
-<div class="outline-text-2" id="text-org9270481">
+<div id="outline-container-orga6b5664" class="outline-2">
+<h2 id="orga6b5664">What do we do?</h2>
+<div class="outline-text-2" id="text-orga6b5664">
 <p>
 In general, there are a few cool tricks we can use to design around
 these problems, but I&rsquo;m not going to discuss any of them in this post.
