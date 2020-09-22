@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2020-09-21 Mon 21:55 -->
+<!-- 2020-09-21 Mon 21:57 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audio/Visual Latency Tests</title>
@@ -31,6 +31,10 @@ In a (failed) attempt to measure the latency, I wrote these two little web &ldqu
 <li><a href="../static/latency-tests/latency-audio-video.html">Proof of bad audio latency</a> - a canvas that flashes red the same time that a sound is played.</li>
 <li><a href="../static/latency-tests/latency-reaction-time.html">Attempt at quantifying the latency</a> - a canvas flashes red, or a sound is played. User hits a button. Response times are recorded.</li>
 </ol>
+
+<p>
+Note: not sure if either of them work on iOS. Something seems to be broken, but debugging on iOS apparently requires owning a macbook.
+</p>
 
 <p>
 With (2), I was hoping that my response time variance would be low enough to effectively measure the bluetooth latency by comparing my audio and visual response times.
