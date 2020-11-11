@@ -1,36 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-<!-- 2020-09-21 Mon 21:57 -->
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Understaning Pin (for C and C++ Developers)</title>
-<meta name="generator" content="Org mode">
-<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
 </head>
+
 <body>
-<div id="preamble" class="status">
-<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
-</div>
-<div id="content">
-<header>
-<h1 class="title">Understaning Pin (for C and C++ Developers)</h1>
-</header><p>
-<a href="https://doc.rust-lang.org/std/pin/">Pin</a> is pretty important for Rust&rsquo;s recently-released <code>async.await</code>
-features. I read the docs. I didn&rsquo;t get it<sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>. This exercise is what it
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">Understaning Pin (for C and C++ Developers)</h1>
+    </header>
+
+    <p>
+<a href="https://doc.rust-lang.org/std/pin/">Pin</a> is pretty important for Rust's recently-released <code>async.await</code>
+features. I read the docs. I didn't get it<sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>. This exercise is what it
 took for me to understand why <code>Pin</code> is important.
 </p>
 
 <p>
 Opening up the documentation, the page starts with a discussion about
-<code>Unpin</code>. <code>Unpin</code> is weird. Basically, <code>Unpin</code> says &ldquo;yeah I know this
-is pinned but you are free to ignore that.&rdquo; My gut reaction to <code>Unpin</code>
-was &ldquo;why would you need this at all?&rdquo; Doesn&rsquo;t this defeat the purpose
+<code>Unpin</code>. <code>Unpin</code> is weird. Basically, <code>Unpin</code> says "yeah I know this
+is pinned but you are free to ignore that." My gut reaction to <code>Unpin</code>
+was "why would you need this at all?" Doesn't this defeat the purpose
 of <code>Pin</code>?  Why is everything <code>Unpin</code> by default??
 </p>
 
 <p>
-Continuing on, there&rsquo;s a list of rules which must be adhered to in the
+Continuing on, there's a list of rules which must be adhered to in the
 <code>unsafe</code> constructor for <code>Pin</code>. I found this constraint for types
 which are <code>!Unpin</code> to be particularly mysterious:
 </p>
@@ -48,7 +55,7 @@ also takes a mutable reference, cannot not be allowed.
 </p>
 
 <p>
-Let&rsquo;s look at this again:
+Let's look at this again:
 </p>
 
 <blockquote>
@@ -63,12 +70,12 @@ Clearly moving is significant here, what does that mean exactly, and
 why is this such a big deal?
 </p>
 
-<div id="outline-container-orge8f9160" class="outline-2">
-<h2 id="orge8f9160">C++</h2>
-<div class="outline-text-2" id="text-orge8f9160">
+<div id="outline-container-org2c22bb8" class="outline-2">
+<h2 id="org2c22bb8">C++</h2>
+<div class="outline-text-2" id="text-org2c22bb8">
 <p>
-I&rsquo;m more familiar with C++ and my familiarity is probably where my
-misunderstandings are coming from. Let&rsquo;s start by understanding what
+I'm more familiar with C++ and my familiarity is probably where my
+misunderstandings are coming from. Let's start by understanding what
 it means to move something in C++.
 </p>
 
@@ -77,32 +84,32 @@ Consider the following <code>struct</code>:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="org1c91843">  <span class="org-keyword">struct</span> <span class="org-type">Thing</span> <span class="org-rainbow-delimiters-depth-1">{</span>
-    <span class="org-function-name">Thing</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">uint64_t</span> <span class="org-variable-name">id</span><span class="org-rainbow-delimiters-depth-2">)</span>
-      : id<span class="org-rainbow-delimiters-depth-2">(</span>id<span class="org-rainbow-delimiters-depth-2">)</span>
-    <span class="org-rainbow-delimiters-depth-2">{</span> <span class="org-rainbow-delimiters-depth-2">}</span>
+<pre class="src src-cpp" id="orga668fe2"><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
+  <span class="org-function-name">Thing</span>(<span class="org-type">uint64_t</span> <span class="org-variable-name">id</span>)
+    : id(id)
+  { }
 
-    <span class="org-comment-delimiter">// </span><span class="org-comment">The move constructor is only required to leave the object in a</span>
-    <span class="org-comment-delimiter">// </span><span class="org-comment">well defined state</span>
-    <span class="org-function-name">Thing</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">Thing</span>&amp;&amp; <span class="org-variable-name">other</span><span class="org-rainbow-delimiters-depth-2">)</span>
-      : id<span class="org-rainbow-delimiters-depth-2">(</span>other.id<span class="org-rainbow-delimiters-depth-2">)</span>
-    <span class="org-rainbow-delimiters-depth-2">{</span>
-      other.id = <span class="org-highlight-numbers-number">0</span>;
-    <span class="org-rainbow-delimiters-depth-2">}</span>
+  <span class="org-comment-delimiter">// </span><span class="org-comment">The move constructor is only required to leave the object in a</span>
+  <span class="org-comment-delimiter">// </span><span class="org-comment">well defined state</span>
+  <span class="org-function-name">Thing</span>(<span class="org-type">Thing</span>&amp;&amp; <span class="org-variable-name">other</span>)
+    : id(other.id)
+  {
+    other.id = 0;
+  }
 
-    <span class="org-type">Thing</span>&amp; <span class="org-keyword">operator</span><span class="org-function-name">=</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">Thing</span>&amp;&amp; <span class="org-variable-name">other</span><span class="org-rainbow-delimiters-depth-2">)</span>
-    <span class="org-rainbow-delimiters-depth-2">{</span>
-      id       = other.id;
-      other.id = <span class="org-highlight-numbers-number">0</span>;
-      <span class="org-keyword">return</span> *<span class="org-keyword">this</span>;
-    <span class="org-rainbow-delimiters-depth-2">}</span>
+  <span class="org-type">Thing</span>&amp; <span class="org-keyword">operator</span><span class="org-function-name">=</span>(<span class="org-type">Thing</span>&amp;&amp; <span class="org-variable-name">other</span>)
+  {
+    id       = other.id;
+    other.id = 0;
+    <span class="org-keyword">return</span> *<span class="org-keyword">this</span>;
+  }
 
-    <span class="org-comment-delimiter">// </span><span class="org-comment">non-copyable for clarity</span>
-    <span class="org-function-name">Thing</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">Thing</span> <span class="org-keyword">const</span>&amp;<span class="org-rainbow-delimiters-depth-2">)</span>            = <span class="org-keyword">delete</span>;
-    <span class="org-type">Thing</span>&amp; <span class="org-keyword">operator</span><span class="org-function-name">=</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">Thing</span> <span class="org-keyword">const</span>&amp;<span class="org-rainbow-delimiters-depth-2">)</span> = <span class="org-keyword">delete</span>;
+  <span class="org-comment-delimiter">// </span><span class="org-comment">non-copyable for clarity</span>
+  <span class="org-function-name">Thing</span>(<span class="org-type">Thing</span> <span class="org-keyword">const</span>&amp;)            = <span class="org-keyword">delete</span>;
+  <span class="org-type">Thing</span>&amp; <span class="org-keyword">operator</span><span class="org-function-name">=</span>(<span class="org-type">Thing</span> <span class="org-keyword">const</span>&amp;) = <span class="org-keyword">delete</span>;
 
-    <span class="org-type">uint64_t</span> <span class="org-variable-name">id</span>;
-  <span class="org-rainbow-delimiters-depth-1">}</span>;
+  <span class="org-type">uint64_t</span> <span class="org-variable-name">id</span>;
+};
 </pre>
 </div>
 
@@ -112,86 +119,86 @@ undefined, <b>but valid</b> state.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp">  
+<pre class="src src-cpp">
 
-  <span class="org-type">int</span> <span class="org-function-name">main</span><span class="org-rainbow-delimiters-depth-1">()</span> <span class="org-rainbow-delimiters-depth-1">{</span>
-    <span class="org-type">Thing</span> <span class="org-variable-name">a</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-highlight-numbers-number">10</span><span class="org-rainbow-delimiters-depth-2">)</span>;
-    <span class="org-type">Thing</span> <span class="org-keyword">const</span>&amp; <span class="org-variable-name">ref</span> = a;
+<span class="org-type">int</span> <span class="org-function-name">main</span>() {
+  <span class="org-type">Thing</span> <span class="org-variable-name">a</span>(10);
+  <span class="org-type">Thing</span> <span class="org-keyword">const</span>&amp; <span class="org-variable-name">ref</span> = a;
 
-    <span class="org-type">Thing</span> <span class="org-variable-name">c</span> = <span class="org-constant">std</span>::move<span class="org-rainbow-delimiters-depth-2">(</span>a<span class="org-rainbow-delimiters-depth-2">)</span>;      <span class="org-comment-delimiter">// </span><span class="org-comment">moves a, but leave in defined state</span>
-    printf<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"ref %zu\n"</span>, ref.id<span class="org-rainbow-delimiters-depth-2">)</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">prints 0</span>
-  <span class="org-rainbow-delimiters-depth-1">}</span>
+  <span class="org-type">Thing</span> <span class="org-variable-name">c</span> = <span class="org-constant">std</span>::move(a);      <span class="org-comment-delimiter">// </span><span class="org-comment">moves a, but leave in defined state</span>
+  printf(<span class="org-string">"ref %zu\n"</span>, ref.id); <span class="org-comment-delimiter">// </span><span class="org-comment">prints 0</span>
+}
 </pre>
 </div>
 
 <p>
-Next, consider this<sup><a id="fnr.2" class="footref" href="#fn.2">2</a></sup> implementation of <code>swap</code> and it&rsquo;s usage:
+Next, consider this<sup><a id="fnr.2" class="footref" href="#fn.2">2</a></sup> implementation of <code>swap</code> and it's usage:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp">  
+<pre class="src src-cpp">
 
-  <span class="org-keyword">template</span> <span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-keyword">typename</span> <span class="org-type">T</span><span class="org-rainbow-delimiters-depth-1">&gt;</span>
-  <span class="org-type">void</span> <span class="org-function-name">swap</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-type">T</span>&amp; <span class="org-variable-name">a</span>, <span class="org-type">T</span>&amp; <span class="org-variable-name">b</span><span class="org-rainbow-delimiters-depth-1">)</span>
-  <span class="org-rainbow-delimiters-depth-1">{</span>
-    <span class="org-type">T</span> <span class="org-variable-name">tmp</span> = <span class="org-constant">std</span>::move<span class="org-rainbow-delimiters-depth-2">(</span>a<span class="org-rainbow-delimiters-depth-2">)</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">lots of moves</span>
-    a = <span class="org-constant">std</span>::move<span class="org-rainbow-delimiters-depth-2">(</span>b<span class="org-rainbow-delimiters-depth-2">)</span>;     <span class="org-comment-delimiter">// </span><span class="org-comment">move again</span>
-    b = <span class="org-constant">std</span>::move<span class="org-rainbow-delimiters-depth-2">(</span>tmp<span class="org-rainbow-delimiters-depth-2">)</span>;   <span class="org-comment-delimiter">// </span><span class="org-comment">oh look, move again!</span>
-  <span class="org-rainbow-delimiters-depth-1">}</span>
+<span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>&gt;
+<span class="org-type">void</span> <span class="org-function-name">swap</span>(<span class="org-type">T</span>&amp; <span class="org-variable-name">a</span>, <span class="org-type">T</span>&amp; <span class="org-variable-name">b</span>)
+{
+  <span class="org-type">T</span> <span class="org-variable-name">tmp</span> = <span class="org-constant">std</span>::move(a); <span class="org-comment-delimiter">// </span><span class="org-comment">lots of moves</span>
+  a = <span class="org-constant">std</span>::move(b);     <span class="org-comment-delimiter">// </span><span class="org-comment">move again</span>
+  b = <span class="org-constant">std</span>::move(tmp);   <span class="org-comment-delimiter">// </span><span class="org-comment">oh look, move again!</span>
+}
 
-  <span class="org-type">int</span> <span class="org-function-name">main</span><span class="org-rainbow-delimiters-depth-1">()</span> <span class="org-rainbow-delimiters-depth-1">{</span>
-    <span class="org-type">Thing</span> <span class="org-variable-name">a</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-highlight-numbers-number">1</span><span class="org-rainbow-delimiters-depth-2">)</span>;
-    <span class="org-type">Thing</span> <span class="org-variable-name">b</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-highlight-numbers-number">2</span><span class="org-rainbow-delimiters-depth-2">)</span>;
+<span class="org-type">int</span> <span class="org-function-name">main</span>() {
+  <span class="org-type">Thing</span> <span class="org-variable-name">a</span>(1);
+  <span class="org-type">Thing</span> <span class="org-variable-name">b</span>(2);
 
-    <span class="org-type">Thing</span>&amp; <span class="org-variable-name">ref</span> = a;
-    swap<span class="org-rainbow-delimiters-depth-2">(</span>a, b<span class="org-rainbow-delimiters-depth-2">)</span>;
-    printf<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"ref %zu\n"</span>, ref.id<span class="org-rainbow-delimiters-depth-2">)</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">prints 2</span>
-  <span class="org-rainbow-delimiters-depth-1">}</span>
+  <span class="org-type">Thing</span>&amp; <span class="org-variable-name">ref</span> = a;
+  swap(a, b);
+  printf(<span class="org-string">"ref %zu\n"</span>, ref.id); <span class="org-comment-delimiter">// </span><span class="org-comment">prints 2</span>
+}
 </pre>
 </div>
 
 <p>
 As far as I know, this is totally valid C++. The reference is just a
 pointer to some chunk of memory, and, all of the moves that we did are
-defined to leave the moved-from object in a &ldquo;valid&rdquo; state (you might
+defined to leave the moved-from object in a "valid" state (you might
 just have to be careful with them).
 </p>
 
 <p>
-Let&rsquo;s consider one last struct.
+Let's consider one last struct.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="orgc41348e">  <span class="org-keyword">template</span> <span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span><span class="org-rainbow-delimiters-depth-1">&gt;</span>
-  <span class="org-keyword">struct</span> <span class="org-type">ring_buffer</span> <span class="org-rainbow-delimiters-depth-1">{</span>
-    <span class="org-constant">std</span>::<span class="org-type">array</span><span class="org-rainbow-delimiters-depth-2">&lt;</span><span class="org-type">T</span>, N+<span class="org-highlight-numbers-number">1</span><span class="org-rainbow-delimiters-depth-2">&gt;</span> <span class="org-variable-name">entries</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">use one extra element for easy book-keeping</span>
+<pre class="src src-cpp" id="org846d467"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
+<span class="org-keyword">struct</span> <span class="org-type">ring_buffer</span> {
+  <span class="org-constant">std</span>::<span class="org-type">array</span>&lt;<span class="org-type">T</span>, N+1&gt; <span class="org-variable-name">entries</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">use one extra element for easy book-keeping</span>
 
-    <span class="org-comment-delimiter">// </span><span class="org-comment">Store pointers. This is bad, there are better ways to make a ring</span>
-    <span class="org-comment-delimiter">// </span><span class="org-comment">buffer, but the demonstration is useful.</span>
-    <span class="org-type">T</span>* <span class="org-variable-name">head</span> = entries;
-    <span class="org-type">T</span>* <span class="org-variable-name">tail</span> = head+<span class="org-highlight-numbers-number">1</span>;
+  <span class="org-comment-delimiter">// </span><span class="org-comment">Store pointers. This is bad, there are better ways to make a ring</span>
+  <span class="org-comment-delimiter">// </span><span class="org-comment">buffer, but the demonstration is useful.</span>
+  <span class="org-type">T</span>* <span class="org-variable-name">head</span> = entries;
+  <span class="org-type">T</span>* <span class="org-variable-name">tail</span> = head+1;
 
-    <span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
-  <span class="org-rainbow-delimiters-depth-1">}</span>;
+  <span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
+};
 </pre>
 </div>
 
 <p>
 <code>head</code> and <code>tail</code> both point to elements of entries.  C++ will
 generate a default move constructor for us, but the default is just a
-<code>memcpy</code>. If it runs, we&rsquo;ll end up with pointers that point into the
+<code>memcpy</code>. If it runs, we'll end up with pointers that point into the
 wrong array. We must write a custom move constructor.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp">  <span class="org-function-name">ring_buffer</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-type">ring_buffer</span>&amp;&amp; <span class="org-variable-name">other</span><span class="org-rainbow-delimiters-depth-1">)</span>
-    : entries<span class="org-rainbow-delimiters-depth-1">(</span> <span class="org-constant">std</span>::move<span class="org-rainbow-delimiters-depth-2">(</span>other.entries<span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>
-    , head<span class="org-rainbow-delimiters-depth-1">(</span> entries.data<span class="org-rainbow-delimiters-depth-2">()</span> + <span class="org-rainbow-delimiters-depth-2">(</span>other.head - other.entries.data<span class="org-rainbow-delimiters-depth-3">()</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-comment-delimiter">// </span><span class="org-comment">adjust poin</span><span class="org-comment"><span class="org-hl-fill-column">t</span></span><span class="org-comment">er</span>
-    , tail<span class="org-rainbow-delimiters-depth-1">(</span> entries.data<span class="org-rainbow-delimiters-depth-2">()</span> + <span class="org-rainbow-delimiters-depth-2">(</span>other.tail - other.entries.data<span class="org-rainbow-delimiters-depth-3">()</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-comment-delimiter">// </span><span class="org-comment">adjust poin</span><span class="org-comment"><span class="org-hl-fill-column">t</span></span><span class="org-comment">er</span>
-  <span class="org-rainbow-delimiters-depth-1">{</span>
-    other.head = other.entries.data<span class="org-rainbow-delimiters-depth-2">()</span>;
-    other.tail = other.head + <span class="org-highlight-numbers-number">1</span>;
-  <span class="org-rainbow-delimiters-depth-1">}</span>
+<pre class="src src-cpp"><span class="org-function-name">ring_buffer</span>(<span class="org-type">ring_buffer</span>&amp;&amp; <span class="org-variable-name">other</span>)
+  : entries( <span class="org-constant">std</span>::move(other.entries) )
+  , head( entries.data() + (other.head - other.entries.data())) <span class="org-comment-delimiter">// </span><span class="org-comment">adjust pointer</span>
+  , tail( entries.data() + (other.tail - other.entries.data())) <span class="org-comment-delimiter">// </span><span class="org-comment">adjust pointer</span>
+{
+  other.head = other.entries.data();
+  other.tail = other.head + 1;
+}
 </pre>
 </div>
 
@@ -202,96 +209,96 @@ can take advantage of in some special places.
 </div>
 </div>
 
-<div id="outline-container-org1f7d5ce" class="outline-2">
-<h2 id="org1f7d5ce">Rust</h2>
-<div class="outline-text-2" id="text-org1f7d5ce">
+<div id="outline-container-org031ec62" class="outline-2">
+<h2 id="org031ec62">Rust</h2>
+<div class="outline-text-2" id="text-org031ec62">
 <p>
-Let&rsquo;s do the same exercises again in Rust, starting with the <code>Thing</code>
+Let's do the same exercises again in Rust, starting with the <code>Thing</code>
 struct.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-rust">  <span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
-      <span class="org-keyword">pub</span> <span class="org-variable-name">id</span>: <span class="org-type">u64</span>
-  }
+<pre class="src src-rust"><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
+    <span class="org-keyword">pub</span> <span class="org-variable-name">id</span>: <span class="org-type">u64</span>
+}
 
-  <span class="org-keyword">impl</span> <span class="org-type">Thing</span> {
-      <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">new</span>(<span class="org-variable-name">id</span>: <span class="org-type">u64</span>) -&gt; <span class="org-type">Self</span> {
-          <span class="org-type">Self</span> { id }
-      }
-  }
+<span class="org-keyword">impl</span> <span class="org-type">Thing</span> {
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">new</span>(<span class="org-variable-name">id</span>: <span class="org-type">u64</span>) -&gt; <span class="org-type">Self</span> {
+        <span class="org-type">Self</span> { id }
+    }
+}
 </pre>
 </div>
 
 <p>
-Trying to port the first example directly into Rust won&rsquo;t work.
+Trying to port the first example directly into Rust won't work.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-rust">  <span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
-      <span class="org-keyword">let</span> <span class="org-variable-name">a</span> = <span class="org-type">Thing</span>::new(<span class="org-highlight-numbers-number">10</span>);
-      <span class="org-keyword">let</span> <span class="org-variable-name">r</span> = &amp;a;
+<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
+    <span class="org-keyword">let</span> <span class="org-variable-name">a</span> = <span class="org-type">Thing</span>::new(10);
+    <span class="org-keyword">let</span> <span class="org-variable-name">r</span> = &amp;a;
 
-      <span class="org-keyword">let</span> <span class="org-variable-name">c</span> = a; <span class="org-comment-delimiter">// </span><span class="org-comment">this is a move, but won't compile</span>
-      <span class="org-rustic-builtin-formatting-macro">println!</span>(<span class="org-string">"ref </span><span class="org-rustic-string-interpolation">{}</span><span class="org-string">"</span>, r.id);
-  }
+    <span class="org-keyword">let</span> <span class="org-variable-name">c</span> = a; <span class="org-comment-delimiter">// </span><span class="org-comment">this is a move, but won't compile</span>
+    <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"ref </span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, r.id);
+}
 </pre>
 </div>
 
 <p>
-The compiler doesn&rsquo;t like this. It says:
+The compiler doesn't like this. It says:
 </p>
 
 <div class="org-src-container">
 <pre class="src src-rust">error[<span class="org-type">E0505</span>]: cannot <span class="org-keyword">move</span> out of `a` because it is borrowed
-  --&gt; ex1.<span class="org-variable-name">rs</span>:<span class="org-highlight-numbers-number">16</span>:<span class="org-highlight-numbers-number">13</span>
+  --&gt; ex1.<span class="org-variable-name">rs</span>:1<span class="org-variable-name">6</span>:13
    |
-<span class="org-highlight-numbers-number">15</span> |     <span class="org-keyword">let</span> <span class="org-variable-name">r</span> = &amp;a;
+15 |     <span class="org-keyword">let</span> <span class="org-variable-name">r</span> = &amp;a;
    |             -- borrow of `a` occurs here
-<span class="org-highlight-numbers-number">16</span> |     <span class="org-keyword">let</span> <span class="org-variable-name">c</span> = a; <span class="org-comment-delimiter">// </span><span class="org-comment">this is a move, but won't compile</span>
+16 |     <span class="org-keyword">let</span> <span class="org-variable-name">c</span> = a; <span class="org-comment-delimiter">// </span><span class="org-comment">this is a move, but won't compile</span>
    |             ^ <span class="org-keyword">move</span> out of `a` occurs here
-<span class="org-highlight-numbers-number">17</span> |
-<span class="org-highlight-numbers-number">18</span> |     <span class="org-rustic-builtin-formatting-macro">println!</span>(<span class="org-string">"ref </span><span class="org-rustic-string-interpolation">{}</span><span class="org-string">"</span>, r.id);
+17 |
+18 |     <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"ref </span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, r.id);
    |                        ---- borrow later used here
 </pre>
 </div>
 
 <p>
 Rust is telling us that it knows we moved the value, and, since we
-moved it, we can&rsquo;t use it anymore. What does this mean though? What is
+moved it, we can't use it anymore. What does this mean though? What is
 actually going?
 </p>
 
 <p>
-Let&rsquo;s try to find out with some unsafe and undefined-behavior inducing
-Rust. The first time I tried something like this, I wasn&rsquo;t sure what
+Let's try to find out with some unsafe and undefined-behavior inducing
+Rust. The first time I tried something like this, I wasn't sure what
 to expect, but hopefully this example is clear.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-rust">  <span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
-      <span class="org-keyword">let</span> <span class="org-variable-name">a</span> = <span class="org-type">Thing</span>::new(<span class="org-highlight-numbers-number">1</span>);
-      <span class="org-keyword">let</span> <span class="org-variable-name">r</span>: *<span class="org-keyword">const</span> <span class="org-type">Thing</span> = &amp;a;
+<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
+    <span class="org-keyword">let</span> <span class="org-variable-name">a</span> = <span class="org-type">Thing</span>::new(1);
+    <span class="org-keyword">let</span> <span class="org-variable-name">r</span>: *<span class="org-keyword">const</span> <span class="org-type">Thing</span> = &amp;a;
 
-      <span class="org-keyword">let</span> <span class="org-variable-name">c</span> = a;
-      <span class="org-rustic-builtin-formatting-macro">println!</span>(<span class="org-string">"ref </span><span class="org-rustic-string-interpolation">{}</span><span class="org-string">"</span>, <span class="org-rustic-unsafe">unsafe</span> { (*r).id });
-  }
+    <span class="org-keyword">let</span> <span class="org-variable-name">c</span> = a;
+    <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"ref </span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, <span class="org-rust-unsafe">unsafe</span> { (*r).id });
+}
 </pre>
 </div>
 
 <p>
-This prints &ldquo;1&rdquo; because the compiler reused the stack space used by
+This prints "1" because the compiler reused the stack space used by
 the object named <code>a</code> to store the object named <code>b</code>. There was no
-&ldquo;empty valid husk&rdquo; left behind.
+"empty valid husk" left behind.
 </p>
 
 <p>
 This behavior is very different from the C++ move. The Rust compiler
 knows about the move and can take advantage of the move to save some
-stack space. Without writing unsafe code, there is no way you&rsquo;d ever
+stack space. Without writing unsafe code, there is no way you'd ever
 be able to access fields from <code>a</code> again, so how the compiler wants to
 use that space occupied by <code>a</code> after the move is entirely the
-compiler&rsquo;s decision.
+compiler's decision.
 </p>
 
 <p>
@@ -306,22 +313,22 @@ these (implicit) <code>move</code> constructors where just <code>memcpy</code>.
 </p>
 
 <p>
-Swap in Rust isn&rsquo;t as straightforward as the C++ version. In the C++
+Swap in Rust isn't as straightforward as the C++ version. In the C++
 version, we just call the user defined move constructor to do all of
-the hard work. In Rust, we don&rsquo;t have this user defined function to
-call, so we&rsquo;ll have to actually be explicit about what swap does.
-This version of swap is adapted from Rust&rsquo;s standard library:
+the hard work. In Rust, we don't have this user defined function to
+call, so we'll have to actually be explicit about what swap does.
+This version of swap is adapted from Rust's standard library:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-rust">  <span class="org-keyword">fn</span> <span class="org-function-name">swap</span>&lt;<span class="org-type">T</span>&gt;(<span class="org-variable-name">a</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">T</span>, <span class="org-variable-name">b</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">T</span>) {
-      <span class="org-comment-delimiter">// </span><span class="org-comment">a and b are both valid pointers</span>
-      <span class="org-rustic-unsafe">unsafe</span> {
-          <span class="org-keyword">let</span> <span class="org-variable-name">tmp</span>: <span class="org-type">T</span> = <span class="org-constant">std</span>::<span class="org-constant">ptr</span>::read(a); <span class="org-comment-delimiter">// </span><span class="org-comment">memcpy</span>
-          <span class="org-constant">std</span>::<span class="org-constant">ptr</span>::copy(b, a, <span class="org-highlight-numbers-number">1</span>);        <span class="org-comment-delimiter">// </span><span class="org-comment">memcpy</span>
-          <span class="org-constant">std</span>::<span class="org-constant">ptr</span>::write(b, tmp);        <span class="org-comment-delimiter">// </span><span class="org-comment">memcpy</span>
-      }
-  }
+<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">swap</span>&lt;<span class="org-type">T</span>&gt;(<span class="org-variable-name">a</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">T</span>, <span class="org-variable-name">b</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">T</span>) {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">a and b are both valid pointers</span>
+    <span class="org-rust-unsafe">unsafe</span> {
+        <span class="org-keyword">let</span> <span class="org-variable-name">tmp</span>: <span class="org-type">T</span> = <span class="org-constant">std</span>::<span class="org-constant">ptr</span>::read(a); <span class="org-comment-delimiter">// </span><span class="org-comment">memcpy</span>
+        <span class="org-constant">std</span>::<span class="org-constant">ptr</span>::copy(b, a, 1);        <span class="org-comment-delimiter">// </span><span class="org-comment">memcpy</span>
+        <span class="org-constant">std</span>::<span class="org-constant">ptr</span>::write(b, tmp);        <span class="org-comment-delimiter">// </span><span class="org-comment">memcpy</span>
+    }
+}
 </pre>
 </div>
 
@@ -330,24 +337,24 @@ Roaming again into undefined-behavior territory:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-rust">  <span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
-      <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">a</span> = <span class="org-type">Thing</span>::new(<span class="org-highlight-numbers-number">1</span>);
-      <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">b</span> = <span class="org-type">Thing</span>::new(<span class="org-highlight-numbers-number">2</span>);
+<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
+    <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">a</span> = <span class="org-type">Thing</span>::new(1);
+    <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">b</span> = <span class="org-type">Thing</span>::new(2);
 
-      <span class="org-keyword">let</span> <span class="org-variable-name">r</span>: *<span class="org-keyword">const</span> <span class="org-type">Thing</span> = &amp;a;
+    <span class="org-keyword">let</span> <span class="org-variable-name">r</span>: *<span class="org-keyword">const</span> <span class="org-type">Thing</span> = &amp;a;
 
-      swap(&amp;<span class="org-keyword">mut</span> a, &amp;<span class="org-keyword">mut</span> b);
+    swap(&amp;<span class="org-keyword">mut</span> a, &amp;<span class="org-keyword">mut</span> b);
 
-      <span class="org-rustic-builtin-formatting-macro">println!</span>(<span class="org-string">"</span><span class="org-rustic-string-interpolation">{}</span><span class="org-string">"</span>, <span class="org-rustic-unsafe">unsafe</span> { (*r).id }); <span class="org-comment-delimiter">// </span><span class="org-comment">prints 2</span>
-  }
+    <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"</span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, <span class="org-rust-unsafe">unsafe</span> { (*r).id }); <span class="org-comment-delimiter">// </span><span class="org-comment">prints 2</span>
+}
 </pre>
 </div>
 
 <p>
-This example is nice because it does what you&rsquo;d expect, but it
-highlights something critical about Rust&rsquo;s move semantics: <code>move</code> is
-<span class="underline">always</span> a <code>memcpy</code>. <code>move</code> in Rust couldn&rsquo;t be anything other than a
-<code>memcpy</code>. Rust doesn&rsquo;t define anything else associated with the struct
+This example is nice because it does what you'd expect, but it
+highlights something critical about Rust's move semantics: <code>move</code> is
+<span class="underline">always</span> a <code>memcpy</code>. <code>move</code> in Rust couldn't be anything other than a
+<code>memcpy</code>. Rust doesn't define anything else associated with the struct
 that would let the user specify any other operation.
 </p>
 
@@ -356,23 +363,23 @@ Rule number 2: Rust move is always <span class="underline">just</span> a <code>m
 </p>
 
 <p>
-Now, let&rsquo;s think about the ring buffer. It is not even remotely
+Now, let's think about the ring buffer. It is not even remotely
 idiomatic to write anything like the C++ version of the ring-buffer in
-Rust<sup><a id="fnr.3" class="footref" href="#fn.3">3</a></sup>, but let&rsquo;s do it anyway. I&rsquo;m also going to pretend that <a href="https://github.com/rust-lang/rust/issues/44580">const
+Rust<sup><a id="fnr.3" class="footref" href="#fn.3">3</a></sup>, but let's do it anyway. I'm also going to pretend that <a href="https://github.com/rust-lang/rust/issues/44580">const
 generics</a> are finished for the sake of clarity.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-rust">  <span class="org-keyword">struct</span> <span class="org-type">RingBuffer</span>&lt;<span class="org-type">T</span>, <span class="org-keyword">const</span> <span class="org-variable-name">N</span>: <span class="org-type">usize</span>&gt; {
-      <span class="org-variable-name">entries</span>: [<span class="org-type">T</span>; <span class="org-type">N</span>+<span class="org-highlight-numbers-number">1</span>],
-      <span class="org-variable-name">head</span>: *<span class="org-keyword">const</span> <span class="org-type">T</span>,   <span class="org-comment-delimiter">// </span><span class="org-comment">next pop location, T is moved (memcpy) out</span>
-      <span class="org-variable-name">tail</span>: *<span class="org-keyword">mut</span> <span class="org-type">T</span>,     <span class="org-comment-delimiter">// </span><span class="org-comment">next push location, T is moved (memcpy) in</span>
-  }
+<pre class="src src-rust"><span class="org-keyword">struct</span> <span class="org-type">RingBuffer</span>&lt;<span class="org-type">T</span>, <span class="org-keyword">const</span> <span class="org-variable-name">N</span>: <span class="org-type">usize</span>&gt; {
+    <span class="org-variable-name">entries</span>: [<span class="org-type">T</span>; <span class="org-type">N</span>+1],
+    <span class="org-variable-name">head</span>: *<span class="org-keyword">const</span> <span class="org-type">T</span>,   <span class="org-comment-delimiter">// </span><span class="org-comment">next pop location, T is moved (memcpy) out</span>
+    <span class="org-variable-name">tail</span>: *<span class="org-keyword">mut</span> <span class="org-type">T</span>,     <span class="org-comment-delimiter">// </span><span class="org-comment">next push location, T is moved (memcpy) in</span>
+}
 </pre>
 </div>
 
 <p>
-The problem now is that we can&rsquo;t define a custom move constructor. If
+The problem now is that we can't define a custom move constructor. If
 this struct is ever moved (including the move-by-<code>memcpy</code> in
 swap/replace), the pointers stored will be point to the wrong piece of
 memory.
@@ -387,14 +394,14 @@ Once something is marked as <code>!Unpin</code>, getting a mutable reference to
 it becomes unsafe. If you get a mutable reference to a pinned type
 which is <code>!Unpin</code>, you must promise to never call anything that moves
 out of the type. I have thoughts on the actual feasibility of
-following these rules, but that&rsquo;s a topic for another time.
+following these rules, but that's a topic for another time.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org6a5d716" class="outline-2">
-<h2 id="org6a5d716">Futures/async.await</h2>
-<div class="outline-text-2" id="text-org6a5d716">
+<div id="outline-container-org0153676" class="outline-2">
+<h2 id="org0153676">Futures/async.await</h2>
+<div class="outline-text-2" id="text-org0153676">
 <p>
 Hopefully now, we can understand why this is prerequisite for
 async.await support in Rust.
@@ -404,15 +411,15 @@ async.await support in Rust.
 Consider this async function:
 </p>
 <div class="org-src-container">
-<pre class="src src-rust">  <span class="org-keyword">async</span> <span class="org-keyword">fn</span> <span class="org-function-name">foo</span>() -&gt; <span class="org-type">u32</span> {
-      <span class="org-comment-delimiter">// </span><span class="org-comment">First call to poll runs until the line with the await</span>
-      <span class="org-keyword">let</span> <span class="org-variable-name">x</span> = [<span class="org-highlight-numbers-number">1</span>, <span class="org-highlight-numbers-number">2</span>, <span class="org-highlight-numbers-number">3</span>, <span class="org-highlight-numbers-number">4</span>];
-      <span class="org-keyword">let</span> <span class="org-variable-name">y</span> = &amp;x[<span class="org-highlight-numbers-number">1</span>];
-      <span class="org-keyword">let</span> nxt_idx= make_network_request().<span class="org-keyword">await</span>;
+<pre class="src src-rust"><span class="org-keyword">async</span> <span class="org-keyword">fn</span> <span class="org-function-name">foo</span>() -&gt; <span class="org-type">u32</span> {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">First call to poll runs until the line with the await</span>
+    <span class="org-keyword">let</span> <span class="org-variable-name">x</span> = [1, 2, 3, 4];
+    <span class="org-keyword">let</span> <span class="org-variable-name">y</span> = &amp;x[1];
+    <span class="org-keyword">let</span> nxt_idx= make_network_request().<span class="org-keyword">await</span>;
 
-      <span class="org-comment-delimiter">// </span><span class="org-comment">next call to poll runs the last line</span>
-      <span class="org-keyword">return</span> y + x[nxt_idx];
-  }
+    <span class="org-comment-delimiter">// </span><span class="org-comment">next call to poll runs the last line</span>
+    <span class="org-keyword">return</span> y + x[nxt_idx];
+}
 </pre>
 </div>
 
@@ -425,16 +432,16 @@ this:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-rust">  <span class="org-keyword">struct</span> <span class="org-type">StateMachineData_State1</span> {
-      <span class="org-variable-name">x</span>: [<span class="org-type">u32</span>, <span class="org-highlight-numbers-number">4</span>],
-      <span class="org-variable-name">y</span>: &amp;<span class="org-type">u32</span>,      <span class="org-comment-delimiter">// </span><span class="org-comment">ignore lifetime. This will point into `x`</span>
-  }
+<pre class="src src-rust"><span class="org-keyword">struct</span> <span class="org-type">StateMachineData_State1</span> {
+    <span class="org-variable-name">x</span>: [<span class="org-type">u32</span>, 4],
+    <span class="org-variable-name">y</span>: &amp;<span class="org-type">u32</span>,      <span class="org-comment-delimiter">// </span><span class="org-comment">ignore lifetime. This will point into `x`</span>
+}
 </pre>
 </div>
 
 <p>
 Since <code>y</code> is a reference (pointer), if we <code>move</code> (<code>memcpy</code>) the
-intermediate state, we&rsquo;ll be messing up our pointers. This is why
+intermediate state, we'll be messing up our pointers. This is why
 <code>Pin</code> matters for async.
 </p>
 </div>
@@ -444,24 +451,33 @@ intermediate state, we&rsquo;ll be messing up our pointers. This is why
 <div id="text-footnotes">
 
 <div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1">1</a></sup> <div class="footpara"><p class="footpara">
-The docs are great, but something just wasn&rsquo;t clicking for me.
+The docs are great, but something just wasn't clicking for me.
 </p></div></div>
 
 <div class="footdef"><sup><a id="fn.2" class="footnum" href="#fnr.2">2</a></sup> <div class="footpara"><p class="footpara">
-probably incorrect. there&rsquo;s no such thing as correct C++ code.
+probably incorrect. there's no such thing as correct C++ code.
 </p></div></div>
 
 <div class="footdef"><sup><a id="fn.3" class="footnum" href="#fnr.3">3</a></sup> <div class="footpara"><p class="footpara">
 The idiomatic Rust version is better (use indicies instead of pointers).
-This isn&rsquo;t an indictment of Rust. The idiomatic Rust version would be
+This isn't an indictment of Rust. The idiomatic Rust version would be
 better in C++ too.
 </p></div></div>
 
 
 </div>
-</div></div>
-<div id="postamble" class="status">
-<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2019-05-25-pin-rs-cpp.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
 </div>
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
 </body>
+</html>
+
+</body>
+
 </html>

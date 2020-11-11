@@ -1,43 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-<!-- 2020-09-21 Mon 21:57 -->
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Audio programming 101</title>
-<meta name="generator" content="Org mode">
-<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
 </head>
+
 <body>
-<div id="preamble" class="status">
-<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
-</div>
-<div id="content">
-<header>
-<h1 class="title">Audio programming 101</h1>
-</header><p>
-Recently, I&rsquo;ve been working on a synthesizer (the kind that makes
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">Audio programming 101</h1>
+    </header>
+
+    <p>
+Recently, I've been working on a synthesizer (the kind that makes
 sounds) in Rust. I am hoping to write a large number of little articles
 about the things I learn as I work on this project.
 </p>
 
 <p>
-To start off this series, here&rsquo;s a short article about audio
+To start off this series, here's a short article about audio
 programming.
 </p>
 
-<div id="outline-container-org82c4995" class="outline-2">
-<h2 id="org82c4995">Digital audio</h2>
-<div class="outline-text-2" id="text-org82c4995">
+<div id="outline-container-orgf1ae7e6" class="outline-2">
+<h2 id="orgf1ae7e6">Digital audio</h2>
+<div class="outline-text-2" id="text-orgf1ae7e6">
 <p>
 To generate audio, audio software sends some digital audio signals to
 the audio card. Digital audio signals are just lists of floating point
-(decimal) numbers. Think of these numbers as &ldquo;sound pressure&rdquo; over time
+(decimal) numbers. Think of these numbers as "sound pressure" over time
 (see <a href="https://docs.cycling74.com/max5/tutorials/msp-tut/mspdigitalaudio.html">this page</a> for more)
 </p>
 
 <p>
-Because sound is continuous, we can&rsquo;t record every possible value.
+Because sound is continuous, we can't record every possible value.
 Instead, we take measurements of the sound pressure values at some
 evenly spaced interval. For CD quality audio, we take 44100 samples per
 second, or, one sample every 23ish microseconds. We might sample a sine
@@ -45,23 +52,23 @@ wave like this (from Wikipedia):
 </p>
 
 
-<figure>
+<figure id="orga992054">
 <img src="../static/sound/sine_samples.png" alt="sine_samples.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 1: </span>Samples</figcaption>
 </figure>
 
 <p>
-The audio card turns these lists of samples into some &ldquo;real-world&rdquo;
+The audio card turns these lists of samples into some "real-world"
 audio, which is then played through the speakers.
 </p>
 </div>
 
-<div id="outline-container-orgce4d6c2" class="outline-3">
-<h3 id="orgce4d6c2">Types of audio software</h3>
-<div class="outline-text-3" id="text-orgce4d6c2">
+<div id="outline-container-org8c8aa91" class="outline-3">
+<h3 id="org8c8aa91">Types of audio software</h3>
+<div class="outline-text-3" id="text-org8c8aa91">
 <p>
-Next let&rsquo;s think about a few different kinds of audio software (this
+Next let's think about a few different kinds of audio software (this
 list is by no means complete):
 </p>
 
@@ -76,14 +83,14 @@ distortion and compression)</li>
 
 <p>
 Media players are pretty self explanatory, but the others might need
-some explanation. Next on the list is &ldquo;Software instruments.&rdquo; These are
+some explanation. Next on the list is "Software instruments." These are
 just pieces of software that can be used to generate sounds. They are
-played with external keyboards, or &ldquo;programmed&rdquo; with cool user
+played with external keyboards, or "programmed" with cool user
 interfaces.
 </p>
 
 
-<figure>
+<figure id="org755f7d0">
 <img src="../static/sound/reason_drums.jpg" alt="reason_drums.jpg"> 
 
 <figcaption><span class="figure-number">Figure 2: </span>drum machine in some software</figcaption>
@@ -97,14 +104,14 @@ frequency ranges (make the bass louder, make the treble quieter):
 </p>
 
 
-<figure>
+<figure id="org22d36dc">
 <img src="../static/sound/itunes_eq.jpg" alt="itunes_eq.jpg">
 
 <figcaption><span class="figure-number">Figure 3: </span>equalizer</figcaption>
 </figure>
 
 <p>
-Finally, we come to what I&rsquo;m calling a software audio system. Because
+Finally, we come to what I'm calling a software audio system. Because
 there is only one sound card on your system, any audio you are playing
 on your computer must be mixed together, then sent to the audio card. On
 windows, using the default audio system, I can mix audio with this
@@ -112,7 +119,7 @@ little mixer thing:
 </p>
 
 
-<figure>
+<figure id="orgf256415">
 <img src="../static/sound/win_mixer.png" alt="win_mixer.png">
 
 <figcaption><span class="figure-number">Figure 4: </span>windows mixer</figcaption>
@@ -132,22 +139,22 @@ developers use to develop audio applications.
 </div>
 </div>
 
-<div id="outline-container-org6dbc3de" class="outline-2">
-<h2 id="org6dbc3de">Software audio systems</h2>
-<div class="outline-text-2" id="text-org6dbc3de">
+<div id="outline-container-org22bed45" class="outline-2">
+<h2 id="org22bed45">Software audio systems</h2>
+<div class="outline-text-2" id="text-org22bed45">
 <p>
 Most software audio systems (as far as I know) tend to work the same
 way. There is a realtime thread that generates samples and a bunch of
 other threads that deal with everything else. The audio thread is
-usually set up by the audio system&rsquo;s library. The library calls a user
+usually set up by the audio system's library. The library calls a user
 provided callback function to get the samples it needs to deliver to the
 audio card.
 </p>
 </div>
 
-<div id="outline-container-org79ad9b9" class="outline-3">
-<h3 id="org79ad9b9">How fast is realtime?</h3>
-<div class="outline-text-3" id="text-org79ad9b9">
+<div id="outline-container-org4982f93" class="outline-3">
+<h3 id="org4982f93">How fast is realtime?</h3>
+<div class="outline-text-3" id="text-org4982f93">
 <p>
 In the previous section, I claimed that, at 44.1 kHz (the standard CD
 sample rate), we need to take one audio sample approximately every 23
@@ -161,7 +168,7 @@ At these speeds, it would not be possible for the audio system to call
 our callback function to get every individual sample. Instead, the audio
 library system ask us for larger batches of samples. If we simplify the
 real world a bit, we can approximate how often our callback function
-will be called. Here&rsquo;s a table comparing batch size to the time between
+will be called. Here's a table comparing batch size to the time between
 callback function calls (all times in milliseconds):
 </p>
 
@@ -229,7 +236,7 @@ callback function calls (all times in milliseconds):
 
 <p>
 There are many complicated trade offs between sample rate/and batch
-size, so I don&rsquo;t want to get into them now. You can read <a href="http://www.penguinproducer.com/Blog/2011/10/balancing-performance-and-reliability-in-jack/">this</a> for a
+size, so I don't want to get into them now. You can read <a href="http://www.penguinproducer.com/Blog/2011/10/balancing-performance-and-reliability-in-jack/">this</a> for a
 bit more information. Long story short, use the smallest batch size
 your computer can handle.
 </p>
@@ -244,9 +251,9 @@ milliseconds can slow everyone else down.
 </div>
 </div>
 
-<div id="outline-container-org4b5c2f9" class="outline-3">
-<h3 id="org4b5c2f9">Time keeps on ticking</h3>
-<div class="outline-text-3" id="text-org4b5c2f9">
+<div id="outline-container-orga3353d8" class="outline-3">
+<h3 id="orga3353d8">Time keeps on ticking</h3>
+<div class="outline-text-3" id="text-orga3353d8">
 <p>
 If our callback function fails to generate samples quickly enough (or
 uses up all of the CPU time), the audio system will produce crackles,
@@ -268,7 +275,7 @@ eliminates many things we often take for granted, including:
 </ul>
 
 <p>
-First, we can&rsquo;t use locks or semaphores or conditional variables or any
+First, we can't use locks or semaphores or conditional variables or any
 of those kinds of things inside of our realtime callback function. If
 one of our other threads is holding the lock, it might not let go soon
 enough for us to generate our samples on time! If you try to make sure
@@ -290,12 +297,12 @@ the following code perform I/O?
 </p>
 
 <div class="org-src-container">
-<pre class="src src-C++">  <span class="org-type">int</span> <span class="org-function-name">callback</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-comment-delimiter">/* </span><span class="org-comment">args</span><span class="org-comment-delimiter"> */</span><span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-rainbow-delimiters-depth-1">{</span>
-    <span class="org-type">float</span>* <span class="org-variable-name">samples</span> = <span class="org-comment-delimiter">// </span><span class="org-comment">get a contiguous array of samples in a nonblocking way</span>
-    <span class="org-keyword">for</span> <span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">size_t</span> <span class="org-variable-name">i</span> = <span class="org-highlight-numbers-number">0</span>; i &lt; N; i++<span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-2">{</span>
-      output_sample<span class="org-rainbow-delimiters-depth-3">(</span> samples<span class="org-rainbow-delimiters-depth-1">[</span>i<span class="org-rainbow-delimiters-depth-1">]</span> <span class="org-rainbow-delimiters-depth-3">)</span>;
-    <span class="org-rainbow-delimiters-depth-2">}</span>
-  <span class="org-rainbow-delimiters-depth-1">}</span>
+<pre class="src src-C++"><span class="org-type">int</span> <span class="org-function-name">callback</span>(<span class="org-comment-delimiter">/* </span><span class="org-comment">args</span><span class="org-comment-delimiter"> */</span>) {
+  <span class="org-type">float</span>* <span class="org-variable-name">samples</span> = <span class="org-comment-delimiter">// </span><span class="org-comment">get a contiguous array of samples in a nonblocking way</span>
+  <span class="org-keyword">for</span> (<span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; N; i++) {
+    output_sample( samples[i] );
+  }
+}
 </pre>
 </div>
 
@@ -304,7 +311,7 @@ Unfortunately, it can. If the array of samples is <i>extremely</i> large,
 the samples might not all actually be in physical memory. When the
 operating system must contend with increasing memory pressure, it may
 move some of the <a href="https://en.wikipedia.org/wiki/Page_(computer_memory)">virtual memory pages</a> it manages out of physical
-memory. If the page isn&rsquo;t in main memory, the operating system has to
+memory. If the page isn't in main memory, the operating system has to
 go get it from somewhere. These pages are often moved to a hard disk,
 so getting them will require blocking I/O.
 </p>
@@ -320,7 +327,7 @@ may provide you with a workaround. On linux, we can use the system call
 <blockquote>
 <p>
 mlock(), mlock2(), and mlockall() lock part or all of the calling
-process&rsquo;s virtual address space into RAM, preventing that memory from
+process's virtual address space into RAM, preventing that memory from
 being paged to the swap area.
 </p>
 </blockquote>
@@ -352,18 +359,18 @@ allocators</a> which do not violate our realtime constraints.
 </div>
 </div>
 
-<div id="outline-container-orga6b5664" class="outline-2">
-<h2 id="orga6b5664">What do we do?</h2>
-<div class="outline-text-2" id="text-orga6b5664">
+<div id="outline-container-org7268a9f" class="outline-2">
+<h2 id="org7268a9f">What do we do?</h2>
+<div class="outline-text-2" id="text-org7268a9f">
 <p>
 In general, there are a few cool tricks we can use to design around
-these problems, but I&rsquo;m not going to discuss any of them in this post.
+these problems, but I'm not going to discuss any of them in this post.
 Future posts will discuss possible solutions and many of their
 tradeoffs, eventually.
 </p>
 
 <p>
-If you can&rsquo;t wait, here are some interesting things you can read to
+If you can't wait, here are some interesting things you can read to
 learn more:
 </p>
 <ul class="org-ul">
@@ -378,9 +385,18 @@ See you next time!
 </p>
 </div>
 </div>
-</div>
-<div id="postamble" class="status">
-<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2016-12-17-audio-basics.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
-</div>
+
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
 </body>
+</html>
+
+</body>
+
 </html>

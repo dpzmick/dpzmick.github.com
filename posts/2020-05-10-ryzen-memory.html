@@ -1,22 +1,29 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-<!-- 2020-09-21 Mon 21:57 -->
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AMD Zen Memory Latency/Bandwidth Considerations</title>
-<meta name="generator" content="Org mode">
-<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
 </head>
+
 <body>
-<div id="preamble" class="status">
-<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
-</div>
-<div id="content">
-<header>
-<h1 class="title">AMD Zen Memory Latency/Bandwidth Considerations</h1>
-</header><p>
-I&rsquo;ve built a micro-benchmark which sends data between CPU 2 cpu cores.
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">AMD Zen Memory Latency/Bandwidth Considerations</h1>
+    </header>
+
+    <p>
+I've built a micro-benchmark which sends data between CPU 2 cpu cores.
 On my single AMD 3800X desktop CPU, I have crafted a microbenchmark which has different performance characteristics depending on pair of cores I select for testing.
 </p>
 
@@ -25,11 +32,11 @@ Results like this should not be surprising on a multi-socket system, but this sy
 I believe this micro-benchmark is highlighting some of the features of the novel architecture on the new AMD chips.
 </p>
 
-<div id="outline-container-orgf0cad53" class="outline-2">
-<h2 id="orgf0cad53">Caches</h2>
-<div class="outline-text-2" id="text-orgf0cad53">
+<div id="outline-container-org6f981f6" class="outline-2">
+<h2 id="org6f981f6">Caches</h2>
+<div class="outline-text-2" id="text-org6f981f6">
 <p>
-Before diving in to Zen, I&rsquo;d like to talk briefly CPU memory-caching systems.
+Before diving in to Zen, I'd like to talk briefly CPU memory-caching systems.
 </p>
 
 <p>
@@ -58,15 +65,26 @@ Finally, if L3 runs out of space, it will evict the data back to main memory.
 </p>
 
 <p>
-Generally, each CPU has it&rsquo;s own L1 and L2 cache, but the L3 cache is shared by all of the cores.
+Generally, each CPU has it's own L1 and L2 cache, but the L3 cache is shared by all of the cores.
 Something like this:
 </p>
 
-
-<figure>
-<img src="../static/ryzen_numa/unified_l3.png" alt="unified_l3.png">
-
-</figure>
+<div class="org-src-container">
+<pre class="src src-ditaa">/-----------------------------------\
+|                                   |
+|   L3 cache (shared by all cores)  |
+|                                   |
++--------+--------+--------+--------+
+|        |        |        |        |
+| L{1,2} | L{1,2} | L{1,2} | L{1,2} |
+|        |        |        |        |
++--------+--------+--------+--------+
+|        |        |        |        |
+|  Core  |  Core  |  Core  |  Core  |
+|        |        |        |        |
+\--------+--------+--------+--------/
+</pre>
+</div>
 
 <p>
 This style of L1/L2/L3 cache has been common in CPU designs for many years.
@@ -74,22 +92,22 @@ This style of L1/L2/L3 cache has been common in CPU designs for many years.
 </div>
 </div>
 
-<div id="outline-container-org8bf7303" class="outline-2">
-<h2 id="org8bf7303">Ryzen Architecture</h2>
-<div class="outline-text-2" id="text-org8bf7303">
+<div id="outline-container-orga0c3a5d" class="outline-2">
+<h2 id="orga0c3a5d">Ryzen Architecture</h2>
+<div class="outline-text-2" id="text-orga0c3a5d">
 <p>
-To talk about AMD&rsquo;s Zen architecture, there&rsquo;s a few terms we need to define:
+To talk about AMD's Zen architecture, there's a few terms we need to define:
 </p>
 <ul class="org-ul">
 <li>CCX: Core Complex. Contains a max of 4 cores and a slice of the L3 cache.</li>
 <li>CCD: Core Chiplet Die: A single die which contains 2 CCX (on Ryzen 3/5/7)</li>
-<li>IO controller: A separate die containing DDR controllers, PCIe controllers. Also the hub for the &ldquo;Infinity Fabric&rdquo;</li>
+<li>IO controller: A separate die containing DDR controllers, PCIe controllers. Also the hub for the "Infinity Fabric"</li>
 <li>Infinity Fabric: High performance interconnect connecting CCXs</li>
 </ul>
 
 <p>
 Each Ryzen processor has one IO controller and some number of CCD dies.
-This CCD/CCX/IO controller strategy allows AMD to mass produce CCD chips, performance/correctness test the cores (this is called &ldquo;binning&rdquo;), then build a wide variety of different processor configurations.
+This CCD/CCX/IO controller strategy allows AMD to mass produce CCD chips, performance/correctness test the cores (this is called "binning"), then build a wide variety of different processor configurations.
 </p>
 
 <p>
@@ -100,7 +118,7 @@ Each of those physical cores is capable of running two threads (<a href="https:/
 </p>
 
 <p>
-Here&rsquo;s how this looks in <a href="https://www.open-mpi.org/projects/hwloc/">hwloc</a>&rsquo;s <code>lstopo</code> output:
+Here's how this looks in <a href="https://www.open-mpi.org/projects/hwloc/">hwloc</a>'s <code>lstopo</code> output:
 <img src="../static/ryzen_numa/topo.png" alt="topo.png">
 </p>
 
@@ -119,25 +137,25 @@ If cores from different CCXs need to communicate, they will have to use the infi
 </div>
 </div>
 
-<div id="outline-container-orgbbebddc" class="outline-2">
-<h2 id="orgbbebddc">Latency Test</h2>
-<div class="outline-text-2" id="text-orgbbebddc">
+<div id="outline-container-orgec4a4c6" class="outline-2">
+<h2 id="orgec4a4c6">Latency Test</h2>
+<div class="outline-text-2" id="text-orgec4a4c6">
 <p>
 To verify my hypothesis, lets start with a classic pingpong roundtrip latency test.
 </p>
 
 <p>
 This test runs two threads.
-The first thread flips a value in memory to some value &ldquo;Ping&rdquo;, then waits to see another value &ldquo;Pong.&rdquo;
-The second thread waits to see &ldquo;Ping&rdquo;, then flips the value to &ldquo;Pong.&rdquo;
+The first thread flips a value in memory to some value "Ping", then waits to see another value "Pong."
+The second thread waits to see "Ping", then flips the value to "Pong."
 </p>
 
 <p>
-The first thread starts timing right before sending &ldquo;Ping&rdquo;, and stops timing once it sees &ldquo;Pong.&rdquo;
+The first thread starts timing right before sending "Ping", and stops timing once it sees "Pong."
 </p>
 
 <p>
-I&rsquo;ve plotted the mean core-to-core pingpong round-trip time for all pairs of cores (including the SMT cores).
+I've plotted the mean core-to-core pingpong round-trip time for all pairs of cores (including the SMT cores).
 Latency for A-&gt;B and B-&gt;A were both tested (for no particular reason).
 </p>
 
@@ -158,7 +176,7 @@ This plot is a heatmap of core-&gt;core pingpong roundtrip time, in nanoseconds:
 </p>
 
 <p>
-As we can see, there&rsquo;s a clear difference in round-trip latency between pairs of cores in the same CCX and pairs of cores in a different CCX.
+As we can see, there's a clear difference in round-trip latency between pairs of cores in the same CCX and pairs of cores in a different CCX.
 For example, core 0-&gt;core 3 round-trip latency is pinkish, but core 0-&gt;core 4 latency is dark blueish.
 The actual values I got around ~96ns for 0-&gt;3 and ~196ns for 0-&gt;4.
 </p>
@@ -178,24 +196,24 @@ Few applications actually have any reason to bounce a single value back and fort
 </div>
 </div>
 
-<div id="outline-container-org4bce9fe" class="outline-2">
-<h2 id="org4bce9fe">Bandwidth Test</h2>
-<div class="outline-text-2" id="text-org4bce9fe">
+<div id="outline-container-orgf4160d6" class="outline-2">
+<h2 id="orgf4160d6">Bandwidth Test</h2>
+<div class="outline-text-2" id="text-orgf4160d6">
 <p>
-When discussing latency, programmers who are more bandwidth focused will often (rightly) say something like &ldquo;the latency doesn&rsquo;t matter, I only care about bandwidth.&rdquo;
+When discussing latency, programmers who are more bandwidth focused will often (rightly) say something like "the latency doesn't matter, I only care about bandwidth."
 Most programmers are more focused on bandwidth than latency, because generally we care a lot more about throughput than latency.
 </p>
 </div>
 
-<div id="outline-container-org86cd8d8" class="outline-3">
-<h3 id="org86cd8d8">Baseline with large core-to-core copies</h3>
-<div class="outline-text-3" id="text-org86cd8d8">
+<div id="outline-container-orge4c0d17" class="outline-3">
+<h3 id="orge4c0d17">Baseline with large core-to-core copies</h3>
+<div class="outline-text-3" id="text-orge4c0d17">
 <p>
-Let&rsquo;s start by proving that, when moving around large chunks of data, none of this matters.
+Let's start by proving that, when moving around large chunks of data, none of this matters.
 </p>
 
 <p>
-I&rsquo;ve created a small tester which:
+I've created a small tester which:
 </p>
 <ul class="org-ul">
 <li>binds to a core</li>
@@ -212,12 +230,12 @@ We should be able fire off a <code>memcpy</code> then sit back while the hardwar
 </p>
 
 <p>
-Here&rsquo;s the plot:
+Here's the plot:
 <img src="../static/ryzen_numa/bw_baseline.png" alt="bw_baseline.png">
 </p>
 
 <p>
-As we can see, we&rsquo;re pretty much getting a ~14.5-15 GiB/s copy rate regardless of the cores selected.
+As we can see, we're pretty much getting a ~14.5-15 GiB/s copy rate regardless of the cores selected.
 This is good news.
 The new AMD core layout makes no difference when copying around 4 gig chunks of data.
 </p>
@@ -228,9 +246,9 @@ For full details about this benchmark, please see the source and my results <a h
 </div>
 </div>
 
-<div id="outline-container-orgb78934a" class="outline-3">
-<h3 id="orgb78934a">When might it matter?</h3>
-<div class="outline-text-3" id="text-orgb78934a">
+<div id="outline-container-org610b6b5" class="outline-3">
+<h3 id="org610b6b5">When might it matter?</h3>
+<div class="outline-text-3" id="text-org610b6b5">
 <p>
 We are often able to amortize high latency operations over large transfers or by work on something else to hide the costs of high latency.
 However, as data sizes shrink, it becomes harder and harder to hide latency.
@@ -243,26 +261,26 @@ Recently, it seems like (anecdotally) there has been a trend of using queues to 
 <ul class="org-ul">
 <li>The <a href="https://jackaudio.org/">Jack</a> audio system uses ring buffers to transfer audio samples between multiple communicating applications</li>
 <li>A number of async IO libraries use thread pools, event queues, and work stealing scheduling</li>
-<li>Go&rsquo;s channels are fundamentally just queues between concurrent (sometimes running in parallel) threads</li>
-<li>Erlang&rsquo;s fundamental abstraction is threads that communicate over queues</li>
+<li>Go's channels are fundamentally just queues between concurrent (sometimes running in parallel) threads</li>
+<li>Erlang's fundamental abstraction is threads that communicate over queues</li>
 <li>etc..</li>
 </ul>
 
 <p>
-When messages sent over these queues are small, we might be able to observe Ryzen&rsquo;s latency characteristics as a drop in throughput.
+When messages sent over these queues are small, we might be able to observe Ryzen's latency characteristics as a drop in throughput.
 </p>
 
 <p>
-I&rsquo;ve built a simple microbenchmark to test this.
+I've built a simple microbenchmark to test this.
 The benchmark runs a writer thread and some number of reader threads.
-The threads share a region of memory that contains a bunch of &ldquo;chunks&rdquo;.
+The threads share a region of memory that contains a bunch of "chunks".
 The array of chunks looks sort of a like a single producer, single consumer queue:
 </p>
 <div class="org-src-container">
 <pre class="src src-c"><span class="org-keyword">typedef</span> <span class="org-keyword">struct</span> {
   <span class="org-type">uint64_t</span> <span class="org-variable-name">ready</span>;          
-  <span class="org-type">char</span>     <span class="org-variable-name">padding</span>[ <span class="org-constant">CACHE_LINE_SIZE</span> - <span class="org-keyword">sizeof</span>( <span class="org-type">uint64_t</span> ) ];
-  <span class="org-type">char</span>     <span class="org-variable-name">data</span>[ <span class="org-constant">N_DATA_LINES</span>*<span class="org-constant">CACHE_LINE_SIZE</span> ];
+  <span class="org-type">char</span>     <span class="org-variable-name">padding</span>[ CACHE_LINE_SIZE - <span class="org-keyword">sizeof</span>( <span class="org-type">uint64_t</span> ) ];
+  <span class="org-type">char</span>     <span class="org-variable-name">data</span>[ N_DATA_LINES*CACHE_LINE_SIZE ];
 } <span class="org-type">chunk_t</span>;
 </pre>
 </div>
@@ -278,7 +296,7 @@ Padding is introduced to ensure that the data region and the <code>ready</code> 
 In pseudocode, the writer looks something like this:
 </p>
 <div class="org-src-container">
-<pre class="src src-c"><span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = <span class="org-highlight-numbers-number">0</span>; i &lt; <span class="org-constant">N_CHUNKS</span>; ++i ) {
+<pre class="src src-c"><span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; N_CHUNKS; ++i ) {
   populate_chunk_data( &amp;chunks[i] );
   <span class="org-comment-delimiter">// </span><span class="org-comment">signal that the reader should read the data</span>
   atomic_store( &amp;chunks[i].ready, <span class="org-constant">true</span> );
@@ -290,7 +308,7 @@ In pseudocode, the writer looks something like this:
 The reader looks something like this:
 </p>
 <div class="org-src-container">
-<pre class="src src-c"><span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = <span class="org-highlight-numbers-number">0</span>; i &lt; <span class="org-constant">N_CHUNKS</span>; ++i ) {
+<pre class="src src-c"><span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; N_CHUNKS; ++i ) {
   <span class="org-comment-delimiter">// </span><span class="org-comment">Wait for the chunk to be ready</span>
   <span class="org-keyword">while</span>( <span class="org-negation-char">!</span>atomic_load( &amp;chunks[i].ready ) ) { }
   read_and_discard_data( &amp;chunks[i] );
@@ -304,24 +322,24 @@ If the reader falls behind the writer, the writer should be able to plow ahead w
 </p>
 
 <p>
-In the benchmark, I&rsquo;ve placed the array of chunks into a 2 megabyte <a href="https://kerneltalks.com/services/what-is-huge-pages-in-linux/">huge page</a>.
-I created a region containing 8192 chunks, and each chunk&rsquo;s data segment contains 8 cache lines (512 bytes) of data.
-The number of chunks doesn&rsquo;t seem to affect the benchmark much, but the size of the data segment does.
-I&rsquo;ve kept the size low to highlight the effects I&rsquo;m looking for, but, these effects seem to still be present for data sizes up to a few KiB.
+In the benchmark, I've placed the array of chunks into a 2 megabyte <a href="https://kerneltalks.com/services/what-is-huge-pages-in-linux/">huge page</a>.
+I created a region containing 8192 chunks, and each chunk's data segment contains 8 cache lines (512 bytes) of data.
+The number of chunks doesn't seem to affect the benchmark much, but the size of the data segment does.
+I've kept the size low to highlight the effects I'm looking for, but, these effects seem to still be present for data sizes up to a few KiB.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org724fd17" class="outline-3">
-<h3 id="org724fd17">Results</h3>
-<div class="outline-text-3" id="text-org724fd17">
+<div id="outline-container-orgb45caef" class="outline-3">
+<h3 id="orgb45caef">Results</h3>
+<div class="outline-text-3" id="text-orgb45caef">
 <p>
-Using the same style of plots that we&rsquo;ve already see, let&rsquo;s first look at bandwidth reported by the writer.
-This plot shows the write rate when Y-axis core is sending data to X-axis core (rate is in GiB/s, I&rsquo;ve again included the SMT cores):
+Using the same style of plots that we've already see, let's first look at bandwidth reported by the writer.
+This plot shows the write rate when Y-axis core is sending data to X-axis core (rate is in GiB/s, I've again included the SMT cores):
 </p>
 
 
-<figure>
+<figure id="org53da9b5">
 <img src="../static/ryzen_numa/writerplot.png" alt="writerplot.png">
 
 </figure>
@@ -333,17 +351,17 @@ This plot shows the write rate when Y-axis core is sending data to X-axis core (
 </ul>
 
 <p>
-There&rsquo;s some patterns in this plot that I have not been able to explain, but, there doesn&rsquo;t seem to be any significant variation in write rate when the reader core is on a different CCX.
-I&rsquo;m reasonably confident claiming that the writer is unaffected by choice of core.
+There's some patterns in this plot that I have not been able to explain, but, there doesn't seem to be any significant variation in write rate when the reader core is on a different CCX.
+I'm reasonably confident claiming that the writer is unaffected by choice of core.
 </p>
 
 <p>
-Here&rsquo;s the rates that the reader reported:
+Here's the rates that the reader reported:
 <img src="../static/ryzen_numa/readerplot.png" alt="readerplot.png">
 </p>
 
 <p>
-From the reader&rsquo;s perspective, the differences are stark.
+From the reader's perspective, the differences are stark.
 When the reader and writer share an L3 cache (are in the same CCX), we consistently see a read rate around 13-14 GiB/s.
 When the reader and writer do not share the L3 cache (are in different CCX), the read rates are consistently lower, around 10-11 GiB/s.
 </p>
@@ -359,9 +377,9 @@ For full details about this benchmark, please see the source and my results <a h
 </div>
 </div>
 
-<div id="outline-container-org134e595" class="outline-2">
-<h2 id="org134e595">Conclusions</h2>
-<div class="outline-text-2" id="text-org134e595">
+<div id="outline-container-orgdd0585c" class="outline-2">
+<h2 id="orgdd0585c">Conclusions</h2>
+<div class="outline-text-2" id="text-orgdd0585c">
 <p>
 This sort of behavior will not come as a surprised for programmers used to programming for multi-socket (multiple physical CPU) server systems (see <a href="https://en.wikipedia.org/wiki/Non-uniform_memory_access">NUMA</a>).
 However, for those writing parallel applications, I feel like this effect is still notable and warrants slightly different considerations than traditional NUMA.
@@ -370,12 +388,12 @@ However, for those writing parallel applications, I feel like this effect is sti
 <p>
 In a traditional multi-socket/multiple-physical CPU system, RAM is physically connected to only one of the many CPUS.
 If core0 of cpu0 needs to access memory physically attached to cpu1, it will pay a latency penalty to access this memory (this is NUMA - Non-Uniform Memory Access).
-However, we&rsquo;ve also generally assumed that core0 can access any part of memory attached to cpu0 with the same latency.
+However, we've also generally assumed that core0 can access any part of memory attached to cpu0 with the same latency.
 Therefore, applications built for NUMA architectures often focused on getting their data into the memory CPU attached to a CPU, then using the cores on that CPU to process the data.
 </p>
 
 <p>
-For platforms like AMD&rsquo;s (and recent Intel, see <a href="https://itpeernetwork.intel.com/intel-mesh-architecture-data-center/">Intel Mesh</a>) we have to now make NUMA-style considerations any time we are operating over a piece of data on multiple cores, not just when dealing with multiple sockets.
+For platforms like AMD's (and recent Intel, see <a href="https://itpeernetwork.intel.com/intel-mesh-architecture-data-center/">Intel Mesh</a>) we have to now make NUMA-style considerations any time we are operating over a piece of data on multiple cores, not just when dealing with multiple sockets.
 </p>
 
 <p>
@@ -389,8 +407,8 @@ Consider the specs for the EPYC 7542:
 
 <p>
 On the 7542, we have to divide this 128 MiB of L3 cache up into CCX cache slices.
-Assuming each CCX has 4 cores (which I think is correct), we&rsquo;d have 32/4=8 CCXs on this CPU.
-Therefore, each CCX (4 cores) only has 16 MiB of &ldquo;close L3 cache memory,&rdquo; accessing the rest of the cache will incur a small amount of extra latency.
+Assuming each CCX has 4 cores (which I think is correct), we'd have 32/4=8 CCXs on this CPU.
+Therefore, each CCX (4 cores) only has 16 MiB of "close L3 cache memory," accessing the rest of the cache will incur a small amount of extra latency.
 </p>
 
 <p>
@@ -400,14 +418,23 @@ Building high performance code with 2.5 MiB of super fast shared memory per core
 </p>
 
 <p>
-I suspect that &ldquo;networked&rdquo; cpu architectures will become the new normal in the next few years.
+I suspect that "networked" cpu architectures will become the new normal in the next few years.
 These new platforms are going probably going to be increasingly more and more sensitive to data access and data movement than the systems of the past.
 </p>
 </div>
 </div>
-</div>
-<div id="postamble" class="status">
-<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2020-05-10-ryzen-memory.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
-</div>
+
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
 </body>
+</html>
+
+</body>
+
 </html>

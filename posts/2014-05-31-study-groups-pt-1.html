@@ -1,46 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<!-- 2020-09-21 Mon 21:57 -->
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Study Groups Pt. 1</title>
-<meta name="generator" content="Org mode">
-<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        displayAlign: "center",
-        displayIndent: "0em",
+<html>
 
-        "HTML-CSS": { scale: 100,
-                        linebreaks: { automatic: "false" },
-                        webFont: "TeX"
-                       },
-        SVG: {scale: 100,
-              linebreaks: { automatic: "false" },
-              font: "TeX"},
-        NativeMML: {scale: 100},
-        TeX: { equationNumbers: {autoNumber: "AMS"},
-               MultLineWidth: "85%",
-               TagSide: "right",
-               TagIndent: ".8em"
-             }
-});
-</script>
-<script type="text/javascript"
-        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
 </head>
+
 <body>
-<div id="preamble" class="status">
-<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
-</div>
-<div id="content">
-<header>
-<h1 class="title">Study Groups Pt. 1</h1>
-</header><p>
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">Study Groups Pt. 1</h1>
+    </header>
+
+    <p>
 Almost without fail, whenever my friends and I get together to study for
-something in a group, we end up in a group that, due to it&rsquo;s size,
-decreases our productivity. I&rsquo;m reading a book at the moment about
+something in a group, we end up in a group that, due to it's size,
+decreases our productivity. I'm reading a book at the moment about
 animal behavior, and one of the chapters referenced some research done
 about animal group formation. In some models, with simulation, it can be
 shown that groups almost always grow to be larger than their optimal
@@ -50,15 +35,15 @@ I plan to strengthen the model and (hopefully) present possible
 solutions to the problem.
 </p>
 
-<div id="outline-container-org5193383" class="outline-2">
-<h2 id="org5193383">The Model</h2>
-<div class="outline-text-2" id="text-org5193383">
+<div id="outline-container-org51bb9e5" class="outline-2">
+<h2 id="org51bb9e5">The Model</h2>
+<div class="outline-text-2" id="text-org51bb9e5">
 <p>
 The basic assumptions of the simulation we will use are as follows:
 </p>
 
 <ul class="org-ul">
-<li>When a person &ldquo;arrives&rdquo; they must chose a study group to join (can&rsquo;t
+<li>When a person "arrives" they must chose a study group to join (can't
 walk away)</li>
 <li>People arrive one at a time</li>
 <li>Once someone has joined a group, they do not leave</li>
@@ -66,11 +51,11 @@ walk away)</li>
 </ul>
 
 <p>
-We need a method to determine which group is &ldquo;best,&rdquo; a group fitness
+We need a method to determine which group is "best," a group fitness
 function. So, lets consider how the fitness of a group changes as people
 join the group. Every person the joins benefits the group in some way,
 but, if the group is large, adding another member will likely decrease
-the group&rsquo;s productivity. To simplify this a bit more, add the following
+the group's productivity. To simplify this a bit more, add the following
 assumptions:
 </p>
 
@@ -95,12 +80,12 @@ where:
 <ul class="org-ul">
 <li>$ F $ is the fitness function.</li>
 <li>$ n $ is the number of people currently in the group</li>
-<li>$ &alpha; $ is an individual&rsquo;s contribution to the study group</li>
-<li>$ &beta; $ is an individual&rsquo;s detriment to the study group</li>
+<li>$ &alpha; $ is an individual's contribution to the study group</li>
+<li>$ &beta; $ is an individual's detriment to the study group</li>
 </ul>
 
 <p>
-Let&rsquo;s explore this for a moment before moving on. Consider just $
+Let's explore this for a moment before moving on. Consider just $
 \frac{dF}{dn} = &alpha; $. This piece of the equation tells us that as
 the number of people in the study group changes, the change in the
 fitness of the study group is proportional to $ &alpha; $, the individual
@@ -127,9 +112,9 @@ optimal size is $ \frac{\alpha}{\beta} $.
 </div>
 </div>
 
-<div id="outline-container-org244bbf8" class="outline-2">
-<h2 id="org244bbf8">The Simulation</h2>
-<div class="outline-text-2" id="text-org244bbf8">
+<div id="outline-container-org2c0b368" class="outline-2">
+<h2 id="org2c0b368">The Simulation</h2>
+<div class="outline-text-2" id="text-org2c0b368">
 <p>
 The simulation I have in mind is fairly simple.
 </p>
@@ -145,9 +130,9 @@ function)</li>
 </div>
 </div>
 
-<div id="outline-container-org202bfbb" class="outline-2">
-<h2 id="org202bfbb">Implementation and Results</h2>
-<div class="outline-text-2" id="text-org202bfbb">
+<div id="outline-container-org51fa1f3" class="outline-2">
+<h2 id="org51fa1f3">Implementation and Results</h2>
+<div class="outline-text-2" id="text-org51fa1f3">
 <p>
 I wrote some python code to see how this system would perform. I will
 leave the code at the bottom of the document. The results seem to
@@ -155,19 +140,19 @@ correspond with reality.
 </p>
 
 
-<figure>
+<figure id="org073d599">
 <img src="../static/study_groups/1x.5.png" alt="1x.5.png" class="light-invert">
 
 </figure>
 
 
-<figure>
+<figure id="org517ea67">
 <img src="../static/study_groups/1x.4.png" alt="1x.4.png" class="light-invert">
 
 </figure>
 
 <p>
-And here are links to all of the images I&rsquo;ve generated at the time of
+And here are links to all of the images I've generated at the time of
 writing.
 </p>
 
@@ -182,9 +167,9 @@ writing.
 </div>
 </div>
 
-<div id="outline-container-org9001384" class="outline-2">
-<h2 id="org9001384">Conclusion</h2>
-<div class="outline-text-2" id="text-org9001384">
+<div id="outline-container-org2b53bc9" class="outline-2">
+<h2 id="org2b53bc9">Conclusion</h2>
+<div class="outline-text-2" id="text-org2b53bc9">
 <p>
 From this model, it seems like we tend to form groups larger than would
 be optimal, because people continue to join the group once their joining
@@ -195,7 +180,7 @@ personal productivity.
 <p>
 As I said at the top I do plan to explore this idea more. I hope to
 build a more complicated simulator allowing groups to split, experiment
-with a &ldquo;selflessness factor,&rdquo; some chance that a person will not join a
+with a "selflessness factor," some chance that a person will not join a
 group if it hurts the group but helps the person, and a few other
 things. Please leave some feedback if this is interesting to you, we
 could discuss more ideas!
@@ -203,53 +188,62 @@ could discuss more ideas!
 </div>
 </div>
 
-<div id="outline-container-org49ad9f2" class="outline-2">
-<h2 id="org49ad9f2">Simulation Code (not pythonic!)</h2>
-<div class="outline-text-2" id="text-org49ad9f2">
+<div id="outline-container-org7621ba4" class="outline-2">
+<h2 id="org7621ba4">Simulation Code (not pythonic!)</h2>
+<div class="outline-text-2" id="text-org7621ba4">
 <div class="org-src-container">
-<pre class="src src-python">  <span class="org-keyword">from</span> math <span class="org-keyword">import</span> <span class="org-builtin">pow</span>
-  <span class="org-keyword">from</span> random <span class="org-keyword">import</span> randint
-  <span class="org-comment-delimiter">###### </span><span class="org-comment">Parameters</span>
-  <span class="org-variable-name">a</span> = <span class="org-highlight-numbers-number">1.0</span> <span class="org-comment-delimiter"># </span><span class="org-comment">alpha define above</span>
-  <span class="org-variable-name">b</span> = .<span class="org-highlight-numbers-number">5</span>  <span class="org-comment-delimiter"># </span><span class="org-comment">beta, also define above</span>
-  <span class="org-variable-name">maxgroups</span> = <span class="org-highlight-numbers-number">15</span>
-  <span class="org-variable-name">numjoiners</span> = <span class="org-highlight-numbers-number">10</span>
+<pre class="src src-python"><span class="org-keyword">from</span> math <span class="org-keyword">import</span> <span class="org-builtin">pow</span>
+<span class="org-keyword">from</span> random <span class="org-keyword">import</span> randint
+<span class="org-comment-delimiter">###### </span><span class="org-comment">Parameters</span>
+<span class="org-variable-name">a</span> = 1.0 <span class="org-comment-delimiter"># </span><span class="org-comment">alpha define above</span>
+<span class="org-variable-name">b</span> = .5  <span class="org-comment-delimiter"># </span><span class="org-comment">beta, also define above</span>
+<span class="org-variable-name">maxgroups</span> = 15
+<span class="org-variable-name">numjoiners</span> = 10
 
-  <span class="org-comment-delimiter">###### </span><span class="org-comment">Globals</span>
-  <span class="org-variable-name">pool</span> = [<span class="org-highlight-numbers-number">0</span>] * maxgroups
+<span class="org-comment-delimiter">###### </span><span class="org-comment">Globals</span>
+<span class="org-variable-name">pool</span> = [0] * maxgroups
 
-  <span class="org-comment-delimiter">###### </span><span class="org-comment">Functions</span>
-  <span class="org-keyword">def</span> <span class="org-function-name">fitness</span>(n):
-      <span class="org-keyword">return</span> a*n - (b/<span class="org-highlight-numbers-number">2</span>)*<span class="org-builtin">pow</span>(n,<span class="org-highlight-numbers-number">2</span>)
+<span class="org-comment-delimiter">###### </span><span class="org-comment">Functions</span>
+<span class="org-keyword">def</span> <span class="org-function-name">fitness</span>(n):
+    <span class="org-keyword">return</span> a*n - (b/2)*<span class="org-builtin">pow</span>(n,2)
 
-  <span class="org-comment-delimiter">##### </span><span class="org-comment">Simulation</span>
-  <span class="org-keyword">if</span> <span class="org-builtin">__name__</span> == <span class="org-string">"__main__"</span>:
-      <span class="org-keyword">print</span>(<span class="org-string">"Starting the simulation"</span>)
-      <span class="org-keyword">for</span> i <span class="org-keyword">in</span> <span class="org-builtin">xrange</span>(<span class="org-highlight-numbers-number">0</span>, numjoiners):
-          <span class="org-variable-name">best</span> = (-<span class="org-highlight-numbers-number">1</span>, <span class="org-constant">None</span>)
-          <span class="org-keyword">for</span> index, fits <span class="org-keyword">in</span> <span class="org-builtin">enumerate</span>(<span class="org-builtin">map</span>(fitness, pool)):
-              <span class="org-keyword">if</span> best[<span class="org-highlight-numbers-number">1</span>] == <span class="org-constant">None</span> <span class="org-keyword">or</span> fits &gt; best[<span class="org-highlight-numbers-number">1</span>]:
-                  <span class="org-variable-name">best</span> = (index, fits)
-          <span class="org-keyword">if</span> best[<span class="org-highlight-numbers-number">0</span>] &gt; <span class="org-highlight-numbers-number">0</span>:
-              pool[best[<span class="org-highlight-numbers-number">0</span>]] += <span class="org-highlight-numbers-number">1</span>
-          <span class="org-keyword">elif</span> best[<span class="org-highlight-numbers-number">0</span>] == <span class="org-highlight-numbers-number">0</span>:
-              <span class="org-variable-name">pool</span>[randint(<span class="org-highlight-numbers-number">0</span>, <span class="org-builtin">len</span>(pool) - <span class="org-highlight-numbers-number">1</span>)] += <span class="org-highlight-numbers-number">1</span>
-          <span class="org-keyword">else</span>:
-              <span class="org-keyword">print</span>(<span class="org-string">"I refuse to join these groups"</span>)
-              <span class="org-keyword">break</span>
-      <span class="org-keyword">print</span>(pool)
-      <span class="org-keyword">print</span>(<span class="org-builtin">map</span>(fitness,pool))
+<span class="org-comment-delimiter">##### </span><span class="org-comment">Simulation</span>
+<span class="org-keyword">if</span> <span class="org-builtin">__name__</span> == <span class="org-string">"__main__"</span>:
+    <span class="org-keyword">print</span>(<span class="org-string">"Starting the simulation"</span>)
+    <span class="org-keyword">for</span> i <span class="org-keyword">in</span> <span class="org-builtin">xrange</span>(0, numjoiners):
+        <span class="org-variable-name">best</span> = (-1, <span class="org-constant">None</span>)
+        <span class="org-keyword">for</span> index, fits <span class="org-keyword">in</span> <span class="org-builtin">enumerate</span>(<span class="org-builtin">map</span>(fitness, pool)):
+            <span class="org-keyword">if</span> best[1] == <span class="org-constant">None</span> <span class="org-keyword">or</span> fits &gt; best[1]:
+                <span class="org-variable-name">best</span> = (index, fits)
+        <span class="org-keyword">if</span> best[0] &gt; 0:
+            pool[best[0]] += 1
+        <span class="org-keyword">elif</span> best[0] == 0:
+            <span class="org-variable-name">pool</span>[randint(0, <span class="org-builtin">len</span>(pool) - 1)] += 1
+        <span class="org-keyword">else</span>:
+            <span class="org-keyword">print</span>(<span class="org-string">"I refuse to join these groups"</span>)
+            <span class="org-keyword">break</span>
+    <span class="org-keyword">print</span>(pool)
+    <span class="org-keyword">print</span>(<span class="org-builtin">map</span>(fitness,pool))
 
-      <span class="org-keyword">print</span>(<span class="org-string">"optimal group size %d"</span> % (a/b) )
-      <span class="org-keyword">print</span>(<span class="org-string">"average non_empty group size %d"</span> %
-              (<span class="org-builtin">sum</span>(pool) / <span class="org-builtin">len</span>(<span class="org-builtin">filter</span>(<span class="org-keyword">lambda</span> a: a != <span class="org-highlight-numbers-number">0</span>, pool))))
+    <span class="org-keyword">print</span>(<span class="org-string">"optimal group size %d"</span> % (a/b) )
+    <span class="org-keyword">print</span>(<span class="org-string">"average non_empty group size %d"</span> %
+            (<span class="org-builtin">sum</span>(pool) / <span class="org-builtin">len</span>(<span class="org-builtin">filter</span>(<span class="org-keyword">lambda</span> a: a != 0, pool))))
 </pre>
 </div>
 </div>
 </div>
-</div>
-<div id="postamble" class="status">
-<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2014-05-31-study-groups-pt-1.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
-</div>
+
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
 </body>
+</html>
+
+</body>
+
 </html>

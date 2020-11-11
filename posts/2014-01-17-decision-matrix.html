@@ -1,61 +1,46 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<!-- 2020-09-21 Mon 21:57 -->
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Decision Matrix</title>
-<meta name="generator" content="Org mode">
-<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        displayAlign: "center",
-        displayIndent: "0em",
+<html>
 
-        "HTML-CSS": { scale: 100,
-                        linebreaks: { automatic: "false" },
-                        webFont: "TeX"
-                       },
-        SVG: {scale: 100,
-              linebreaks: { automatic: "false" },
-              font: "TeX"},
-        NativeMML: {scale: 100},
-        TeX: { equationNumbers: {autoNumber: "AMS"},
-               MultLineWidth: "85%",
-               TagSide: "right",
-               TagIndent: ".8em"
-             }
-});
-</script>
-<script type="text/javascript"
-        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
 </head>
+
 <body>
-<div id="preamble" class="status">
-<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
-</div>
-<div id="content">
-<header>
-<h1 class="title">Decision Matrix</h1>
-</header><p>
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">Decision Matrix</h1>
+    </header>
+
+    <p>
 Decision matrix analysis is a simple way of selecting one of many
 options. This post exists to allow me to dump thoughts somewhere (so I
-don&rsquo;t forget them) and share them with others easily. I will probably
+don't forget them) and share them with others easily. I will probably
 update this document as I have new ideas.
 </p>
 
-<div id="outline-container-org1e251b0" class="outline-2">
-<h2 id="org1e251b0">Brief Description</h2>
-<div class="outline-text-2" id="text-org1e251b0">
+<div id="outline-container-orge2fee61" class="outline-2">
+<h2 id="orge2fee61">Brief Description</h2>
+<div class="outline-text-2" id="text-orge2fee61">
 <p>
 Simply put, a decision consists of objectives and alternatives. An
 objective is something you want to fulfill by making the decision. For
-example, a career decision objective may be &ldquo;Decent Pay&rdquo; or &ldquo;Short
-Commute.&rdquo; In deciding what university to attend, objectives may be
-things such as &ldquo;Academic Rating,&rdquo; &ldquo;Class Size,&rdquo; and &ldquo;Cost.&rdquo; These
+example, a career decision objective may be "Decent Pay" or "Short
+Commute." In deciding what university to attend, objectives may be
+things such as "Academic Rating," "Class Size," and "Cost." These
 objectives all have an importance, or weight. When selecting a car to
-purchase, the objective &ldquo;Low Fuel Consumption&rdquo; may be extremely
-important to you, but &ldquo;Heated Seats&rdquo; might be less important. I would
+purchase, the objective "Low Fuel Consumption" may be extremely
+important to you, but "Heated Seats" might be less important. I would
 say that fuel economy is weighted more heavily than heated seats, if
 this were the case.
 </p>
@@ -65,9 +50,9 @@ Alternatives, or options, are the different options you have to choose
 from, so, in the car example, my options may be a Honda Accord, Toyota
 Camry, and a Maserati. To evaluate these options, assign a rating for
 each of your chosen objectives. So, say my objectives were Cost and
-Style. The Maserati would get a &ldquo;Very Displeased&rdquo; for cost, but a &ldquo;Very
-Pleased&rdquo; for style, and the Camry would get a &ldquo;Very pleased&rdquo; for cost,
-and a &ldquo;Somewhat Pleased&rdquo; for style.
+Style. The Maserati would get a "Very Displeased" for cost, but a "Very
+Pleased" for style, and the Camry would get a "Very pleased" for cost,
+and a "Somewhat Pleased" for style.
 </p>
 
 <p>
@@ -120,16 +105,16 @@ technique also allows you to understand trade offs. In the example
 above, if we chose the Camry, we would be sacrificing a bit on Style to
 save on Cost. Because a low cost is important to us, we may be willing
 to make that trade. Using the technique also creates a mechanism to
-experiment. You can ask question like, &ldquo;How much cheaper would the
-Maserati need to be for it to become &lsquo;better&rsquo; than the Camry,&rdquo; or, &ldquo;How
-much of a pay cut am I willing to take to continue living in Houston?&rdquo;
+experiment. You can ask question like, "How much cheaper would the
+Maserati need to be for it to become 'better' than the Camry," or, "How
+much of a pay cut am I willing to take to continue living in Houston?"
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgdfc8b23" class="outline-2">
-<h2 id="orgdfc8b23">Mathematical Definitions</h2>
-<div class="outline-text-2" id="text-orgdfc8b23">
+<div id="outline-container-orgb20c1ba" class="outline-2">
+<h2 id="orgb20c1ba">Mathematical Definitions</h2>
+<div class="outline-text-2" id="text-orgb20c1ba">
 <p>
 To model a decision with \(n\) objectives and \(m\) alternatives, define:
 </p>
@@ -159,7 +144,7 @@ where:
 <p>
 The vector
 \[ \mathbf{a_i} = \begin{pmatrix} r_1 & r_2 & \cdots & r_m \end{pmatrix} \]
-for the ith alternative, where \(r_k\) is the ith alternative&rsquo;s rating
+for the ith alternative, where \(r_k\) is the ith alternative's rating
 for the kth objective.
 </p>
 
@@ -182,9 +167,9 @@ The relative strengths of each alternative are given by \(A\mathbf{o}\).
 </div>
 </div>
 
-<div id="outline-container-org4a03e5f" class="outline-2">
-<h2 id="org4a03e5f">Example</h2>
-<div class="outline-text-2" id="text-org4a03e5f">
+<div id="outline-container-org81b9d72" class="outline-2">
+<h2 id="org81b9d72">Example</h2>
+<div class="outline-text-2" id="text-org81b9d72">
 <p>
 Let us revist the car example. Suppose my objectives are Cost, Style,
 and Comfort. Using a 1-5 importance scale, Cost would have an importance
@@ -235,7 +220,7 @@ So, we build our alternatives matrix.
 </p>
 
 <p>
-And get each alternative&rsquo;s score:
+And get each alternative's score:
 </p>
 
 <p>
@@ -267,9 +252,9 @@ us.
 </div>
 </div>
 
-<div id="outline-container-org2abf0c4" class="outline-2">
-<h2 id="org2abf0c4">Analysis</h2>
-<div class="outline-text-2" id="text-org2abf0c4">
+<div id="outline-container-org0faedc4" class="outline-2">
+<h2 id="org0faedc4">Analysis</h2>
+<div class="outline-text-2" id="text-org0faedc4">
 <p>
 Now that we have a model of a decision, it is interesting to ask a few
 questions about the model, for example:
@@ -281,26 +266,26 @@ for comfort and style for our desire to keep cost low.</li>
 <li>How much would we have to sacrifice on cost to make the Maserati the
 best option?</li>
 <li>Which of our objectives have impact? If an objective gets the same,
-or close to the same rating for each candidate, it doesn&rsquo;t really
+or close to the same rating for each candidate, it doesn't really
 impact the decision.</li>
 </ol>
 </div>
 </div>
 
-<div id="outline-container-org323c1f8" class="outline-2">
-<h2 id="org323c1f8">Trade offs</h2>
-<div class="outline-text-2" id="text-org323c1f8">
+<div id="outline-container-org02fd950" class="outline-2">
+<h2 id="org02fd950">Trade offs</h2>
+<div class="outline-text-2" id="text-org02fd950">
 <p>
 Referring back to our car example, how can we try and understand what we
 are trading if we chose the Maserati over the Civic?
 </p>
 
 <p>
-Let&rsquo;s define \(\mathbf{t}(i,j) = \mathbf{a_i} - \mathbf{a_j}\) to be the
+Let's define \(\mathbf{t}(i,j) = \mathbf{a_i} - \mathbf{a_j}\) to be the
 trades made if alternative \(i\) is selected over alternative \(j\). Any
 negative value in \(\mathbf{t}\) represents a sacrificed objective in
 the trade, and any positive value represents something gained. So, if
-the 1st element is negative and the last two are positive, we&rsquo;ve
+the 1st element is negative and the last two are positive, we've
 sacrificed on our first objective for gains on our second and third.
 </p>
 
@@ -313,7 +298,7 @@ and \(\mathbf{a\_3} = \begin{pmatrix} 3 & 1 & 2 \end{pmatrix}\) for the Civic.
 \(\mathbf{t}(1,3) = \mathbf{a\_1} - \mathbf{a\_3} = \begin{pmatrix} -6 & 1 & 1 \end{pmatrix}\)
 So, if we were to choose the Maserati over the Civic, we would be
 sacrificing money (first objective) to gain comfort and style (second
-and third objectives). But, we aren&rsquo;t willing to make this trade; we&rsquo;ve
+and third objectives). But, we aren't willing to make this trade; we've
 demonstrated that in the previous example. Let us investigate the trade
 here again. A trade make sense if the gains in the trade outweigh the
 loses ($gains - losses &gt; 0 $). The total gain is the sum of each
@@ -363,7 +348,7 @@ recalculating Or, we can try using a bit of linear programming.
 We are attempting to satisfy \(-6w_1 + 1w_2 + 1w_3 \gt 0\) under the
 constraint \(0 \ge w_1, w_2, w_3 \ge 5\) (from our rating scale). A good
 solver can give you results in this region. To simplify the solution,
-lets say we feel very strongly about the importance of cost, we don&rsquo;t
+lets say we feel very strongly about the importance of cost, we don't
 plan on assigning any less importance to that, but a good salesman may
 be able to convince us that our comfort or style is more important than
 we think at the moment.
@@ -386,7 +371,7 @@ would make the Maserati reasonable for us.
 </p>
 
 
-<figure>
+<figure id="org0b59f42">
 <img src="../static/decision_matrix/not_feasible.png" alt="not_feasible.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 1: </span>plot of feasible region</figcaption>
@@ -401,7 +386,7 @@ x-axis)
 </p>
 
 
-<figure>
+<figure id="orgd9113cb">
 <img src="../static/decision_matrix/feasible.png" alt="feasible.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 2: </span>plot of feasible region</figcaption>
@@ -409,15 +394,15 @@ x-axis)
 
 <p>
 This analysis could continue and could be done in more dimensions
-analytically, but I believe I have demonstrated the methodology I&rsquo;ve
+analytically, but I believe I have demonstrated the methodology I've
 found to be interesting (maybe even useful?). I may explain in detail
 how I choose to use some of these ideas in WhichOne in a future post.
 </p>
 </div>
 
-<div id="outline-container-org564349f" class="outline-3">
-<h3 id="org564349f">Other ideas:</h3>
-<div class="outline-text-3" id="text-org564349f">
+<div id="outline-container-org3b7ecf4" class="outline-3">
+<h3 id="org3b7ecf4">Other ideas:</h3>
+<div class="outline-text-3" id="text-org3b7ecf4">
 <ol class="org-ol">
 <li>Determine analytically what weights to assign so that an alternative
 beats another (instead of just guessing).</li>
@@ -428,9 +413,9 @@ a single structure.</li>
 </div>
 </div>
 
-<div id="outline-container-org90f324e" class="outline-2">
-<h2 id="org90f324e">Objective Impact</h2>
-<div class="outline-text-2" id="text-org90f324e">
+<div id="outline-container-org8561205" class="outline-2">
+<h2 id="org8561205">Objective Impact</h2>
+<div class="outline-text-2" id="text-org8561205">
 <p>
 Say I give you
 </p>
@@ -490,7 +475,7 @@ appropriate space, with all other weights set to zero.
 </p>
 
 <p>
-I&rsquo;ve decided to call \(A\mathbf{o}_k\) the impact vector for objective
+I've decided to call \(A\mathbf{o}_k\) the impact vector for objective
 \(k\) because the vector represents how the objective \(k\) changes
 alternatives scores in this decision.
 </p>
@@ -548,21 +533,21 @@ objective has on the decision. However, it may be better to use the
 standard deviation instead of variance to reduce the effect squaring.
 Variance/standard deviation of the impact vectors is also a good measure
 of impact because it not only factors in ratings for each objective and
-the score each objective was given. However, I&rsquo;m not entirely convinced
+the score each objective was given. However, I'm not entirely convinced
 that the variance or s.d. gives the best possible picture of how an
-objectives &ldquo;changes&rdquo; a decision, because it only looks at impact
+objectives "changes" a decision, because it only looks at impact
 vectors, not at how these vectors pull your choices one way or another
-(doesn&rsquo;t factor in trade offs to determine influence). Again, this is
+(doesn't factor in trade offs to determine influence). Again, this is
 more of a theoretical question, practically variance/s.d. performs well.
 </p>
 </div>
 
-<div id="outline-container-org2d34005" class="outline-3">
-<h3 id="org2d34005">WARNING: What follows is not well structured or explained.</h3>
-<div class="outline-text-3" id="text-org2d34005">
+<div id="outline-container-org96ba1ab" class="outline-3">
+<h3 id="org96ba1ab">WARNING: What follows is not well structured or explained.</h3>
+<div class="outline-text-3" id="text-org96ba1ab">
 <p>
 Here is another idea for understanding trade offs and objective impact
-I&rsquo;ve been toying with.
+I've been toying with.
 </p>
 
 <p>
@@ -615,11 +600,11 @@ And, our impact vectors are
 </p>
 
 <p>
-Let&rsquo;s plot those along with the line \(y = x\)
+Let's plot those along with the line \(y = x\)
 </p>
 
 
-<figure>
+<figure id="orgf412c36">
 <img src="../static/decision_matrix/impact.png" alt="impact.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 3: </span>plot of impact vectors</figcaption>
@@ -627,7 +612,7 @@ Let&rsquo;s plot those along with the line \(y = x\)
 
 <p>
 This plot may be a bit difficult to wrap your head around (it is for
-me), but let&rsquo;s walk through it. Our x and y axis represent alternative
+me), but let's walk through it. Our x and y axis represent alternative
 scores.
 </p>
 
@@ -644,14 +629,14 @@ vector of
 </p>
 
 <p>
-This objective clearly favors the first alternative (it adds 15 to \(a_1\)&rsquo;s
-score, and 0 to \(a_2\)&rsquo;s score. In this case that would be something
+This objective clearly favors the first alternative (it adds 15 to \(a_1\)'s
+score, and 0 to \(a_2\)'s score. In this case that would be something
 that very much favors the first alternative. Plotted, we would get
 this.
 </p>
 
 
-<figure>
+<figure id="org8dbde38">
 <img src="../static/decision_matrix/wow.png" alt="wow.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 4: </span>wow plot</figcaption>
@@ -668,7 +653,7 @@ section, the big blue vector has no impact.
 <p>
 It may be possible to define an importance function using these vectors
 and their distance from the neutral line (\(x_1 = x_2 = \cdots = x_n\))
-for n alternatives, but I haven&rsquo;t yet explored this entirely. If I do,
+for n alternatives, but I haven't yet explored this entirely. If I do,
 I will post again probably explaining the process. Practically,
 variance works well enough. But, I think this is a really cool, fun
 way to think about objectives.
@@ -676,11 +661,11 @@ way to think about objectives.
 </div>
 </div>
 
-<div id="outline-container-orgd865eaa" class="outline-3">
-<h3 id="orgd865eaa">Maserati and Camry example</h3>
-<div class="outline-text-3" id="text-orgd865eaa">
+<div id="outline-container-org1f802e9" class="outline-3">
+<h3 id="org1f802e9">Maserati and Camry example</h3>
+<div class="outline-text-3" id="text-org1f802e9">
 <p>
-Let&rsquo;s do this with the Maserati and Camry again. Same objectives.
+Let's do this with the Maserati and Camry again. Same objectives.
 </p>
 
 <p>
@@ -750,7 +735,7 @@ Here is a plot:
 </p>
 
 
-<figure>
+<figure id="orgcd0bab4">
 <img src="../static/decision_matrix/maserati_camry.png" alt="maserati_camry.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 5: </span>maserati camry plot</figcaption>
@@ -759,20 +744,20 @@ Here is a plot:
 <p>
 In terms of impact, the cost vector is perpendicular to the neutral
 line. This is as far from neutral as possible! Cost clearly has a large
-amount of impact. Understanding the &ldquo;which direction does this objective
-pull my decision&rdquo; thing is quite a bit harder here and I can only kind
+amount of impact. Understanding the "which direction does this objective
+pull my decision" thing is quite a bit harder here and I can only kind
 of see it. But, this train of though may still hold some potential.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org7740400" class="outline-3">
-<h3 id="org7740400">Other ideas:</h3>
-<div class="outline-text-3" id="text-org7740400">
+<div id="outline-container-orgde89f8f" class="outline-3">
+<h3 id="orgde89f8f">Other ideas:</h3>
+<div class="outline-text-3" id="text-orgde89f8f">
 <ol class="org-ol">
 <li>Finish determining impact using distance of impact vector to neutral
 line.</li>
-<li>Evaluate trade offs using the &ldquo;pull&rdquo; of an impact vector.</li>
+<li>Evaluate trade offs using the "pull" of an impact vector.</li>
 </ol>
 
 <p>
@@ -782,9 +767,18 @@ comments.
 </div>
 </div>
 </div>
-</div>
-<div id="postamble" class="status">
-<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2014-01-17-decision-matrix.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
-</div>
+
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
 </body>
+</html>
+
+</body>
+
 </html>

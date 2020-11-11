@@ -1,24 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-<!-- 2020-09-21 Mon 21:57 -->
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Homelab Act 2: Servers and 10GbE</title>
-<meta name="generator" content="Org mode">
-<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
 </head>
+
 <body>
-<div id="preamble" class="status">
-<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
-</div>
-<div id="content">
-<header>
-<h1 class="title">Homelab Act 2: Servers and 10GbE</h1>
-</header><p>
-For the last 171 days (according to uptime on one my routers), I&rsquo;ve been setting up a small homelab.
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">Homelab Act 2: Servers and 10GbE</h1>
+    </header>
+
+    <p>
+For the last 171 days (according to uptime on one my routers), I've been setting up a small homelab.
 Homelabs are kind of cool, and, the setup has been <i>interesting</i>.
-I&rsquo;ll be writing a few posts explaining the steps I took.
+I'll be writing a few posts explaining the steps I took.
 </p>
 
 <ul class="org-ul">
@@ -30,12 +37,12 @@ I&rsquo;ll be writing a few posts explaining the steps I took.
 
 <p>
 Since I could access my system remotely, I had started <a href="../static/homelab/desktop_under_desk.jpg">sticking interesting network cards into my desktop</a> around this time and working on projects remotely.
-Unfortunately, I didn&rsquo;t have enough PCIe slots, or PCIe lanes, to keep all of these plugged in at the same time.
+Unfortunately, I didn't have enough PCIe slots, or PCIe lanes, to keep all of these plugged in at the same time.
 Plugging and unplugging stuff all the time was a bit of a pain.
 </p>
 
 <p>
-Since part of this was running in the cloud, I figured I&rsquo;d also start setting up the cool stuff.
+Since part of this was running in the cloud, I figured I'd also start setting up the cool stuff.
 I was hoping to set up small cloud instances to run:
 </p>
 <ul class="org-ul">
@@ -45,18 +52,18 @@ I was hoping to set up small cloud instances to run:
 </ul></li>
 <li>Some sort of NFS server or cloud syncing server
 <ul class="org-ul">
-<li>I&rsquo;ve been trying out <a href="https://orgmode.org/">orgmode</a> and was looking for a way to sync files between devices</li>
-<li>I also have a large photo collection, a few ripped CDs that can&rsquo;t be streamed, some home videos, etc</li>
+<li>I've been trying out <a href="https://orgmode.org/">orgmode</a> and was looking for a way to sync files between devices</li>
+<li>I also have a large photo collection, a few ripped CDs that can't be streamed, some home videos, etc</li>
 </ul></li>
 <li>IRC bouncer/or headless weechat with <a href="https://weechat.org/files/doc/stable/weechat_relay_protocol.en.html">remoting enabled</a></li>
 <li>Maybe a self-hosted RSS reader?</li>
-<li>Perhaps a sql server for <a href="https://www.digikam.org/news/2010-10-15_using_digikam_with_mysql/">digikam&rsquo;s remote database</a> (if I can find a place to store the files)</li>
+<li>Perhaps a sql server for <a href="https://www.digikam.org/news/2010-10-15_using_digikam_with_mysql/">digikam's remote database</a> (if I can find a place to store the files)</li>
 <li><a href="https://github.com/awesome-selfhosted/awesome-selfhosted">lots of stuff</a></li>
 </ul>
 
-<div id="outline-container-org1289c43" class="outline-2">
-<h2 id="org1289c43">Cloud Cost</h2>
-<div class="outline-text-2" id="text-org1289c43">
+<div id="outline-container-orgd0a9afe" class="outline-2">
+<h2 id="orgd0a9afe">Cloud Cost</h2>
+<div class="outline-text-2" id="text-orgd0a9afe">
 <p>
 A single, low ram, shared CPU, tiny storage cloud instance can cost something like $3.50 a month.
 If you want a real CPU, or some real storage, the prices go up quite a bit.
@@ -66,22 +73,22 @@ Neither should need much storage for my workload.
 </p>
 
 <p>
-A single core (real core, not shared core) server costs like $10 a month (ish kindof), so, if I wanted two of them, I&rsquo;d be paying $240 a year for 2 cores.
-This is sort of okay, but this won&rsquo;t come close to addressing my photo problem.
-I&rsquo;d also still be swapping PCIe cards back and forth for my other projects (annoying!).
+A single core (real core, not shared core) server costs like $10 a month (ish kindof), so, if I wanted two of them, I'd be paying $240 a year for 2 cores.
+This is sort of okay, but this won't come close to addressing my photo problem.
+I'd also still be swapping PCIe cards back and forth for my other projects (annoying!).
 </p>
 
 <p>
-I know I&rsquo;ve seen used rackmount servers on eBay for about this price, so I thought it might be worthwhile to put a server in my apartment.
+I know I've seen used rackmount servers on eBay for about this price, so I thought it might be worthwhile to put a server in my apartment.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org7c15a3d" class="outline-2">
-<h2 id="org7c15a3d">eBay time</h2>
-<div class="outline-text-2" id="text-org7c15a3d">
+<div id="outline-container-org9ed8266" class="outline-2">
+<h2 id="org9ed8266">eBay time</h2>
+<div class="outline-text-2" id="text-org9ed8266">
 <p>
-The first order of business was finding a &ldquo;quiet, low power, expandable, powerful server.&rdquo;
+The first order of business was finding a "quiet, low power, expandable, powerful server."
 I eventually settled on a Dell R720 with 2.5 inch drive bays.
 Specs:
 </p>
@@ -91,29 +98,29 @@ Specs:
 <li>2x 10k SAS drives (300gigs each)</li>
 <li>H710p controller (this was the upgraded choice, seemed wise in case I wanted to do RAID. This was very wrong, see <a href="./2020-01-12-nas.html">NAS, ZFS, and NFS</a>)</li>
 <li>4 ports of gigabit ethernet</li>
-<li>Dell&rsquo;s iDRAC remote management system</li>
+<li>Dell's iDRAC remote management system</li>
 </ul>
 
 <p>
 This was a $379 server.
 Passmark gives the dual xeons an <a href="https://www.cpubenchmark.net/cpu.php?cpu=Intel+Xeon+E5-2650+v2+%40+2.60GHz&amp;id=2042&amp;cpuCount=2">18813</a>.
 A new 2016 i7 (the one I used until RYZEN happened) sells in 2020 for $300 and passmarks at <a href="https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i7-6700K+%40+4.00GHz&amp;id=2565">11108</a>.
-The RYZEN chip I have now blows them both away at <a href="https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+3800X&amp;id=3499">24503</a> on passmark, but this isn&rsquo;t an AMD fanboy post.
-The Xeon is a 2013 CPU, so the performance/power isn&rsquo;t going to be as good as newer cpus, but the performance/dollar pretty much blows away the cloud deal, if you only consider CPU cores.
+The RYZEN chip I have now blows them both away at <a href="https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+3800X&amp;id=3499">24503</a> on passmark, but this isn't an AMD fanboy post.
+The Xeon is a 2013 CPU, so the performance/power isn't going to be as good as newer cpus, but the performance/dollar pretty much blows away the cloud deal, if you only consider CPU cores.
 </p>
 
 <p>
-This decision wasn&rsquo;t easy, but after reading almost every post on <a href="https://www.reddit.com/r/homelab/">r/homelab</a> I decided I&rsquo;d give this a try.
+This decision wasn't easy, but after reading almost every post on <a href="https://www.reddit.com/r/homelab/">r/homelab</a> I decided I'd give this a try.
 </p>
 </div>
 
-<div id="outline-container-orgd0d5912" class="outline-3">
-<h3 id="orgd0d5912">Barebones server setup</h3>
-<div class="outline-text-3" id="text-orgd0d5912">
+<div id="outline-container-orgb2018bb" class="outline-3">
+<h3 id="orgb2018bb">Barebones server setup</h3>
+<div class="outline-text-3" id="text-orgb2018bb">
 </div>
-<div id="outline-container-orgfccbc10" class="outline-4">
-<h4 id="orgfccbc10">Setup a RAID 0 array across the two drives</h4>
-<div class="outline-text-4" id="text-orgfccbc10">
+<div id="outline-container-org5d8765b" class="outline-4">
+<h4 id="org5d8765b">Setup a RAID 0 array across the two drives</h4>
+<div class="outline-text-4" id="text-org5d8765b">
 <p>
 For testing, I just stuck a RAID 0 array across the two drives.
 This is done using the remote management web ui, or by booting the machine and tweaking settings from the remote management virtual display.
@@ -121,9 +128,9 @@ This is done using the remote management web ui, or by booting the machine and t
 </div>
 </div>
 
-<div id="outline-container-org933cac9" class="outline-4">
-<h4 id="org933cac9">Install an operating system</h4>
-<div class="outline-text-4" id="text-org933cac9">
+<div id="outline-container-org2b86606" class="outline-4">
+<h4 id="org2b86606">Install an operating system</h4>
+<div class="outline-text-4" id="text-org2b86606">
 <p>
 Again, super straightforward.
 I mounted an arch ISO using the remote management tools, booted the box, and installed arch the standard way.
@@ -136,15 +143,15 @@ This is loud enough to be heard through a closed door.
 
 <p>
 Once an OS is installed and booted, the fans in the server will spin down to a pretty reasonably low volume.
-I can still hear the machine when the room is silent, but, if I&rsquo;m typing, playing music, or doing pretty much anything else, I can&rsquo;t really tell it is there anymore.
-If I put a large amount of load on the machine, the fans will spin up, but that&rsquo;s expected and doesn&rsquo;t really bother me.
+I can still hear the machine when the room is silent, but, if I'm typing, playing music, or doing pretty much anything else, I can't really tell it is there anymore.
+If I put a large amount of load on the machine, the fans will spin up, but that's expected and doesn't really bother me.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org8675fe8" class="outline-4">
-<h4 id="org8675fe8">Adding PCIe cards</h4>
-<div class="outline-text-4" id="text-org8675fe8">
+<div id="outline-container-org1326d62" class="outline-4">
+<h4 id="org1326d62">Adding PCIe cards</h4>
+<div class="outline-text-4" id="text-org1326d62">
 <p>
 To install PCIe cards, all you have to do is lift the lid, pop out a little tool-less bay and plop the card in.
 Its useful to read the server documentation to make sure each card is installed is attached to the appropriate socket, if you are installing multiple cards.
@@ -152,7 +159,7 @@ Its useful to read the server documentation to make sure each card is installed 
 
 <p>
 After installing new cards, the machine booted, fans spun at max (as expected), but, they never spun down.
-Apparently Dell doesn&rsquo;t like it when you install &ldquo;non-certified&rdquo; cards in the server, since they are not aware of the thermal requirements of the card.
+Apparently Dell doesn't like it when you install "non-certified" cards in the server, since they are not aware of the thermal requirements of the card.
 </p>
 
 <p>
@@ -164,19 +171,19 @@ The internet gave two pieces of advice:
 </ol>
 
 <p>
-I tried (1), but it didn&rsquo;t make any difference.
+I tried (1), but it didn't make any difference.
 For (2), I found the solution <a href="https://serverfault.com/questions/715387/how-do-i-stop-dell-r730xd-fans-from-going-full-speed-when-broadcom-qlogic-netxtr/733064#733064">here</a>, reposted for longevity:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-bash"><span class="org-comment-delimiter"># </span><span class="org-comment">check if the fans will get loud (do this first to </span><span class="org-type"><span class="org-comment">make</span></span><span class="org-comment"> sure these instructions</span><span class="org-comment"><span class="org-hl-fill-column"> </span></span><span class="org-comment">actually work)</span>
+<pre class="src src-bash"><span class="org-comment-delimiter"># </span><span class="org-comment">check if the fans will get loud (do this first to make sure these instructions actually work)</span>
 $ ipmitool raw 0x30 0xce 0x01 0x16 0x05 0x00 0x00 0x00
 
 <span class="org-comment-delimiter"># </span><span class="org-comment">response like below means Disabled (fans will not get loud)</span>
-<span class="org-highlight-numbers-number">16</span> <span class="org-highlight-numbers-number">05</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">05</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">01</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span>
+16 05 00 00 00 05 00 01 00 00
 
 <span class="org-comment-delimiter"># </span><span class="org-comment">response like below means Enabled (fans will get loud)</span>
-<span class="org-highlight-numbers-number">16</span> <span class="org-highlight-numbers-number">05</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">05</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span>
+16 05 00 00 00 05 00 00 00 00
 
 <span class="org-comment-delimiter"># </span><span class="org-comment">if that worked, you can Disable the "Default Cooling Response Logic" with</span>
 $ ipmitool raw 0x30 0xce 0x00 0x16 0x05 0x00 0x00 0x00 0x05 0x00 0x01 0x00 0x00
@@ -192,9 +199,9 @@ To connect to my server, I needed to run <code>ipmitool</code> like this (use th
 
 <div class="org-src-container">
 <pre class="src src-bash"><span class="org-comment-delimiter"># </span><span class="org-comment">at this point, server hostname was `worf` and idrac hostname was `idrac-worf`</span>
-$ ipmitool -I lanplus -H idrac-worf -U root raw 0x30 0xce 0x01 0x16 0x05 0x00 0x<span class="org-hl-fill-column">0</span>0 0x00
+$ ipmitool -I lanplus -H idrac-worf -U root raw 0x30 0xce 0x01 0x16 0x05 0x00 0x00 0x00
 Password:
- <span class="org-highlight-numbers-number">16</span> <span class="org-highlight-numbers-number">05</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">05</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">01</span> <span class="org-highlight-numbers-number">00</span> <span class="org-highlight-numbers-number">00</span>
+ 16 05 00 00 00 05 00 01 00 00
 </pre>
 </div>
 </div>
@@ -202,9 +209,9 @@ Password:
 </div>
 </div>
 
-<div id="outline-container-orge9b5afc" class="outline-2">
-<h2 id="orge9b5afc">Networking</h2>
-<div class="outline-text-2" id="text-orge9b5afc">
+<div id="outline-container-org9ddb6ed" class="outline-2">
+<h2 id="org9ddb6ed">Networking</h2>
+<div class="outline-text-2" id="text-org9ddb6ed">
 <p>
 As discussed in my <a href="./2020-01-09-vpn.html">previous post</a>, I already had a small TP-Link switch sitting behind the VPN/router box.
 Four ports was getting tight (I was unplugging my smart light hub to play with a network card).
@@ -212,7 +219,7 @@ Four ports was getting tight (I was unplugging my smart light hub to play with a
 
 <p>
 I had some project ideas that might benefit from having fast ethernet, and, I really wanted statistics from the switches.
-To keep a long story short, I&rsquo;ve ended up with a combination of a few different network cards and two Mikrotik switches:
+To keep a long story short, I've ended up with a combination of a few different network cards and two Mikrotik switches:
 </p>
 <ul class="org-ul">
 <li>CSS326-24G-2S+RM: 24 port 1gib, 2 SFP+ 10gib. My primary network lives on this switch</li>
@@ -220,48 +227,48 @@ To keep a long story short, I&rsquo;ve ended up with a combination of a few diff
 </ul>
 
 <p>
-Buying this networking gear (especially the 10 GbE switch), pushed me a little bit over the &ldquo;saving money over cloud&rdquo; limit if I&rsquo;m only planning on running a small number of services.
-However, as I&rsquo;ll discuss in my <a href="./2020-01-12-nas.html">next post</a>, I&rsquo;m also pushing a lot of bandwidth over this network and I&rsquo;m not sure what that would cost on AWS.
+Buying this networking gear (especially the 10 GbE switch), pushed me a little bit over the "saving money over cloud" limit if I'm only planning on running a small number of services.
+However, as I'll discuss in my <a href="./2020-01-12-nas.html">next post</a>, I'm also pushing a lot of bandwidth over this network and I'm not sure what that would cost on AWS.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org5e5e5db" class="outline-2">
-<h2 id="org5e5e5db">Rack</h2>
-<div class="outline-text-2" id="text-org5e5e5db">
+<div id="outline-container-orgbd0aa3e" class="outline-2">
+<h2 id="orgbd0aa3e">Rack</h2>
+<div class="outline-text-2" id="text-orgbd0aa3e">
 <p>
 I wired a bunch of stuff up and threw it under my desk:
 </p>
 
 
-<figure>
+<figure id="orge7fe5a9">
 <img src="../static/homelab/server_desktop_wire_mess.jpg" alt="server_desktop_wire_mess.jpg">
 
 </figure>
 
 <p>
-That wasn&rsquo;t going to work, so I threw all of this into a small rack, moved my desktop to a (crappy) rack mount case, and here we are:
+That wasn't going to work, so I threw all of this into a small rack, moved my desktop to a (crappy) rack mount case, and here we are:
 </p>
 
 
-<figure>
+<figure id="org43c1d8a">
 <img src="../static/homelab/battlestation.jpg" alt="battlestation.jpg">
 
 </figure>
 </div>
 </div>
 
-<div id="outline-container-org9b2e3ad" class="outline-2">
-<h2 id="org9b2e3ad">Do something with it</h2>
-<div class="outline-text-2" id="text-org9b2e3ad">
+<div id="outline-container-org7e44224" class="outline-2">
+<h2 id="org7e44224">Do something with it</h2>
+<div class="outline-text-2" id="text-org7e44224">
 <p>
 At first I used this server mostly to poke at the network and write kernel bypass drivers for an Intel I350-T4 quad-gigabit-port network card.
 Side note: The <a href="https://github.com/emmericp/ixy">ixy</a> project is pretty neat and 100% worth poking at if you are interested in networking.
-I was able to get a driver working for the previously mentioned intel card by reading intel&rsquo;s documentation, ixy&rsquo;s other drivers, and <a href="https://spdk.io/">spdk</a> in 500 lines of code.
+I was able to get a driver working for the previously mentioned intel card by reading intel's documentation, ixy's other drivers, and <a href="https://spdk.io/">spdk</a> in 500 lines of code.
 </p>
 
 <p>
-I&rsquo;ve also used this as a bunch of CPUs for some brute forcing I tried on a few advent of code problems (I also solved them the right way) and for a few other projects where I wanted a quiet system to benchmark on.
+I've also used this as a bunch of CPUs for some brute forcing I tried on a few advent of code problems (I also solved them the right way) and for a few other projects where I wanted a quiet system to benchmark on.
 </p>
 
 <p>
@@ -275,9 +282,18 @@ See my <a href="./2020-01-12-nas.html">next post</a> for the continuation of thi
 </p>
 </div>
 </div>
-</div>
-<div id="postamble" class="status">
-<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2020-01-11-server-network.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
-</div>
+
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
 </body>
+</html>
+
+</body>
+
 </html>

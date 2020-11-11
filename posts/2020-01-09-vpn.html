@@ -1,24 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-<!-- 2020-09-21 Mon 21:57 -->
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Homelab Act 1: VPNs</title>
-<meta name="generator" content="Org mode">
-<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
 </head>
+
 <body>
-<div id="preamble" class="status">
-<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
-</div>
-<div id="content">
-<header>
-<h1 class="title">Homelab Act 1: VPNs</h1>
-</header><p>
-For the last 170 days (according to uptime on one my routers), I&rsquo;ve been setting up a small homelab.
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">Homelab Act 1: VPNs</h1>
+    </header>
+
+    <p>
+For the last 170 days (according to uptime on one my routers), I've been setting up a small homelab.
 Homelabs are kind of cool, and, the setup has been <i>interesting</i>.
-I&rsquo;ll be writing a few posts explaining the steps I took.
+I'll be writing a few posts explaining the steps I took.
 </p>
 
 <ul class="org-ul">
@@ -28,12 +35,12 @@ I&rsquo;ll be writing a few posts explaining the steps I took.
 <li>Part 4 <a href="./2020-02-01-homelab4-cloud.html">Services and Applications</a></li>
 </ul>
 
-<div id="outline-container-orga7781cc" class="outline-2">
-<h2 id="orga7781cc">VPNs</h2>
-<div class="outline-text-2" id="text-orga7781cc">
+<div id="outline-container-orgbbcc704" class="outline-2">
+<h2 id="orgbbcc704">VPNs</h2>
+<div class="outline-text-2" id="text-orgbbcc704">
 <p>
-Unfortunately, I don&rsquo;t have a public IP in my building, so setting up remote access had to be a little more involved than just opening a port for ssh.
-I found a tiny, passively cooled, quad-port <b>intel</b> NIC, celeron box <a href="https://www.amazon.com/Firewall-Gigabit-Celeron-AES-NI-Barebone/dp/B07G7H4M73">on amazon</a>, and figured I&rsquo;d try setting up my own linux router and run my own VPN server in AWS or something.
+Unfortunately, I don't have a public IP in my building, so setting up remote access had to be a little more involved than just opening a port for ssh.
+I found a tiny, passively cooled, quad-port <b>intel</b> NIC, celeron box <a href="https://www.amazon.com/Firewall-Gigabit-Celeron-AES-NI-Barebone/dp/B07G7H4M73">on amazon</a>, and figured I'd try setting up my own linux router and run my own VPN server in AWS or something.
 </p>
 
 <p>
@@ -41,25 +48,25 @@ This took a bit of work.
 </p>
 </div>
 
-<div id="outline-container-org31555e0" class="outline-3">
-<h3 id="org31555e0">Networking</h3>
-<div class="outline-text-3" id="text-org31555e0">
+<div id="outline-container-org3eeda2b" class="outline-3">
+<h3 id="org3eeda2b">Networking</h3>
+<div class="outline-text-3" id="text-org3eeda2b">
 <p>
 Before diving in, I needed to decide how to layout my network and what VPN tools to use.
-I read a ton about best practices, but this wasn&rsquo;t super helpful, so instead, I just started spinning up VMs and messing with VPN software and playing with my network settings.
+I read a ton about best practices, but this wasn't super helpful, so instead, I just started spinning up VMs and messing with VPN software and playing with my network settings.
 </p>
 
 <p>
 Eventually I settled on wireguard for a VPN, mostly because I never actually got OpenVPN working anywhere.
-I also spent bunch of time trying to get IPSec and layer 2 tunneling to work, but decided that I didn&rsquo;t really want that anyway.
-Wireguard is easy, fast, and probably secure, so I&rsquo;m using that for now.
+I also spent bunch of time trying to get IPSec and layer 2 tunneling to work, but decided that I didn't really want that anyway.
+Wireguard is easy, fast, and probably secure, so I'm using that for now.
 </p>
 
 <p>
 The network is organized as:
 </p>
 <ul class="org-ul">
-<li>One subnet for each &ldquo;region&rdquo;
+<li>One subnet for each "region"
 <ul class="org-ul">
 <li>My apartment is on the <code>172.16.1.xxx</code> subnet (for snobs: <code>172.16.1.0/24</code>)</li>
 <li>A cloud region on the <code>172.16.2.xxx</code> subnet
@@ -71,9 +78,9 @@ The network is organized as:
 <li>Each device connected to the VPN gets an IP on this subnet</li>
 </ul></li>
 </ul></li>
-<li>Use one private, made-up subdomain for each &ldquo;region.&rdquo; For example, you could use <code>apartment.me.com</code>, <code>cloud.me.com</code>, and <code>vpn.me.com</code>.
+<li>Use one private, made-up subdomain for each "region." For example, you could use <code>apartment.me.com</code>, <code>cloud.me.com</code>, and <code>vpn.me.com</code>.
 <ul class="org-ul">
-<li>I&rsquo;m using a private subdomains of a domain that I control to ensure that I never clash with anything that actually exists.</li>
+<li>I'm using a private subdomains of a domain that I control to ensure that I never clash with anything that actually exists.</li>
 </ul></li>
 <li>Have a DHCP server and DNS server available in each region (the DHCP host will always be <code>xxx.xxx.xxx.1</code> and have hostname/dns name <code>gateway</code>)
 <ul class="org-ul">
@@ -84,12 +91,12 @@ The network is organized as:
 </ul></li>
 <li>The VPN server/cloud gateway has a public IP
 <ul class="org-ul">
-<li>Probably also want a firewall that drops everything other than VPN traffic (I&rsquo;m using cloud provider firewall and a firewall on the server)</li>
+<li>Probably also want a firewall that drops everything other than VPN traffic (I'm using cloud provider firewall and a firewall on the server)</li>
 </ul></li>
 </ul>
 
 <p>
-I haven&rsquo;t figured out ipv6 yet because I&rsquo;m a bad person.
+I haven't figured out ipv6 yet because I'm a bad person.
 </p>
 
 <p>
@@ -100,17 +107,17 @@ Unfortunately, a local coffee shop I frequent uses an IP range that clashes with
 </div>
 </div>
 
-<div id="outline-container-orgc87ee46" class="outline-3">
-<h3 id="orgc87ee46">Install <a href="https://alpinelinux.org/">alpine linux</a> on local router</h3>
-<div class="outline-text-3" id="text-orgc87ee46">
+<div id="outline-container-org13f2326" class="outline-3">
+<h3 id="org13f2326">Install <a href="https://alpinelinux.org/">alpine linux</a> on local router</h3>
+<div class="outline-text-3" id="text-org13f2326">
 <p>
-The official install guides are good and more up to date than anything I&rsquo;d have to say about this.
+The official install guides are good and more up to date than anything I'd have to say about this.
 </p>
 </div>
 
-<div id="outline-container-orgaca2647" class="outline-4">
-<h4 id="orgaca2647">Setup Basic Networking</h4>
-<div class="outline-text-4" id="text-orgaca2647">
+<div id="outline-container-org99ac0b2" class="outline-4">
+<h4 id="org99ac0b2">Setup Basic Networking</h4>
+<div class="outline-text-4" id="text-org99ac0b2">
 <p>
 In <code>/etc/network/interfaces</code>:
 </p>
@@ -133,33 +140,32 @@ iface eth1 inet static
 </div>
 </div>
 
-<div id="outline-container-org2670822" class="outline-4">
-<h4 id="org2670822">Firewall and NAT</h4>
-<div class="outline-text-4" id="text-org2670822">
+<div id="outline-container-org2817825" class="outline-4">
+<h4 id="org2817825">Firewall and NAT</h4>
+<div class="outline-text-4" id="text-org2817825">
 <p>
 After spending time banging my head against the <code>iptable</code>, I gave up and tried using a this thing built into alpine called <a href="https://wiki.alpinelinux.org/wiki/How-To_Alpine_Wall">awall</a>.
-There&rsquo;s a pretty good <a href="https://wiki.alpinelinux.org/wiki/Zero-To-Awall">Zero to Awall</a> guide available which can get you started.
+There's a pretty good <a href="https://wiki.alpinelinux.org/wiki/Zero-To-Awall">Zero to Awall</a> guide available which can get you started.
 </p>
 
 <p>
-I don&rsquo;t want to explain a full example (the docs are again better than what I can do), but here&rsquo;s some highlights.
+I don't want to explain a full example (the docs are again better than what I can do), but here's some highlights.
 </p>
 </div>
 
-<div id="outline-container-org9c80bf4" class="outline-5">
-<h5 id="org9c80bf4">Enable packet forwarding</h5>
-<div class="outline-text-5" id="text-org9c80bf4">
+<ul class="org-ul">
+<li><a id="orgb42f0c0"></a>Enable packet forwarding<br>
+<div class="outline-text-5" id="text-orgb42f0c0">
 <p>
 The linux kernel must be told that it is allowed to forward packets.
 Put <code>net.ipv4.ip_forward = 1</code> in a <code>sysctl.conf</code> file on alpine, see <a href="https://wiki.alpinelinux.org/wiki/Sysctl.conf">https://wiki.alpinelinux.org/wiki/Sysctl.conf</a>
-This is probably needed for ipv6 as well, if you aren&rsquo;t a bad person who is ignoring ipv6, like me
+This is probably needed for ipv6 as well, if you aren't a bad person who is ignoring ipv6, like me
 </p>
 </div>
-</div>
+</li>
 
-<div id="outline-container-orgdc925d5" class="outline-5">
-<h5 id="orgdc925d5">Most (all?) for awalls config files can be written in <code>yaml</code></h5>
-<div class="outline-text-5" id="text-orgdc925d5">
+<li><a id="org2dfd8c7"></a>Most (all?) for awalls config files can be written in <code>yaml</code><br>
+<div class="outline-text-5" id="text-org2dfd8c7">
 <p>
 The Zero To Awall guide has this example:
 </p>
@@ -170,11 +176,11 @@ The Zero To Awall guide has this example:
 
 <div class="org-src-container">
 <pre class="src src-json">{
-    <span class="org-keyword">"service"</span>: {
-        <span class="org-keyword">"openvpn"</span>: [
-            { <span class="org-keyword">"proto"</span>: <span class="org-string">"udp"</span>, <span class="org-keyword">"port"</span>: <span class="org-highlight-numbers-number">1194</span> },
-            { <span class="org-keyword">"proto"</span>: <span class="org-string">"tcp"</span>, <span class="org-keyword">"port"</span>: <span class="org-highlight-numbers-number">1194</span> }
-        ]
+    "service": {
+	"openvpn": [
+	    { "proto": "udp", "port": 1194 },
+	    { "proto": "tcp", "port": 1194 }
+	]
     }
 }
 </pre>
@@ -184,19 +190,20 @@ The Zero To Awall guide has this example:
 But, you could also create an equivelent <code>/etc/awall/private/custom-services.yaml</code> if you want:
 </p>
 <div class="org-src-container">
-<pre class="src src-yaml"><span class="org-variable-name">service</span>:
-  <span class="org-variable-name">openvpn</span>:
-    - { <span class="org-variable-name">proto</span>: udp, <span class="org-variable-name">port</span>: 1194 }
-    - { <span class="org-variable-name">proto</span>: tcp, <span class="org-variable-name">port</span>: 1194 }
+<pre class="src src-yaml">service:
+  openvpn:
+    - { proto: udp, port: 1194 }
+    - { proto: tcp, port: 1194 }
 </pre>
 </div>
 </div>
-</div>
+</li>
+</ul>
 </div>
 
-<div id="outline-container-orgb26248c" class="outline-4">
-<h4 id="orgb26248c">Tricks</h4>
-<div class="outline-text-4" id="text-orgb26248c">
+<div id="outline-container-orgbda069b" class="outline-4">
+<h4 id="orgbda069b">Tricks</h4>
+<div class="outline-text-4" id="text-orgbda069b">
 <p>
 In case the internet every goes down, I sometimes need to refresh my ISP DHCP lease to get it to come back up.
 I stuck a <code>checkinit.sh</code> script into my <code>$PATH</code> somewhere, then added it to <code>cron</code> to run once a minute:
@@ -204,31 +211,31 @@ I stuck a <code>checkinit.sh</code> script into my <code>$PATH</code> somewhere,
 
 <div class="org-src-container">
 <pre class="src src-bash">gateway:~# crontab -l
-<span class="org-comment-delimiter"># </span><span class="org-comment">min   hour    day month   weekday command</span>
-*   *   *   *   *   checkinet.sh| logger -t checkinet
+<span class="org-comment-delimiter"># </span><span class="org-comment">min   hour    day     month   weekday command</span>
+*       *       *       *       *       checkinet.sh| logger -t checkinet
 
-gateway:~# <span class="org-type">cat</span> $<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-builtin">which</span> checkinet.sh<span class="org-rainbow-delimiters-depth-1">)</span>
+gateway:~# cat $(<span class="org-builtin">which</span> checkinet.sh)
 <span class="org-comment-delimiter">#</span><span class="org-comment">!/bin/sh</span>
 
-<span class="org-type">echo</span> <span class="org-string">"Checking if internet still up"</span>
+<span class="org-builtin">echo</span> <span class="org-string">"Checking if internet still up"</span>
 
 <span class="org-comment-delimiter"># </span><span class="org-comment">does not use our dns server, uses isp</span>
 <span class="org-keyword">if</span> <span class="org-negation-char">!</span> ping -c5 google.com; <span class="org-keyword">then</span>
-    <span class="org-type">echo</span> <span class="org-string">"bouncing network interface"</span>
-    ifdown eth0
-    ifup eth0
+        <span class="org-builtin">echo</span> <span class="org-string">"bouncing network interface"</span>
+        ifdown eth0
+        ifup eth0
         <span class="org-comment-delimiter">#</span><span class="org-comment">unbound needed to be restarted, dnsmasq appears to be fine with this</span>
-    <span class="org-comment-delimiter">#</span><span class="org-type"><span class="org-comment">sleep</span></span><span class="org-comment"> 30</span>
-    <span class="org-comment-delimiter">#</span><span class="org-comment">/etc/init.d/unbound restart # idk why this needs to happen</span>
+        <span class="org-comment-delimiter">#</span><span class="org-comment">sleep 30</span>
+        <span class="org-comment-delimiter">#</span><span class="org-comment">/etc/init.d/unbound restart # idk why this needs to happen</span>
 <span class="org-keyword">else</span>
-    <span class="org-type">echo</span> <span class="org-string">"Internet still up!"</span>
+        <span class="org-builtin">echo</span> <span class="org-string">"Internet still up!"</span>
 <span class="org-keyword">fi</span>
 </pre>
 </div>
 
 <p>
 This is really only testing if I can resolve <code>google.com</code>, since ping will probably work if I can reach DNS to resolve google, but whatever.
-The script gets me back up and going if I unplug stuff or if my ISP flakes out for some reason (which has only happened twice ever, this fixed it the second time), and it&rsquo;s never killed my internet spuriously, so I guess it works?
+The script gets me back up and going if I unplug stuff or if my ISP flakes out for some reason (which has only happened twice ever, this fixed it the second time), and it's never killed my internet spuriously, so I guess it works?
 </p>
 
 <p>
@@ -236,16 +243,16 @@ I also:
 </p>
 <ul class="org-ul">
 <li>Cranked up the syslog file size and max files to keep around by editing an init file (probably the wrong way to do it)</li>
-<li>Installed the S.M.A.R.T. tools (since there&rsquo;s an SSD in the thing)</li>
-<li>Created a cron job to run smart tests sometimes and log it somewhere (which I&rsquo;ve never looked at)</li>
+<li>Installed the S.M.A.R.T. tools (since there's an SSD in the thing)</li>
+<li>Created a cron job to run smart tests sometimes and log it somewhere (which I've never looked at)</li>
 </ul>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org15328c0" class="outline-3">
-<h3 id="org15328c0">Setup <a href="http://www.thekelleys.org.uk/dnsmasq/doc.html">dnsmasq</a> as a DHCP server and DNS server</h3>
-<div class="outline-text-3" id="text-org15328c0">
+<div id="outline-container-org9bf2afc" class="outline-3">
+<h3 id="org9bf2afc">Setup <a href="http://www.thekelleys.org.uk/dnsmasq/doc.html">dnsmasq</a> as a DHCP server and DNS server</h3>
+<div class="outline-text-3" id="text-org9bf2afc">
 <p>
 The arch wiki has wonderful docs for this. Just go read those.
 </p>
@@ -278,9 +285,9 @@ All I really had to do in the end was:
 </ul>
 </div>
 
-<div id="outline-container-org6ca1a0e" class="outline-4">
-<h4 id="org6ca1a0e">Download <a href="https://pi-hole.net/">pi-hole</a>&rsquo;s ad domain blacklist</h4>
-<div class="outline-text-4" id="text-org6ca1a0e">
+<div id="outline-container-org38821ba" class="outline-4">
+<h4 id="org38821ba">Download <a href="https://pi-hole.net/">pi-hole</a>'s ad domain blacklist</h4>
+<div class="outline-text-4" id="text-org38821ba">
 <p>
 From <a href="https://github.com/notracking/hosts-blocklists">https://github.com/notracking/hosts-blocklists</a>.
 Put the tracking domain lists somewhere then just set:
@@ -299,9 +306,9 @@ See the dnsmasq docs for an explanation of the difference.
 </div>
 </div>
 
-<div id="outline-container-org07d9d30" class="outline-3">
-<h3 id="org07d9d30">Pay for and plug in some sort of Wireless Access Point</h3>
-<div class="outline-text-3" id="text-org07d9d30">
+<div id="outline-container-org90166f1" class="outline-3">
+<h3 id="org90166f1">Pay for and plug in some sort of Wireless Access Point</h3>
+<div class="outline-text-3" id="text-org90166f1">
 <p>
 I bought a Unifi AP and followed the instructions to set it up.
 It works.
@@ -309,32 +316,32 @@ It works.
 </div>
 </div>
 
-<div id="outline-container-org59347b5" class="outline-3">
-<h3 id="org59347b5">Setup alpine and DNS on a cloud server somewhere</h3>
-<div class="outline-text-3" id="text-org59347b5">
+<div id="outline-container-orgf01145b" class="outline-3">
+<h3 id="orgf01145b">Setup alpine and DNS on a cloud server somewhere</h3>
+<div class="outline-text-3" id="text-orgf01145b">
 <p>
 Same as above mostly, just with a different made-up star trek themed subdomain.
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgd659fd4" class="outline-3">
-<h3 id="orgd659fd4">Wireguard</h3>
-<div class="outline-text-3" id="text-orgd659fd4">
+<div id="outline-container-orgabdd3f3" class="outline-3">
+<h3 id="orgabdd3f3">Wireguard</h3>
+<div class="outline-text-3" id="text-orgabdd3f3">
 <p>
 Each device that can connect to the server needs a private/public key pair.
 The server contains a list of recognized public keys; only the devices in the server config can connect.
 </p>
 
 <p>
-There&rsquo;s a wireguard-tooling package available that you can use to generate keys.
+There's a wireguard-tooling package available that you can use to generate keys.
 Generate keys for each device (including the server):
 </p>
 
 <div class="org-src-container">
-<pre class="src src-bash">$ umask <span class="org-highlight-numbers-number">077</span> <span class="org-comment-delimiter"># </span><span class="org-type"><span class="org-comment">make</span></span><span class="org-comment"> sure no one can read your files</span>
+<pre class="src src-bash">$ umask 077 <span class="org-comment-delimiter"># </span><span class="org-comment">make sure no one can read your files</span>
 $ wg genkey | tee private_key | wg pubkey &gt; public_key
-$ <span class="org-type">ls</span>
+$ ls
 private_key public_key
 </pre>
 </div>
@@ -344,9 +351,9 @@ Once you are done copying the contents of these files into the wireguard configs
 </p>
 </div>
 
-<div id="outline-container-orgd7ffcac" class="outline-4">
-<h4 id="orgd7ffcac">On the VPN server (cloud instance)</h4>
-<div class="outline-text-4" id="text-orgd7ffcac">
+<div id="outline-container-org9434584" class="outline-4">
+<h4 id="org9434584">On the VPN server (cloud instance)</h4>
+<div class="outline-text-4" id="text-org9434584">
 <p>
 Create a wireguard server config at <code>/etc/wireguard/wg0.conf</code>.
 Note that I am not using the <code>wg-quick</code> interface for this or the apartment router.
@@ -364,10 +371,10 @@ Note that I am not using the <code>wg-quick</code> interface for this or the apa
 [<span class="org-type">Peer</span>]
 <span class="org-variable-name">PublicKey</span> = ..... <span class="org-comment-delimiter"># </span><span class="org-comment">put the contents of the public key file here</span>
 <span class="org-comment-delimiter"># </span><span class="org-comment">The AllowedIPs list is sort of like a routing table</span>
-<span class="org-comment-delimiter"># </span><span class="org-comment">In this section, we specify which IPs may be reached by directing traffic to t</span><span class="org-comment"><span class="org-hl-fill-column">h</span></span><span class="org-comment">is peer.</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">In this section, we specify which IPs may be reached by directing traffic to this peer.</span>
 <span class="org-comment-delimiter"># </span><span class="org-comment">For the apartment router:</span>
 <span class="org-comment-delimiter"># </span><span class="org-comment">- assign the VPN IP: 172.16.255.2 and</span>
-<span class="org-comment-delimiter"># </span><span class="org-comment">- allow wireguard to route traffic from the VPN subnet to the 172.16.1.0/24 us</span><span class="org-comment"><span class="org-hl-fill-column">i</span></span><span class="org-comment">ng this peer</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">- allow wireguard to route traffic from the VPN subnet to the 172.16.1.0/24 using this peer</span>
 <span class="org-variable-name">AllowedIPs</span> = 172.16.255.2/32, 172.16.1.0/24
 
 <span class="org-comment-delimiter"># </span><span class="org-comment">laptop</span>
@@ -383,7 +390,7 @@ Note that I am not using the <code>wg-quick</code> interface for this or the apa
 </div>
 
 <p>
-Next, configure kernel&rsquo;s networking stack:
+Next, configure kernel's networking stack:
 </p>
 <ol class="org-ol">
 <li>create a new interface named <code>wg0</code></li>
@@ -399,20 +406,20 @@ This is done on alpine by adding more stuff to <code>/etc/network/interfaces</co
 <div class="org-src-container">
 <pre class="src src-conf">auto wg0
 iface wg0 inet static
-    address 172.16.255.1
-    netmask 255.255.255.0
-    pre-up ip link add dev wg0 type wireguard
-    pre-up wg setconf wg0 /etc/wireguard/wg0.conf
-    post-up ip route add 172.16.1.0/24 dev wg0
-    post-down ip link delete wg0
+        address 172.16.255.1
+        netmask 255.255.255.0
+        pre-up ip link add dev wg0 type wireguard
+        pre-up wg setconf wg0 /etc/wireguard/wg0.conf
+        post-up ip route add 172.16.1.0/24 dev wg0
+        post-down ip link delete wg0
 </pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org006b500" class="outline-4">
-<h4 id="org006b500">On the apartment <code>gateway</code></h4>
-<div class="outline-text-4" id="text-org006b500">
+<div id="outline-container-org46e9e4e" class="outline-4">
+<h4 id="org46e9e4e">On the apartment <code>gateway</code></h4>
+<div class="outline-text-4" id="text-org46e9e4e">
 <p>
 The router in my apartment is a VPN client, maintaining a persistent connection to the VPN server.
 </p>
@@ -427,7 +434,7 @@ In <code>/etc/wireguard/wg0.conf</code> put something like:
 [<span class="org-type">Peer</span>]
 <span class="org-variable-name">Endpoint</span> = &lt;public ip of VPN server&gt;:&lt;port of VPN server&gt;
 <span class="org-variable-name">PublicKey</span> = ...... <span class="org-comment-delimiter"># </span><span class="org-comment">public key goes here</span>
-<span class="org-variable-name">PersistentKeepalive</span> = <span class="org-highlight-numbers-number">25</span>  <span class="org-comment-delimiter"># </span><span class="org-comment">keep the connection alive at all times</span>
+<span class="org-variable-name">PersistentKeepalive</span> = 25  <span class="org-comment-delimiter"># </span><span class="org-comment">keep the connection alive at all times</span>
 <span class="org-comment-delimiter"># </span><span class="org-comment">Allow the apartment router to route traffic into:</span>
 <span class="org-comment-delimiter"># </span><span class="org-comment">- VPN subnet</span>
 <span class="org-comment-delimiter"># </span><span class="org-comment">- cloud subnet</span>
@@ -442,20 +449,20 @@ Create the new interface in <code>/etc/network/interfaces</code>:
 <div class="org-src-container">
 <pre class="src src-conf">auto wg0
 iface wg0 inet static
-    address 172.16.255.2
-    netmask 255.255.255.0
-    pre-up ip link add dev wg0 type wireguard
-    pre-up wg setconf wg0 /etc/wireguard/wg0.conf
-    post-up ip route add 172.16.2.0/24 dev wg0
-    post-down ip link delete wg0
+        address 172.16.255.2
+        netmask 255.255.255.0
+        pre-up ip link add dev wg0 type wireguard
+        pre-up wg setconf wg0 /etc/wireguard/wg0.conf
+        post-up ip route add 172.16.2.0/24 dev wg0
+        post-down ip link delete wg0
 </pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org48de11e" class="outline-4">
-<h4 id="org48de11e">On a &ldquo;dynamic&rdquo; VPN client</h4>
-<div class="outline-text-4" id="text-org48de11e">
+<div id="outline-container-orgd2ea2f5" class="outline-4">
+<h4 id="orgd2ea2f5">On a "dynamic" VPN client</h4>
+<div class="outline-text-4" id="text-orgd2ea2f5">
 <p>
 On machines like my laptop, I want to easily bring the VPN up and down.
 This is easy to do with the <code>wg-quick</code> tool.
@@ -464,7 +471,7 @@ When you run <code>wg-quick up wg0</code>, it will bring up the interface, confi
 </p>
 
 <p>
-Here&rsquo;s the config from my (arch linux/systemd) laptop:
+Here's the config from my (arch linux/systemd) laptop:
 </p>
 
 <div class="org-src-container">
@@ -472,8 +479,8 @@ Here&rsquo;s the config from my (arch linux/systemd) laptop:
 <span class="org-variable-name">Address</span> = 172.16.255.3/32
 <span class="org-variable-name">PrivateKey</span> = .... <span class="org-comment-delimiter"># </span><span class="org-comment">private key for this device</span>
 <span class="org-comment-delimiter"># </span><span class="org-comment">After coming up, reconfigure my domain resolution.</span>
-<span class="org-comment-delimiter"># </span><span class="org-comment">I'm on the vpn subdomain now. I resolve DNS queries with the cloud region's DN</span><span class="org-comment"><span class="org-hl-fill-column">S</span></span><span class="org-comment"> server</span>
-<span class="org-variable-name">PostUp</span> = printf <span class="org-string">'domain vpn.me.com\nnameserver 172.16.2.1'</span> | resolvconf -a %i -m<span class="org-hl-fill-column"> </span><span class="org-highlight-numbers-number">0</span> -x
+<span class="org-comment-delimiter"># </span><span class="org-comment">I'm on the vpn subdomain now. I resolve DNS queries with the cloud region's DNS server</span>
+<span class="org-variable-name">PostUp</span> = printf <span class="org-string">'domain vpn.me.com\nnameserver 172.16.2.1'</span> | resolvconf -a %i -m 0 -x
 <span class="org-comment-delimiter"># </span><span class="org-comment">dnsmasq caches queries, so restart it to make sure the cache is clean</span>
 <span class="org-variable-name">PostUp</span> = systemctl restart dnsmasq
 <span class="org-comment-delimiter"># </span><span class="org-comment">on teardown, undo the DNS resolver tweaks</span>
@@ -482,7 +489,7 @@ Here&rsquo;s the config from my (arch linux/systemd) laptop:
 [<span class="org-type">Peer</span>]
 <span class="org-variable-name">Endpoint</span> = &lt;server public ip&gt;:&lt;server public port&gt;
 <span class="org-variable-name">PublicKey</span> = ...... <span class="org-comment-delimiter"># </span><span class="org-comment">public key for the server</span>
-<span class="org-variable-name">PersistentKeepalive</span> = <span class="org-highlight-numbers-number">25</span>
+<span class="org-variable-name">PersistentKeepalive</span> = 25
 <span class="org-comment-delimiter"># </span><span class="org-comment">Route *all traffic* through the VPN</span>
 <span class="org-variable-name">AllowedIPs</span> = 0.0.0.0/0, ::/0
 <span class="org-comment-delimiter"># </span><span class="org-comment">Alternatively, we could use a list like:</span>
@@ -493,9 +500,9 @@ Here&rsquo;s the config from my (arch linux/systemd) laptop:
 </div>
 </div>
 
-<div id="outline-container-org9dbf351" class="outline-5">
-<h5 id="org9dbf351">Laptop Lid</h5>
-<div class="outline-text-5" id="text-org9dbf351">
+<ul class="org-ul">
+<li><a id="orgc3a80b7"></a>Laptop Lid<br>
+<div class="outline-text-5" id="text-orgc3a80b7">
 <p>
 When my laptop lid closes, I kill the wireguard connection with a systemd unit file.
 This seems to minimize confusion when I close my laptop and take it somewhere.
@@ -518,13 +525,14 @@ In <code>/etc/systemd/system/wg-down.service</code>:
 </pre>
 </div>
 </div>
-</div>
+</li>
+</ul>
 </div>
 </div>
 
-<div id="outline-container-org0e4bc83" class="outline-3">
-<h3 id="org0e4bc83">Tweak dnsmasq config again</h3>
-<div class="outline-text-3" id="text-org0e4bc83">
+<div id="outline-container-org1493ab5" class="outline-3">
+<h3 id="org1493ab5">Tweak dnsmasq config again</h3>
+<div class="outline-text-3" id="text-org1493ab5">
 <p>
 Make sure that the DNS servers know how to send queries to each other:
 </p>
@@ -556,9 +564,9 @@ In the cloud.me.com dnsmasq config:
 </div>
 </div>
 
-<div id="outline-container-orgfa97cbd" class="outline-3">
-<h3 id="orgfa97cbd">Plug it all in</h3>
-<div class="outline-text-3" id="text-orgfa97cbd">
+<div id="outline-container-org29cd813" class="outline-3">
+<h3 id="org29cd813">Plug it all in</h3>
+<div class="outline-text-3" id="text-org29cd813">
 <p>
 I plugged the new router box into the wall (on port 0), and plugged a small 4-port TP-link switch into port 1.
 Everything else is plugged into the TP-link switch.
@@ -567,28 +575,28 @@ Everything else is plugged into the TP-link switch.
 </div>
 </div>
 
-<div id="outline-container-orgfe725a2" class="outline-2">
-<h2 id="orgfe725a2">Finally: use the system</h2>
-<div class="outline-text-2" id="text-orgfe725a2">
+<div id="outline-container-orgfca0cbc" class="outline-2">
+<h2 id="orgfca0cbc">Finally: use the system</h2>
+<div class="outline-text-2" id="text-orgfca0cbc">
 </div>
-<div id="outline-container-orgfeb56ec" class="outline-3">
-<h3 id="orgfeb56ec">Good</h3>
-<div class="outline-text-3" id="text-orgfeb56ec">
+<div id="outline-container-orga239a58" class="outline-3">
+<h3 id="orga239a58">Good</h3>
+<div class="outline-text-3" id="text-orga239a58">
 <ul class="org-ul">
 <li>Wireguard is rock solid, even on my phone and from an airplane.</li>
 <li>My local network performance is incredible</li>
 <li>The tracker block lists noticeably effect load times for some sites</li>
-<li>The latency/bandwidth I get back to my apartment is low/high, from everywhere I&rsquo;ve been in Chicago</li>
+<li>The latency/bandwidth I get back to my apartment is low/high, from everywhere I've been in Chicago</li>
 </ul>
 </div>
 </div>
-<div id="outline-container-orgaad2cb7" class="outline-3">
-<h3 id="orgaad2cb7">Bad</h3>
-<div class="outline-text-3" id="text-orgaad2cb7">
+<div id="outline-container-orgfa3d696" class="outline-3">
+<h3 id="orgfa3d696">Bad</h3>
+<div class="outline-text-3" id="text-orgfa3d696">
 <ul class="org-ul">
 <li>DHCP lease refreshes are slow for me right now
 <ul class="org-ul">
-<li>When my lease expires, sometimes I&rsquo;ll see connectivity blips</li>
+<li>When my lease expires, sometimes I'll see connectivity blips</li>
 </ul></li>
 <li>The latency/bandwidth I get from when connecting to my apartment or cloud instance in Chicago from somewhere like Florida seems poor
 <ul class="org-ul">
@@ -599,18 +607,27 @@ Everything else is plugged into the TP-link switch.
 <li>Many tracker links are broken (emailed, google sponsored, etc)</li>
 <li>Facebook behaves strangely</li>
 </ul></li>
-<li>I haven&rsquo;t setup ipv6</li>
+<li>I haven't setup ipv6</li>
 </ul>
 
 <p>
-Overall, I&rsquo;m extremely happy with how this turned out.
+Overall, I'm extremely happy with how this turned out.
 </p>
 </div>
 </div>
 </div>
-</div>
-<div id="postamble" class="status">
-<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2020-01-09-vpn.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
-</div>
+
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
 </body>
+</html>
+
+</body>
+
 </html>

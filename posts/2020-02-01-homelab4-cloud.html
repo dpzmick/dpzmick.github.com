@@ -1,24 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-<!-- 2020-09-21 Mon 21:57 -->
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Homelab Act 4: Services and Applications</title>
-<meta name="generator" content="Org mode">
-<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
 </head>
+
 <body>
-<div id="preamble" class="status">
-<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
-</div>
-<div id="content">
-<header>
-<h1 class="title">Homelab Act 4: Services and Applications</h1>
-</header><p>
-For the last 192 days (according to uptime on one my routers), I&rsquo;ve been setting up a small homelab.
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">Homelab Act 4: Services and Applications</h1>
+    </header>
+
+    <p>
+For the last 192 days (according to uptime on one my routers), I've been setting up a small homelab.
 Homelabs are kind of cool, and, the setup has been <i>interesting</i>.
-I&rsquo;ll be writing a few posts explaining the steps I took.
+I'll be writing a few posts explaining the steps I took.
 </p>
 
 <ul class="org-ul">
@@ -29,16 +36,16 @@ I&rsquo;ll be writing a few posts explaining the steps I took.
 </ul>
 
 <p>
-Now that I have a VPN, a server, a &ldquo;desktop computer&rdquo; connected to the server over a fast network, and fast storage, I should do something useful.
+Now that I have a VPN, a server, a "desktop computer" connected to the server over a fast network, and fast storage, I should do something useful.
 </p>
 
-<div id="outline-container-org1b1133b" class="outline-2">
-<h2 id="org1b1133b">Administration Tools</h2>
-<div class="outline-text-2" id="text-org1b1133b">
+<div id="outline-container-org14adf2e" class="outline-2">
+<h2 id="org14adf2e">Administration Tools</h2>
+<div class="outline-text-2" id="text-org14adf2e">
 </div>
-<div id="outline-container-org9a9ef92" class="outline-3">
-<h3 id="org9a9ef92"><a href="https://www.influxdata.com/">InfluxDB</a>, <a href="https://grafana.com/">Grafana</a>, and <a href="https://www.influxdata.com/time-series-platform/telegraf/">Telegraf</a></h3>
-<div class="outline-text-3" id="text-org9a9ef92">
+<div id="outline-container-org5b4b81a" class="outline-3">
+<h3 id="org5b4b81a"><a href="https://www.influxdata.com/">InfluxDB</a>, <a href="https://grafana.com/">Grafana</a>, and <a href="https://www.influxdata.com/time-series-platform/telegraf/">Telegraf</a></h3>
+<div class="outline-text-3" id="text-org5b4b81a">
 <p>
 These tools are useful for general system monitoring.
 </p>
@@ -49,63 +56,63 @@ Also, grafana plots are really pretty:
 </p>
 
 <p>
-I&rsquo;m also a fan of using these tools to report your own metrics from your own small applications.
+I'm also a fan of using these tools to report your own metrics from your own small applications.
 You can very easily write stats to output files then jam them through telegraf to collect them and produce plots.
 See <a href="https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md">https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md</a>.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org2f8f4ac" class="outline-3">
-<h3 id="org2f8f4ac"><a href="https://healthchecks.io">healthchecks.io</a> for alerting</h3>
-<div class="outline-text-3" id="text-org2f8f4ac">
+<div id="outline-container-org7dd8303" class="outline-3">
+<h3 id="org7dd8303"><a href="https://healthchecks.io">healthchecks.io</a> for alerting</h3>
+<div class="outline-text-3" id="text-org7dd8303">
 <p>
-<a href="https://healthchecks.io">healthchecks.io</a> is an altering service that sends alerts through email, slack, etc when it hasn&rsquo;t received a ping recently enough.
+<a href="https://healthchecks.io">healthchecks.io</a> is an altering service that sends alerts through email, slack, etc when it hasn't received a ping recently enough.
 You can run the open-source software yourself, or use a hosted version.
 </p>
 
 <p>
-To set it up, you register a number of &ldquo;checks&rdquo; and assign each check a schedule:
+To set it up, you register a number of "checks" and assign each check a schedule:
 </p>
 
 <p>
-Sending updates is also trivial; I just use use <code>curl</code> to send &ldquo;stating&rdquo;, &ldquo;failed,&rdquo; and &ldquo;succeeded&rdquo; messages from a shell script:
+Sending updates is also trivial; I just use use <code>curl</code> to send "stating", "failed," and "succeeded" messages from a shell script:
 </p>
 <div class="org-src-container">
 <pre class="src src-bash"><span class="org-comment-delimiter">#</span><span class="org-comment">!/bin/</span><span class="org-keyword">bash</span>
 
 <span class="org-builtin">set</span> -o pipefail
-<span class="org-comment-delimiter"># </span><span class="org-comment">don't set -e because we want failure to </span><span class="org-type"><span class="org-comment">make</span></span><span class="org-comment"> it all the way to the end, not</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">don't set -e because we want failure to make it all the way to the end, not</span>
 <span class="org-comment-delimiter"># </span><span class="org-comment">sure that's actually happening here</span>
 
-<span class="org-comment-delimiter"># </span><span class="org-comment">retrying </span><span class="org-type"><span class="org-comment">curl</span></span><span class="org-comment"> is questionable</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">retrying curl is questionable</span>
 
-<span class="org-keyword">if</span> <span class="org-rainbow-delimiters-depth-1">[</span> <span class="org-string">"</span><span class="org-string"><span class="org-constant">$</span></span><span class="org-string"><span class="org-variable-name">#</span></span><span class="org-string">"</span> -lt <span class="org-highlight-numbers-number">2</span> <span class="org-rainbow-delimiters-depth-1">]</span>; <span class="org-keyword">then</span>
-    <span class="org-type">echo</span> <span class="org-string">"Usage: URL cmd..."</span>
-    <span class="org-keyword">exit</span> <span class="org-highlight-numbers-number">1</span>
+<span class="org-keyword">if</span> [ <span class="org-string">"$#"</span> -lt 2 ]; <span class="org-keyword">then</span>
+    <span class="org-builtin">echo</span> <span class="org-string">"Usage: URL cmd..."</span>
+    <span class="org-keyword">exit</span> 1
 <span class="org-keyword">fi</span>
 
-<span class="org-variable-name">url</span>=$<span class="org-highlight-numbers-number">1</span>
+<span class="org-variable-name">url</span>=$<span class="org-variable-name">1</span>
 
-<span class="org-type">echo</span> <span class="org-string">"Sending start message"</span>
-<span class="org-type">curl</span> --silent -fsS --retry <span class="org-highlight-numbers-number">3</span> -X GET $<span class="org-rainbow-delimiters-depth-1">{</span><span class="org-variable-name">url</span><span class="org-rainbow-delimiters-depth-1">}</span>/start
-<span class="org-type">echo</span>
+<span class="org-builtin">echo</span> <span class="org-string">"Sending start message"</span>
+curl --silent -fsS --retry 3 -X GET ${<span class="org-variable-name">url</span>}/start
+<span class="org-builtin">echo</span>
 
 <span class="org-comment-delimiter"># </span><span class="org-comment">run the rest of the arguments as a command</span>
-$<span class="org-rainbow-delimiters-depth-1">{</span><span class="org-variable-name">@</span>:2<span class="org-rainbow-delimiters-depth-1">}</span>
+${<span class="org-variable-name">@</span>:2}
 
 <span class="org-variable-name">rc</span>=$<span class="org-variable-name">?</span>
-<span class="org-keyword">if</span> <span class="org-rainbow-delimiters-depth-1">[</span> $<span class="org-rainbow-delimiters-depth-2">{</span><span class="org-variable-name">rc</span><span class="org-rainbow-delimiters-depth-2">}</span> -eq <span class="org-highlight-numbers-number">0</span> <span class="org-rainbow-delimiters-depth-1">]</span>; <span class="org-keyword">then</span>
-    <span class="org-type">echo</span> <span class="org-string">"Success"</span>
-    <span class="org-type">curl</span> --silent -fsS --retry <span class="org-highlight-numbers-number">3</span> -X GET $<span class="org-rainbow-delimiters-depth-1">{</span><span class="org-variable-name">url</span><span class="org-rainbow-delimiters-depth-1">}</span> <span class="org-comment-delimiter"># </span><span class="org-comment">done!</span>
-    <span class="org-type">echo</span>
+<span class="org-keyword">if</span> [ ${<span class="org-variable-name">rc</span>} -eq 0 ]; <span class="org-keyword">then</span>
+    <span class="org-builtin">echo</span> <span class="org-string">"Success"</span>
+    curl --silent -fsS --retry 3 -X GET ${<span class="org-variable-name">url</span>} <span class="org-comment-delimiter"># </span><span class="org-comment">done!</span>
+    <span class="org-builtin">echo</span>
 <span class="org-keyword">else</span>
-    <span class="org-type">echo</span> <span class="org-string">"Command </span><span class="org-string"><span class="org-constant">$</span></span><span class="org-string"><span class="org-variable-name">{@:2}</span></span><span class="org-string"> failed"</span>
-    <span class="org-type">echo</span> <span class="org-string">"Sending fail message"</span>
-    <span class="org-type">curl</span> --silent -fsS --retry <span class="org-highlight-numbers-number">3</span> -X GET $<span class="org-rainbow-delimiters-depth-1">{</span><span class="org-variable-name">url</span><span class="org-rainbow-delimiters-depth-1">}</span>/fail
-    <span class="org-type">echo</span>
+    <span class="org-builtin">echo</span> <span class="org-string">"Command ${@:2} failed"</span>
+    <span class="org-builtin">echo</span> <span class="org-string">"Sending fail message"</span>
+    curl --silent -fsS --retry 3 -X GET ${<span class="org-variable-name">url</span>}/fail
+    <span class="org-builtin">echo</span>
 <span class="org-keyword">fi</span>
-<span class="org-keyword">exit</span> $<span class="org-rainbow-delimiters-depth-1">{</span><span class="org-variable-name">rc</span><span class="org-rainbow-delimiters-depth-1">}</span>
+<span class="org-keyword">exit</span> ${<span class="org-variable-name">rc</span>}
 </pre>
 </div>
 
@@ -113,15 +120,15 @@ $<span class="org-rainbow-delimiters-depth-1">{</span><span class="org-variable-
 Sending start/{success,fail} messages is helpful because:
 </p>
 <ol class="org-ol">
-<li>If you send a start message but don&rsquo;t send a finish soon enough, the service goes down.</li>
+<li>If you send a start message but don't send a finish soon enough, the service goes down.</li>
 <li>The healthchecks web displays the end-start runtime for each successful task in the web ui.</li>
 </ol>
 </div>
 </div>
 
-<div id="outline-container-orgaddb78f" class="outline-3">
-<h3 id="orgaddb78f"><a href="https://duplicacy.com/">Duplicacy</a> and <a href="https://www.backblaze.com/b2/cloud-storage.html">Backblaze B2</a> for backups</h3>
-<div class="outline-text-3" id="text-orgaddb78f">
+<div id="outline-container-org60e844b" class="outline-3">
+<h3 id="org60e844b"><a href="https://duplicacy.com/">Duplicacy</a> and <a href="https://www.backblaze.com/b2/cloud-storage.html">Backblaze B2</a> for backups</h3>
+<div class="outline-text-3" id="text-org60e844b">
 <p>
 Backups are tricky.
 </p>
@@ -132,9 +139,9 @@ My requirements:
 <ul class="org-ul">
 <li>Easy to restore data after a complete hardware failure
 <ul class="org-ul">
-<li>Can&rsquo;t depend on complicated local config files</li>
-<li>Ideally doesn&rsquo;t depend on a large software stack either, downloads straight from a web UI are preferred</li>
-<li>I don&rsquo;t need a carefully crafted mobile app</li>
+<li>Can't depend on complicated local config files</li>
+<li>Ideally doesn't depend on a large software stack either, downloads straight from a web UI are preferred</li>
+<li>I don't need a carefully crafted mobile app</li>
 </ul></li>
 <li>Incremental snapshots</li>
 <li>Cloud Storage supported easily (AWS, Backblaze, etc)
@@ -143,11 +150,11 @@ My requirements:
 </ul></li>
 <li>Understandable, easy to debug when things go wrong</li>
 <li>Very fast backups and very fast restores</li>
-<li>If I&rsquo;m paying for storage size, deduplication and some form of compression</li>
+<li>If I'm paying for storage size, deduplication and some form of compression</li>
 </ul>
 
 <p>
-For many years I&rsquo;ve used and recommended <a href="https://www.crashplan.com/en-us/">CrashPlan</a>.
+For many years I've used and recommended <a href="https://www.crashplan.com/en-us/">CrashPlan</a>.
 I still would recommend CrashPlan; their service satisfies almost all of the above requirements.
 </p>
 
@@ -186,39 +193,39 @@ A few of the snapshots from my laptop were corrupted I believe because I closed 
 </p>
 
 <p>
-Setting this up obviously takes more work than just downloading CrashPlan, but, so far I&rsquo;ve been pretty happy with how this experiement has gone so I will be continuing it for now.
+Setting this up obviously takes more work than just downloading CrashPlan, but, so far I've been pretty happy with how this experiement has gone so I will be continuing it for now.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org060a7bc" class="outline-3">
-<h3 id="org060a7bc">Logs</h3>
-<div class="outline-text-3" id="text-org060a7bc">
+<div id="outline-container-org6e5826c" class="outline-3">
+<h3 id="org6e5826c">Logs</h3>
+<div class="outline-text-3" id="text-org6e5826c">
 <p>
 Nothing.
 </p>
 
 <p>
-I&rsquo;ve wanted to alert on a few things from log files, so I&rsquo;ve just thrown a <code>grep BAD_THING log_file</code> into a script, checked the return code, and alerted to healthchecks when the bad thing happened.
-I don&rsquo;t need log searching/aggregation features for 3 computers.
+I've wanted to alert on a few things from log files, so I've just thrown a <code>grep BAD_THING log_file</code> into a script, checked the return code, and alerted to healthchecks when the bad thing happened.
+I don't need log searching/aggregation features for 3 computers.
 </p>
 </div>
 </div>
 </div>
 
-<div id="outline-container-orgabac66e" class="outline-2">
-<h2 id="orgabac66e">Developer Tools</h2>
-<div class="outline-text-2" id="text-orgabac66e">
+<div id="outline-container-orgdb13ba6" class="outline-2">
+<h2 id="orgdb13ba6">Developer Tools</h2>
+<div class="outline-text-2" id="text-orgdb13ba6">
 <p>
 The personal software development projects I work on can also take advantage of this server/vpn setup.
-I&rsquo;m able to ssh into both of my home machines from anywhere (because of the VPN), so I always have access to the larger CPUs available there (very handy when compiling rust/c++ code).
+I'm able to ssh into both of my home machines from anywhere (because of the VPN), so I always have access to the larger CPUs available there (very handy when compiling rust/c++ code).
 </p>
 
 <p>
-I&rsquo;m also using the server for:
+I'm also using the server for:
 </p>
 <ul class="org-ul">
-<li>SQL server (I like SQL, usually I just throw stuff into SQlite but MariaDB is cool too and I don&rsquo;t have to remember which computer the file was left on)</li>
+<li>SQL server (I like SQL, usually I just throw stuff into SQlite but MariaDB is cool too and I don't have to remember which computer the file was left on)</li>
 <li>A persistent Jupyter notebook server with julia and python available + tons of packages.
 <ul class="org-ul">
 <li>This is nice from my laptop, the server is a lot beefier than my laptop.</li>
@@ -237,47 +244,47 @@ I&rsquo;m also using the server for:
 </div>
 </div>
 
-<div id="outline-container-org8086681" class="outline-2">
-<h2 id="org8086681">Personal Tools that worked out</h2>
-<div class="outline-text-2" id="text-org8086681">
+<div id="outline-container-org1cf48ea" class="outline-2">
+<h2 id="org1cf48ea">Personal Tools that worked out</h2>
+<div class="outline-text-2" id="text-org1cf48ea">
 </div>
-<div id="outline-container-orgf377873" class="outline-3">
-<h3 id="orgf377873">General Archival</h3>
-<div class="outline-text-3" id="text-orgf377873">
+<div id="outline-container-org363237f" class="outline-3">
+<h3 id="org363237f">General Archival</h3>
+<div class="outline-text-3" id="text-org363237f">
 <p>
 I have a small archive of:
 </p>
 <ul class="org-ul">
 <li>Old school work and personal projects</li>
 <li>Videos of high school marching band</li>
-<li>Ripped cds that aren&rsquo;t available elsewhere</li>
+<li>Ripped cds that aren't available elsewhere</li>
 <li>Important Documents</li>
 </ul>
 
 <p>
 Saving these files on a backed-up, redundant storage system is working out well.
 Also, since I can NFS mount this drive over my VPN, I can get at the files anywhere that a computer is available.
-There&rsquo;s not a ton here, and there&rsquo;s not a ton that I want to keep readily accessible, so this is more of a dumping ground for things that I want to keep but don&rsquo;t otherwise need at my fingertips.
+There's not a ton here, and there's not a ton that I want to keep readily accessible, so this is more of a dumping ground for things that I want to keep but don't otherwise need at my fingertips.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org04ded1b" class="outline-3">
-<h3 id="org04ded1b">Samples and Music Projects</h3>
-<div class="outline-text-3" id="text-org04ded1b">
+<div id="outline-container-orgefd4646" class="outline-3">
+<h3 id="orgefd4646">Samples and Music Projects</h3>
+<div class="outline-text-3" id="text-orgefd4646">
 <p>
-I currently do all of my music projects from an actual computer, so I&rsquo;m storing all of the samples I&rsquo;ve collected and recordings I&rsquo;ve made on the NAS.
+I currently do all of my music projects from an actual computer, so I'm storing all of the samples I've collected and recordings I've made on the NAS.
 Since I run linux everywhere, I can NFS mount this drive from anywhere in my apartment and access my samples.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org8afa374" class="outline-3">
-<h3 id="org8afa374">Email/Contact backup</h3>
-<div class="outline-text-3" id="text-org8afa374">
+<div id="outline-container-org3eba764" class="outline-3">
+<h3 id="org3eba764">Email/Contact backup</h3>
+<div class="outline-text-3" id="text-org3eba764">
 <p>
 As part of an experiment to try moving from GMail to literally anything else, I started trying to backup my emails and contacts.
-I&rsquo;m using <a href="http://isync.sourceforge.net/">isync</a> to download my emails, because it is <b>extremely</b> configurable.
+I'm using <a href="http://isync.sourceforge.net/">isync</a> to download my emails, because it is <b>extremely</b> configurable.
 I have isync setup to:
 </p>
 <ul class="org-ul">
@@ -315,55 +322,55 @@ SyncState *
 </div>
 </div>
 
-<div id="outline-container-org20ecbee" class="outline-3">
-<h3 id="org20ecbee">RSS feeds</h3>
-<div class="outline-text-3" id="text-org20ecbee">
+<div id="outline-container-org3ef3df5" class="outline-3">
+<h3 id="org3ef3df5">RSS feeds</h3>
+<div class="outline-text-3" id="text-org3ef3df5">
 <p>
-I&rsquo;m running <a href="https://github.com/wking/rss2email/">rss2email</a> on the server to send RSS feeds to my email.
+I'm running <a href="https://github.com/wking/rss2email/">rss2email</a> on the server to send RSS feeds to my email.
 Using a 32 core behemoth to run a python script daily is silly, but oh well.
 </p>
 
 <p>
 rss2email works wonderfully and I highly recommend it.
 This came about for me because I wanted to read RSS feeds in emacs, but I also wanted to be able to mark stuff as read on my phone.
-My email is available on my phone, and I can make my email show up in emacs, so I&rsquo;m trying this out.
+My email is available on my phone, and I can make my email show up in emacs, so I'm trying this out.
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgd0a2edd" class="outline-3">
-<h3 id="orgd0a2edd">WeeChat</h3>
-<div class="outline-text-3" id="text-orgd0a2edd">
+<div id="outline-container-org2d76d8b" class="outline-3">
+<h3 id="org2d76d8b">WeeChat</h3>
+<div class="outline-text-3" id="text-org2d76d8b">
 <p>
 WeeChat has a pretty nifty <a href="https://weechat.org/files/doc/devel/weechat_relay_protocol.en.html">relay protocol</a> that can be used to remotely access your WeeChat instance from a browser or mobile device.
-I&rsquo;ve been running WeeChat on my machine instead of figuring out how to configure ZNC or some other bouncer.
-Im not super active on IRC, but I&rsquo;ve been happy with this approach and these tools.
+I've been running WeeChat on my machine instead of figuring out how to configure ZNC or some other bouncer.
+Im not super active on IRC, but I've been happy with this approach and these tools.
 </p>
 </div>
 </div>
 </div>
 
-<div id="outline-container-orgbb77d3f" class="outline-2">
-<h2 id="orgbb77d3f">Personal Tools that didn&rsquo;t work out</h2>
-<div class="outline-text-2" id="text-orgbb77d3f">
+<div id="outline-container-org04e359b" class="outline-2">
+<h2 id="org04e359b">Personal Tools that didn't work out</h2>
+<div class="outline-text-2" id="text-org04e359b">
 </div>
-<div id="outline-container-org2b29bf7" class="outline-3">
-<h3 id="org2b29bf7">Photos</h3>
-<div class="outline-text-3" id="text-org2b29bf7">
+<div id="outline-container-orge13cd21" class="outline-3">
+<h3 id="orge13cd21">Photos</h3>
+<div class="outline-text-3" id="text-orge13cd21">
 <p>
 I have a large collection of RAW photos captured in a variety of vendor-specific RAW formats.
 Getting these onto storage I owned and controlled was the main reason I built my NAS server.
 </p>
 
 <p>
-Up until recently, Adobe&rsquo;s cloud version of Lightroom (Lightroom CC) has worked really well for me.
+Up until recently, Adobe's cloud version of Lightroom (Lightroom CC) has worked really well for me.
 </p>
 <ul class="org-ul">
-<li>I don&rsquo;t really need or want Photoshop, I just want to process RAW files</li>
+<li>I don't really need or want Photoshop, I just want to process RAW files</li>
 <li>The facial recognition it does is extremely useful</li>
 <li>The AI powered search is neat and sometimes works</li>
 <li>Great support for many RAW file formats</li>
-<li>It&rsquo;s pretty hard to make a mistake and lose photos</li>
+<li>It's pretty hard to make a mistake and lose photos</li>
 <li>Most importantly: I can edit my photos anywhere, and upload from any device</li>
 </ul>
 
@@ -371,13 +378,13 @@ Up until recently, Adobe&rsquo;s cloud version of Lightroom (Lightroom CC) has w
 However, on a recent trip a few deficiences started to stand out:
 </p>
 <ul class="org-ul">
-<li>The web-app really isn&rsquo;t very good yet; I&rsquo;ve kept Windows installed on my laptop purely for lightroom
+<li>The web-app really isn't very good yet; I've kept Windows installed on my laptop purely for lightroom
 <ul class="org-ul">
 <li>Booting windows and waiting for it to automatically update for an hour is annoying</li>
 </ul></li>
-<li>There&rsquo;s no seamless way to include locally-stored photos in your collection
+<li>There's no seamless way to include locally-stored photos in your collection
 <ul class="org-ul">
-<li>If your network collection is too slow to upload a bunch of giant 50 meg RAW files (or Windows is sucking all your bandwidth to download an update), there&rsquo;s no a good way to view/edit the photos you took for the day from a local copy (with the sync running as a background task).</li>
+<li>If your network collection is too slow to upload a bunch of giant 50 meg RAW files (or Windows is sucking all your bandwidth to download an update), there's no a good way to view/edit the photos you took for the day from a local copy (with the sync running as a background task).</li>
 </ul></li>
 <li>Lightroom is pretty slow
 <ul class="org-ul">
@@ -393,11 +400,11 @@ I tried to glue together pieces of open source software to get some important su
 <p>
 The closest thing that currently exists is <a href="https://www.digikam.org/">DigiKam</a> with a <a href="https://userbase.kde.org/Digikam/Using_digiKam_with_MySQL">Remote Database</a>.
 DigiKam is a really great piece of software.
-Combine DigiKam with <a href="https://www.darktable.org/">Darktable</a> and <a href="https://rawtherapee.com/">rawtherapee</a> and you&rsquo;ll have a truly wonderful desktop photo editing suite.
+Combine DigiKam with <a href="https://www.darktable.org/">Darktable</a> and <a href="https://rawtherapee.com/">rawtherapee</a> and you'll have a truly wonderful desktop photo editing suite.
 </p>
 
 <p>
-But, if you try to access your NFS photo collection over a crappy internet connection, even with the MySQL database, this isn&rsquo;t going to work out so well.
+But, if you try to access your NFS photo collection over a crappy internet connection, even with the MySQL database, this isn't going to work out so well.
 Also, good luck doing anything with your phone.
 </p>
 
@@ -406,100 +413,100 @@ I tried a bunch of crazy things to get this to work well from multiple machines 
 </p>
 
 <p>
-For now, I&rsquo;ll be sticking with lightroom, but I&rsquo;m keeping my eyes open for something better.
-I didn&rsquo;t trust any of the other solutions I came up with to be robust and reliable, and I didn&rsquo;t feel like I was gaining enough to give up the AI search, mobile editing, etc.
+For now, I'll be sticking with lightroom, but I'm keeping my eyes open for something better.
+I didn't trust any of the other solutions I came up with to be robust and reliable, and I didn't feel like I was gaining enough to give up the AI search, mobile editing, etc.
 </p>
 
 <p>
-I don&rsquo;t mean for this to be an indictment of the open source stuff; the open source stuff is really good.
-The photo editing world just really hasn&rsquo;t caught onto the &ldquo;cloud&rdquo; thing yet.
+I don't mean for this to be an indictment of the open source stuff; the open source stuff is really good.
+The photo editing world just really hasn't caught onto the "cloud" thing yet.
 This space is also packed with proprietary software, proprietary file formats, and is sort of fundamentally unix-y.
 Adobe is the only company currently offering a cloud RAW editor with these nifty AI features.
 Everyone else that wants to use more than one machine generally has some crazy scheme involving Dropbox, partial syncing, and multiple databases (in flat files).
 </p>
 
 <p>
-In a couple of months, I&rsquo;ll probably try this again.
-Maybe I&rsquo;ll even build my own editor/manager software that works perfectly and does everything.
+In a couple of months, I'll probably try this again.
+Maybe I'll even build my own editor/manager software that works perfectly and does everything.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org2c1f84f" class="outline-3">
-<h3 id="org2c1f84f">Movies/TV/Music</h3>
-<div class="outline-text-3" id="text-org2c1f84f">
+<div id="outline-container-org8ec60c3" class="outline-3">
+<h3 id="org8ec60c3">Movies/TV/Music</h3>
+<div class="outline-text-3" id="text-org8ec60c3">
 <p>
-I considered turning this into a media streaming box, but it&rsquo;s nearly impossible to legally obtain copies of most of the TV and movies I want to keep around.
-If I could easily get legal digital copies of the TV shows I want to watch, I&rsquo;d be happy to pay, download, and manage the storage myself.
-This isn&rsquo;t the case, so I&rsquo;m just going to keep unhappily renting all of the media I consume.
+I considered turning this into a media streaming box, but it's nearly impossible to legally obtain copies of most of the TV and movies I want to keep around.
+If I could easily get legal digital copies of the TV shows I want to watch, I'd be happy to pay, download, and manage the storage myself.
+This isn't the case, so I'm just going to keep unhappily renting all of the media I consume.
 </p>
 
 <p>
-For music, I&rsquo;ve been pretty happy keeping unique, hard to stream music sitting around in FLAC files in my junk archive, then uploading the albums to Google Play Music for streaming from my phone and office.
+For music, I've been pretty happy keeping unique, hard to stream music sitting around in FLAC files in my junk archive, then uploading the albums to Google Play Music for streaming from my phone and office.
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgace1ab0" class="outline-3">
-<h3 id="orgace1ab0">Notes, Papers, TODO lists</h3>
-<div class="outline-text-3" id="text-orgace1ab0">
+<div id="outline-container-org702cdf4" class="outline-3">
+<h3 id="org702cdf4">Notes, Papers, TODO lists</h3>
+<div class="outline-text-3" id="text-org702cdf4">
 <p>
-I&rsquo;m currently using:
+I'm currently using:
 </p>
 <ul class="org-ul">
-<li><a href="https://www.mendeley.com/">Mendeley</a> to store a bunch of papers I&rsquo;ve read and want to read, with good metadata</li>
+<li><a href="https://www.mendeley.com/">Mendeley</a> to store a bunch of papers I've read and want to read, with good metadata</li>
 <li><a href="https://todoist.com/">todoist</a> to manage todo lists</li>
 <li><a href="https://orgmode.org/">org-mode</a> to take notes about things on a real computer</li>
 </ul>
 
 <p>
-In theory, all of this could be done with orgmode, but I haven&rsquo;t been able to find a good way to sync org mode (with attachments) to mobile devices.
-More or less I&rsquo;ve decided that I don&rsquo;t need to or want to actually write orgmode notes on a mobile device.
-I&rsquo;m using todoist and email to send myself things I need to capture, then capturing them when I have a real computer.
+In theory, all of this could be done with orgmode, but I haven't been able to find a good way to sync org mode (with attachments) to mobile devices.
+More or less I've decided that I don't need to or want to actually write orgmode notes on a mobile device.
+I'm using todoist and email to send myself things I need to capture, then capturing them when I have a real computer.
 I can export everything as HTML for read only access on my phone, in a form factor that works well on a small screen (not yet automated or searchable).
 </p>
 
 <p>
-I haven&rsquo;t figured out papers because I haven&rsquo;t tried to wrangle orgmode correctly to manage/tag/adjust metadata for them.
+I haven't figured out papers because I haven't tried to wrangle orgmode correctly to manage/tag/adjust metadata for them.
 Also, I regularly capture and sometimes read papers from my phone, so I need to find a proper workflow for managing these from my phone somehow.
 </p>
 
 <p>
-Even if I could move all of this to orgmode, I&rsquo;d still not be using the server for much of anything.
-In the best case, I&rsquo;d have a handful of text files in a git repo (or nextcloud or something), and a pile of PDFs on the NAS.
+Even if I could move all of this to orgmode, I'd still not be using the server for much of anything.
+In the best case, I'd have a handful of text files in a git repo (or nextcloud or something), and a pile of PDFs on the NAS.
 Again, none of this really requires a massive server.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org6166236" class="outline-3">
-<h3 id="org6166236">Everything Else</h3>
-<div class="outline-text-3" id="text-org6166236">
+<div id="outline-container-orgf14e072" class="outline-3">
+<h3 id="orgf14e072">Everything Else</h3>
+<div class="outline-text-3" id="text-orgf14e072">
 <p>
-Most of the things I use on a regular basis in my life outside of work aren&rsquo;t realistically replacable with self-hosted versions of things.
+Most of the things I use on a regular basis in my life outside of work aren't realistically replacable with self-hosted versions of things.
 </p>
 
 <p>
 If I refuse to use facebook messenger (or facebook) to stay in touch with people, they simply will not stay in touch or invite me to events.
-Volunteer organizations I&rsquo;m involved in use Google Docs to collaborate.
+Volunteer organizations I'm involved in use Google Docs to collaborate.
 All of my financial applications are closed off and nearly impossible to access with custom code.
 Lots of smart-junk needs to phone home to be fully functional.
 </p>
 
 <p>
-I considered self-hosting email, but I&rsquo;m not willing to deal with IP reputation issues and I&rsquo;m not sure I want to have to keep my server running reliably enough to depend on it for email.
-I&rsquo;m not going to self-host a password manager because I&rsquo;ll be royally screwed if my server goes down.
+I considered self-hosting email, but I'm not willing to deal with IP reputation issues and I'm not sure I want to have to keep my server running reliably enough to depend on it for email.
+I'm not going to self-host a password manager because I'll be royally screwed if my server goes down.
 </p>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org124b527" class="outline-2">
-<h2 id="org124b527">(false) Dichotomy?</h2>
-<div class="outline-text-2" id="text-org124b527">
+<div id="outline-container-org1c1434c" class="outline-2">
+<h2 id="org1c1434c">(false) Dichotomy?</h2>
+<div class="outline-text-2" id="text-org1c1434c">
 <p>
-Since I like to jam the world into neat little dichotomies, here&rsquo;s some attempts explain why some things worked well for me and some things did not.
-I&rsquo;ve come up with two ways to word this.
+Since I like to jam the world into neat little dichotomies, here's some attempts explain why some things worked well for me and some things did not.
+I've come up with two ways to word this.
 I think they are equivalent:
 </p>
 <ul class="org-ul">
@@ -508,32 +515,32 @@ I think they are equivalent:
 </ul>
 
 <p>
-I&rsquo;m generally happy using developer tools, but generally unhappy when I interact with consumer products.
-I&rsquo;m generally extremely comfortable convoluted keybindings or jamming together sed/grep/awk pipelines, but am often irritated when I get stuck in some tool that is &ldquo;user friendly.&rdquo;
+I'm generally happy using developer tools, but generally unhappy when I interact with consumer products.
+I'm generally extremely comfortable convoluted keybindings or jamming together sed/grep/awk pipelines, but am often irritated when I get stuck in some tool that is "user friendly."
 </p>
 
 <p>
-There&rsquo;s a few possible (hyperbolic) explanations:
+There's a few possible (hyperbolic) explanations:
 </p>
 <ol class="org-ol">
-<li>I&rsquo;m a developer so it&rsquo;s obvious that I&rsquo;d have the same mindset as other developers</li>
+<li>I'm a developer so it's obvious that I'd have the same mindset as other developers</li>
 <li>Developer/sysadmin tools are pretty mature, or build on mature UNIX foundations. There are more integrations and tools already available for this reason.
 <ul class="org-ul">
 <li>IMAP syncing and healthchecks are examples of this.</li>
-<li>I can <code>grep</code> almost anything that lives in developer/sysadmin land. I can&rsquo;t <code>grep</code> my <code>gmail</code>.</li>
+<li>I can <code>grep</code> almost anything that lives in developer/sysadmin land. I can't <code>grep</code> my <code>gmail</code>.</li>
 </ul></li>
-<li>There&rsquo;s some fundamental difference between the way &ldquo;developers/power users&rdquo; and &ldquo;consumers&rdquo; want to interact with their computers</li>
-<li>&ldquo;Modern&rdquo; design is terrible/user-hostile because of an intense focus on ease of use
+<li>There's some fundamental difference between the way "developers/power users" and "consumers" want to interact with their computers</li>
+<li>"Modern" design is terrible/user-hostile because of an intense focus on ease of use
 <ul class="org-ul">
 <li>UNIXy stuff was designed for interoperability, not ease of use.</li>
 <li>Modern apps are designed for ease of use.</li>
 <li>Cloud providers have little incentive to make their products easily interoperate with other things, and even less incentive to let you easily extract your data.</li>
-<li>Favorite Example: Instagram doesn&rsquo;t allow links anywhere other than a link in your user profile. This lets instagram control (through ads) most of the ways that people will leave the site. Good discussion on this <a href="https://anildash.com/2019/12/10/link-in-bio-is-how-they-tried-to-kill-the-web/">here</a>.</li>
+<li>Favorite Example: Instagram doesn't allow links anywhere other than a link in your user profile. This lets instagram control (through ads) most of the ways that people will leave the site. Good discussion on this <a href="https://anildash.com/2019/12/10/link-in-bio-is-how-they-tried-to-kill-the-web/">here</a>.</li>
 </ul></li>
-<li>It hard to make &ldquo;power user&rdquo; tools that are usable on a mobile device</li>
-<li>I&rsquo;m wrong. The tools I think are produtive are actually terrible.
+<li>It hard to make "power user" tools that are usable on a mobile device</li>
+<li>I'm wrong. The tools I think are produtive are actually terrible.
 <ul class="org-ul">
-<li>Maybe I shouldn&rsquo;t be trying to type regex into gmail&rsquo;s search and just learn how to type &ldquo;from:realist@gmail.com to:dreamer@not-gmail.com&rdquo; into the search box.</li>
+<li>Maybe I shouldn't be trying to type regex into gmail's search and just learn how to type "from:realist@gmail.com to:dreamer@not-gmail.com" into the search box.</li>
 </ul></li>
 </ol>
 
@@ -543,9 +550,9 @@ Reality is probably some combination of all of these.
 </div>
 </div>
 
-<div id="outline-container-orgd1fc439" class="outline-2">
-<h2 id="orgd1fc439">Closing Rant</h2>
-<div class="outline-text-2" id="text-orgd1fc439">
+<div id="outline-container-org61f186a" class="outline-2">
+<h2 id="org61f186a">Closing Rant</h2>
+<div class="outline-text-2" id="text-org61f186a">
 <p>
 Having an always-on machine, that I can get a virtual terminal on for adminstration has been convenient.
 Running my own DNS server with ad-blocking baked in has been fantastic.
@@ -558,50 +565,59 @@ Using a High Powered Xeon Server to backup some files, sometimes send me some em
 </p>
 
 <p>
-I&rsquo;m disappointed that having my own server hasn&rsquo;t turned out to be more useful.
+I'm disappointed that having my own server hasn't turned out to be more useful.
 Everything I use is a cloud service; everything I use to interact with other people is a cloud service.
 Many modern cloud services are simply better than their self hosted alternatives.
 </p>
 
 <p>
-From a practial perspective, I&rsquo;m most disappointed that I haven&rsquo;t managed to glue together or build something open source/self hosted to mange my photos.
+From a practial perspective, I'm most disappointed that I haven't managed to glue together or build something open source/self hosted to mange my photos.
 </p>
 
 <p>
-For a more philosophical perspective, I&rsquo;m really disappointed that I keep running up against walled gardens with opaque protocols.
+For a more philosophical perspective, I'm really disappointed that I keep running up against walled gardens with opaque protocols.
 To be clear, I have no issue paying someone else to run services for me.
-I also don&rsquo;t really have any issue with services that use funky protocols, or even if the entire service is closed-source and super proprietary.
-I&rsquo;m bothered that it is so difficult to move data between services and to easily hook things together to orchestrate some workflow I want.
+I also don't really have any issue with services that use funky protocols, or even if the entire service is closed-source and super proprietary.
+I'm bothered that it is so difficult to move data between services and to easily hook things together to orchestrate some workflow I want.
 </p>
 
 <p>
-In a perfect world, I&rsquo;d be able to pay companies to host my email, do AI magic on my photos, provide storage for backups, etc.
-Then, ideally, I&rsquo;d be able to glue this all together myself.
-I&rsquo;d like to be able to move data between these services, bring my own storage, and build little custom tools to do cool tricks with the tools I have available.
+In a perfect world, I'd be able to pay companies to host my email, do AI magic on my photos, provide storage for backups, etc.
+Then, ideally, I'd be able to glue this all together myself.
+I'd like to be able to move data between these services, bring my own storage, and build little custom tools to do cool tricks with the tools I have available.
 </p>
 
 <p>
-In today&rsquo;s world, if I pay a company to host my email, I can&rsquo;t get push notifications on an Android phone, unless my email provider has built a custom app that uses google&rsquo;s servers to send messages to my phone (ironically the state of the world is very slightly better on apple devices).
+In today's world, if I pay a company to host my email, I can't get push notifications on an Android phone, unless my email provider has built a custom app that uses google's servers to send messages to my phone (ironically the state of the world is very slightly better on apple devices).
 </p>
 
 <p>
-In today&rsquo;s world, I can pay Adobe to host my photos, do magic AI stuff on them, and give me a nice editor, but I can barely get my photos out.
+In today's world, I can pay Adobe to host my photos, do magic AI stuff on them, and give me a nice editor, but I can barely get my photos out.
 </p>
 
 <p>
-I can use Mendeley&rsquo;s free service to manage my PDFs, but I can&rsquo;t easily build a workflow that moves files between their cloud storage and my wifi-enabled eink reader (which can easily run custom code).
+I can use Mendeley's free service to manage my PDFs, but I can't easily build a workflow that moves files between their cloud storage and my wifi-enabled eink reader (which can easily run custom code).
 </p>
 
 <p>
 Maybe I just need to be patient and wait for all of these cloud products to become more mature.
-Maybe there&rsquo;s something in the <a href="https://fediverse.network/about">fediverse</a> (<a href="https://matrix.org/">matrix</a> and <a href="https://www.w3.org/TR/activitypub/">ActivityPub</a> look promising) that solves some of these problems.
+Maybe there's something in the <a href="https://fediverse.network/about">fediverse</a> (<a href="https://matrix.org/">matrix</a> and <a href="https://www.w3.org/TR/activitypub/">ActivityPub</a> look promising) that solves some of these problems.
 Maybe I just need to move on and go do something more productive with my time..
 </p>
 </div>
 </div>
-</div>
-<div id="postamble" class="status">
-<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2020-02-01-homelab4-cloud.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
-</div>
+
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
 </body>
+</html>
+
+</body>
+
 </html>

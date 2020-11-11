@@ -1,58 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<!-- 2020-09-21 Mon 21:57 -->
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rust Image Processing DSL</title>
-<meta name="generator" content="Org mode">
-<script type='text/javascript' src='/static/scripts.js'></script><link rel='stylesheet' type='text/css' href='/static/base.css' /><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        displayAlign: "center",
-        displayIndent: "0em",
+<html>
 
-        "HTML-CSS": { scale: 100,
-                        linebreaks: { automatic: "false" },
-                        webFont: "TeX"
-                       },
-        SVG: {scale: 100,
-              linebreaks: { automatic: "false" },
-              font: "TeX"},
-        NativeMML: {scale: 100},
-        TeX: { equationNumbers: {autoNumber: "AMS"},
-               MultLineWidth: "85%",
-               TagSide: "right",
-               TagIndent: ".8em"
-             }
-});
-</script>
-<script type="text/javascript"
-        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
 </head>
+
 <body>
-<div id="preamble" class="status">
-<div id='#preamble'><h1><a href='/'>dpzmick.com</a></h1></div>
-</div>
-<div id="content">
-<header>
-<h1 class="title">Rust Image Processing DSL</h1>
-</header><p>
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">Rust Image Processing DSL</h1>
+    </header>
+
+    <p>
 <a href="https://github.com/dpzmick/rust_img_dsl">This Project</a> is essentially an attempt to recreate some of the <a href="http://halide-lang.org/">Halide</a> project in Rust as a means of learning that Rust language.
 Halide is a really clever C++ library that allows programmers to define image processing algorithms in domain specific language which are compiled according to some sort of execution strategy.
-These strategies might be &ldquo;tile for cache efficiency&rdquo; or &ldquo;optimize for execution on a GPU.&rdquo;
+These strategies might be "tile for cache efficiency" or "optimize for execution on a GPU."
 The project is definitely worth poking at for a few minutes.
 </p>
 
 <p>
-The project I will be discussing in this blog post is an implementation of the first &ldquo;half&rdquo; of Halide, using <a href="https://www.rust-lang.org">Rust</a>.
-Specifically, I&rsquo;ve implemented a simple DSL for image processing which is JIT compiled with LLVM.
+The project I will be discussing in this blog post is an implementation of the first "half" of Halide, using <a href="https://www.rust-lang.org">Rust</a>.
+Specifically, I've implemented a simple DSL for image processing which is JIT compiled with LLVM.
 I picked this project mostly to learn rust, so my result is certainly not production code but it may still be interesting to read a bit about.
 </p>
 
-<div id="outline-container-orgb554cbf" class="outline-2">
-<h2 id="orgb554cbf">Annotated example</h2>
-<div class="outline-text-2" id="text-orgb554cbf">
+<div id="outline-container-orgd77d1a4" class="outline-2">
+<h2 id="orgd77d1a4">Annotated example</h2>
+<div class="outline-text-2" id="text-orgd77d1a4">
 <p>
 Before jumping into a discussion about how all of this works, lets look at an example of the DSL.
 In this example, we will define the sobel operator, then process an images with it.
@@ -80,10 +65,10 @@ In the DSL I have defined, we would denote this operation in a similar manner, s
 <span class="org-comment-delimiter">// </span><span class="org-comment">The number indicates how many inputs the function has</span>
 <span class="org-comment-delimiter">// </span><span class="org-comment">This lambda is always called with (x,y) coordinate values</span>
 <span class="org-comment-delimiter">// </span><span class="org-comment">and an array of inputs of the length specified.</span>
-<span class="org-keyword">let</span> <span class="org-variable-name">grad</span> = <span class="org-type">Function</span>::new(<span class="org-highlight-numbers-number">2</span>, |x, y, inputs| {
-    <span class="org-comment-delimiter">// </span><span class="org-comment">first we pull out references to the InputExpressions representing our inp</span><span class="org-comment"><span class="org-hl-fill-column">u</span></span><span class="org-comment">ts</span>
-    <span class="org-keyword">let</span> <span class="org-variable-name">input0</span> = &amp;inputs[<span class="org-highlight-numbers-number">0</span>];
-    <span class="org-keyword">let</span> <span class="org-variable-name">input1</span> = &amp;inputs[<span class="org-highlight-numbers-number">1</span>];
+<span class="org-keyword">let</span> <span class="org-variable-name">grad</span> = <span class="org-type">Function</span>::new(2, |x, y, inputs| {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">first we pull out references to the InputExpressions representing our inputs</span>
+    <span class="org-keyword">let</span> <span class="org-variable-name">input0</span> = &amp;inputs[0];
+    <span class="org-keyword">let</span> <span class="org-variable-name">input1</span> = &amp;inputs[1];
 
     <span class="org-comment-delimiter">// </span><span class="org-comment">compute the squares using the input expressions</span>
     <span class="org-comment-delimiter">// </span><span class="org-comment">Notice that x and y are both treated like functions.</span>
@@ -92,15 +77,15 @@ In the DSL I have defined, we would denote this operation in a similar manner, s
     <span class="org-keyword">let</span> <span class="org-variable-name">t2</span> = input1(x(), y()) * input1(x(), y());
 
     <span class="org-comment-delimiter">// </span><span class="org-comment">Compute the sum and the square root of the sum</span>
-    <span class="org-comment-delimiter">// </span><span class="org-comment">The last expression generated by this lambda is result of the function we</span><span class="org-comment"><span class="org-hl-fill-column"> </span></span><span class="org-comment">are defining</span>
-    <span class="org-comment-delimiter">// </span><span class="org-comment">The Box::new trick is needed, again, because of the way I've store the AS</span><span class="org-comment"><span class="org-hl-fill-column">T</span></span>
+    <span class="org-comment-delimiter">// </span><span class="org-comment">The last expression generated by this lambda is result of the function we are defining</span>
+    <span class="org-comment-delimiter">// </span><span class="org-comment">The Box::new trick is needed, again, because of the way I've store the AST</span>
     <span class="org-type">Box</span>::new(<span class="org-type">SqrtExpr</span>::new(t1 + t2))
 });
 </pre>
 </div>
 
 <p>
-This isn&rsquo;t the most beautiful way to build a representation of our function, but it works and I learned a lot implementing the magic that makes it work.
+This isn't the most beautiful way to build a representation of our function, but it works and I learned a lot implementing the magic that makes it work.
 Each function stores is a syntax tree representing the expression that the function computes.
 The syntax tree defined by the <code>grad</code> function looks something like this:
 </p>
@@ -115,9 +100,9 @@ For example, to generate a function that takes a single image as input and retur
 </p>
 
 <div class="org-src-container">
-<pre class="src src-rust"><span class="org-keyword">let</span> <span class="org-variable-name">sobel_x</span> = [[-<span class="org-highlight-numbers-number">1</span>, <span class="org-highlight-numbers-number">0</span>, <span class="org-highlight-numbers-number">1</span>],
-               [-<span class="org-highlight-numbers-number">2</span>, <span class="org-highlight-numbers-number">0</span>, <span class="org-highlight-numbers-number">2</span>],
-               [-<span class="org-highlight-numbers-number">1</span>, <span class="org-highlight-numbers-number">0</span>, <span class="org-highlight-numbers-number">1</span>]];
+<pre class="src src-rust"><span class="org-keyword">let</span> <span class="org-variable-name">sobel_x</span> = [[-1, 0, 1],
+               [-2, 0, 2],
+               [-1, 0, 1]];
 
 <span class="org-keyword">let</span> <span class="org-variable-name">sobel_x</span> = <span class="org-type">Function</span>::gen_3x3_kernel(sobel_x);
 </pre>
@@ -129,9 +114,9 @@ They do not mutate their inputs, nor do they store any state, nor are they coupl
 </p>
 </div>
 
-<div id="outline-container-org10dbe56" class="outline-3">
-<h3 id="org10dbe56">Connecting functions</h3>
-<div class="outline-text-3" id="text-org10dbe56">
+<div id="outline-container-org60ad4ca" class="outline-3">
+<h3 id="org60ad4ca">Connecting functions</h3>
+<div class="outline-text-3" id="text-org60ad4ca">
 <p>
 Now that we have some abstract functions, we need to compose functions to create something meaningful.
 The composition of functions in my DSL is called a function chain.
@@ -143,12 +128,12 @@ For example, the entire sobel image processing chain looks something like this:
 
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-keyword">let</span> <span class="org-variable-name">sobel_x_fun</span> = <span class="org-comment-delimiter">// </span><span class="org-comment">define the sobel_x function as shown above</span>
-<span class="org-keyword">let</span> <span class="org-variable-name">sobel_y_fun</span> = <span class="org-comment-delimiter">// </span><span class="org-comment">define the sobel_y function similar to the sobel_x function</span><span class="org-comment"><span class="org-hl-fill-column"> </span></span><span class="org-comment">given above</span>
+<span class="org-keyword">let</span> <span class="org-variable-name">sobel_y_fun</span> = <span class="org-comment-delimiter">// </span><span class="org-comment">define the sobel_y function similar to the sobel_x function given above</span>
 <span class="org-keyword">let</span> <span class="org-variable-name">grad_fun</span>    = <span class="org-comment-delimiter">// </span><span class="org-comment">define the gradient function, exactly as given above</span>
 
 <span class="org-comment-delimiter">// </span><span class="org-comment">make an ImageSource defining the start of the chain</span>
 <span class="org-comment-delimiter">// </span><span class="org-comment">In this case, we only need a single image source</span>
-<span class="org-keyword">let</span> <span class="org-variable-name">image</span> = <span class="org-type">ChainLink</span>::<span class="org-type">ImageSource</span>(<span class="org-highlight-numbers-number">0</span>);
+<span class="org-keyword">let</span> <span class="org-variable-name">image</span> = <span class="org-type">ChainLink</span>::<span class="org-type">ImageSource</span>(0);
 
 <span class="org-comment-delimiter">// </span><span class="org-comment">image source pixels flow into sobel_x</span>
 <span class="org-keyword">let</span> <span class="org-variable-name">c1</span> = <span class="org-type">ChainLink</span>::link(<span class="org-preprocessor">vec!</span>[&amp;image], &amp;sobel_x_fun);
@@ -163,9 +148,9 @@ For example, the entire sobel image processing chain looks something like this:
 </div>
 </div>
 
-<div id="outline-container-orgabef1ce" class="outline-3">
-<h3 id="orgabef1ce">Compiling and executing the chain</h3>
-<div class="outline-text-3" id="text-orgabef1ce">
+<div id="outline-container-org1bf256a" class="outline-3">
+<h3 id="org1bf256a">Compiling and executing the chain</h3>
+<div class="outline-text-3" id="text-org1bf256a">
 <p>
 Now that we have built a chain representing the entire sobel algorithm, we only need to compile the chain and use the chain to process an image:
 </p>
@@ -177,7 +162,7 @@ Now that we have built a chain representing the entire sobel algorithm, we only 
 </div>
 
 <p>
-Invoking <code>.compile()</code> on an image chain compiles each function in the chain provided into an LLVM module, optimizes the module with LLVM&rsquo;s optimizer, and uses LLVM&rsquo;s MCJIT to compile to machine code.
+Invoking <code>.compile()</code> on an image chain compiles each function in the chain provided into an LLVM module, optimizes the module with LLVM's optimizer, and uses LLVM's MCJIT to compile to machine code.
 A compiled chain essentially just holds a function pointer to a function which will be called when the chain is executed (and some things used for bookkeeping).
 The only work I had to do to go from AST to function pointer is code generation.
 For this reason, LLVM is decidedly <b>awesome</b>.
@@ -190,17 +175,17 @@ Note: For the full sobel code, see <a href="https://github.com/dpzmick/rust_img_
 </div>
 </div>
 
-<div id="outline-container-orgedeeb76" class="outline-2">
-<h2 id="orgedeeb76">Details, Details, Details</h2>
-<div class="outline-text-2" id="text-orgedeeb76">
+<div id="outline-container-org8a8fffc" class="outline-2">
+<h2 id="org8a8fffc">Details, Details, Details</h2>
+<div class="outline-text-2" id="text-org8a8fffc">
 <p>
-There&rsquo;s lots of little details which may be interesting to discuss, but I&rsquo;m only going to discuss the compilation method.
+There's lots of little details which may be interesting to discuss, but I'm only going to discuss the compilation method.
 First, we need some slightly more rigorous definitions of things:
 </p>
 
 <ul class="org-ul">
 <li>All of the user defined functions take two 64 bit integer values and a list of inputs. They return a 64 bit integer value.</li>
-<li>Because functions themselves have no concept of chaining (the gradient function doesn&rsquo;t call <code>sobel_x</code> and <code>sobel_y</code>), the &ldquo;inputs&rdquo; to a user defined function can be thought of as function-pointers which will eventually be resolved to real functions, although this is not how they are implemented.</li>
+<li>Because functions themselves have no concept of chaining (the gradient function doesn't call <code>sobel_x</code> and <code>sobel_y</code>), the "inputs" to a user defined function can be thought of as function-pointers which will eventually be resolved to real functions, although this is not how they are implemented.</li>
 <li>All of the system-defined expressions (eg. <code>SqrtExpr</code>) take a 64 bit integer and return a 64 bit integer.</li>
 </ul>
 
@@ -208,7 +193,7 @@ First, we need some slightly more rigorous definitions of things:
 The compilation strategy for the DSL is very simple: Every DSL function is compiled into a function with a signature that would look something like this in C:
 </p>
 <div class="org-src-container">
-<pre class="src src-c"><span class="org-keyword">inline</span> <span class="org-type">int64_t</span> <span class="org-function-name">function</span>(<span class="org-type">int64_t</span> <span class="org-variable-name">x</span>, <span class="org-type">int64_t</span> <span class="org-variable-name">y</span>, <span class="org-type">image</span> <span class="org-variable-name">inputs</span>[], <span class="org-type">size_t</span> <span class="org-variable-name">num_inputs</span>)<span class="org-hl-fill-column">;</span>
+<pre class="src src-c"><span class="org-keyword">inline</span> <span class="org-type">int64_t</span> <span class="org-function-name">function</span>(<span class="org-type">int64_t</span> <span class="org-variable-name">x</span>, <span class="org-type">int64_t</span> <span class="org-variable-name">y</span>, <span class="org-type">image</span> <span class="org-variable-name">inputs</span>[], <span class="org-type">size_t</span> <span class="org-variable-name">num_inputs</span>);
 </pre>
 </div>
 
@@ -224,8 +209,8 @@ The generated <code>grad</code> code roughly corresponds to:
 
 <div class="org-src-container">
 <pre class="src src-c"><span class="org-keyword">inline</span> <span class="org-type">int64_t</span> <span class="org-function-name">grad</span>(<span class="org-type">int64_t</span> <span class="org-variable-name">x</span>, <span class="org-type">int64_t</span> <span class="org-variable-name">y</span>, <span class="org-type">image</span> <span class="org-variable-name">inputs</span>[], <span class="org-type">size_t</span> <span class="org-variable-name">num_inputs</span>) {
-    <span class="org-type">int64_t</span> <span class="org-variable-name">partial1</span> = sobel_x(x, y, inputs, num_inputs) * sobel_x(x, y, inputs,<span class="org-hl-fill-column"> </span>num_inputs);
-    <span class="org-type">int64_t</span> <span class="org-variable-name">partial2</span> = sobel_y(x, y, inputs, num_inputs) * sobel_x(x, y, inputs,<span class="org-hl-fill-column"> </span>num_inputs);
+    <span class="org-type">int64_t</span> <span class="org-variable-name">partial1</span> = sobel_x(x, y, inputs, num_inputs) * sobel_x(x, y, inputs, num_inputs);
+    <span class="org-type">int64_t</span> <span class="org-variable-name">partial2</span> = sobel_y(x, y, inputs, num_inputs) * sobel_x(x, y, inputs, num_inputs);
     <span class="org-type">int64_t</span> <span class="org-variable-name">partial3</span> = partial1 + partial2;
 
     <span class="org-keyword">return</span> core_isqrt(partial3);
@@ -235,17 +220,17 @@ The generated <code>grad</code> code roughly corresponds to:
 </div>
 </div>
 
-<div id="outline-container-org5e3a482" class="outline-2">
-<h2 id="org5e3a482">Execution and image inputs</h2>
-<div class="outline-text-2" id="text-org5e3a482">
+<div id="outline-container-org987b5f0" class="outline-2">
+<h2 id="org987b5f0">Execution and image inputs</h2>
+<div class="outline-text-2" id="text-org987b5f0">
 <p>
 A driver function is injected into the module.
 This function performs some bookkeeping tasks, then just loops over the pixels in the output image, calling the appropriate function (whichever was last in the chain) for every pixel:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-c"><span class="org-keyword">for</span> (<span class="org-type">int</span> <span class="org-variable-name">x</span> = <span class="org-highlight-numbers-number">0</span>; x &lt; output.width; x++) {
-  <span class="org-keyword">for</span> (<span class="org-type">int</span> <span class="org-variable-name">y</span> = <span class="org-highlight-numbers-number">0</span>; y &lt; output.height; y++) {
+<pre class="src src-c"><span class="org-keyword">for</span> (<span class="org-type">int</span> <span class="org-variable-name">x</span> = 0; x &lt; output.width; x++) {
+  <span class="org-keyword">for</span> (<span class="org-type">int</span> <span class="org-variable-name">y</span> = 0; y &lt; output.height; y++) {
     <span class="org-type">int64_t</span> <span class="org-variable-name">res</span> = function(x, y, inputs, num_inputs);
 
     <span class="org-comment-delimiter">/* </span><span class="org-comment">output image at x, y</span><span class="org-comment-delimiter"> */</span> = (<span class="org-type">uint8_t</span>) res;
@@ -259,99 +244,99 @@ When the compiler reaches an <code>ImageSource</code> in the function chain, it 
 </p>
 
 <p>
-For anyone interested, I&rsquo;ve dumped the entire LLVM IR module for an unoptimized sobel chain <a href="https://gist.github.com/dpzmick/a55851a9dd5ef87dd925c7f69151c0d0">here</a>.
-Some of the code is generated from the file <a href="https://github.com/dpzmick/rust_img_dsl/blob/master/src/core.c">core.c</a> in the github repo for the project, if you need some hints to figure out what&rsquo;s going on here.
+For anyone interested, I've dumped the entire LLVM IR module for an unoptimized sobel chain <a href="https://gist.github.com/dpzmick/a55851a9dd5ef87dd925c7f69151c0d0">here</a>.
+Some of the code is generated from the file <a href="https://github.com/dpzmick/rust_img_dsl/blob/master/src/core.c">core.c</a> in the github repo for the project, if you need some hints to figure out what's going on here.
 The entry point is the function <code>jitfunction</code>.
-There&rsquo;s lots of other interesting little idiosyncrasies in this code but I don&rsquo;t have space and you don&rsquo;t have time to read about all of them.
+There's lots of other interesting little idiosyncrasies in this code but I don't have space and you don't have time to read about all of them.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org807c8b3" class="outline-2">
-<h2 id="org807c8b3">Performance</h2>
-<div class="outline-text-2" id="text-org807c8b3">
+<div id="outline-container-org445fec3" class="outline-2">
+<h2 id="org445fec3">Performance</h2>
+<div class="outline-text-2" id="text-org445fec3">
 <p>
 Anyone who knows a little bit about computers and performance is probably hurting a little bit thinking about how this might perform.
-You&rsquo;ve noticed all of the function calls, don&rsquo;t these have lots of overhead?
-Uou&rsquo;ve noticed that I&rsquo;m computing the <code>sobel_x</code> and <code>sobel_y</code> values twice in the gradient function.
-Don&rsquo;t worry, it isn&rsquo;t quite so bad.
+You've noticed all of the function calls, don't these have lots of overhead?
+Uou've noticed that I'm computing the <code>sobel_x</code> and <code>sobel_y</code> values twice in the gradient function.
+Don't worry, it isn't quite so bad.
 </p>
 
 <p>
-Anyone who knows a fair amount about computers and performance noticed that <code>inline</code> keyword and is wondering if I&rsquo;m somehow relying on function inlining to extract performance from this technique.
+Anyone who knows a fair amount about computers and performance noticed that <code>inline</code> keyword and is wondering if I'm somehow relying on function inlining to extract performance from this technique.
 The answer is yes.
 Every generated function is marked with an LLVM attribute <code>AlwaysInline</code> which, when combined with the appropriate LLVM optimization passes, guarantees that these functions will always be inlined into their caller.
 </p>
 </div>
 
-<div id="outline-container-orgd02ca67" class="outline-3">
-<h3 id="orgd02ca67">Aside: Function inlining</h3>
-<div class="outline-text-3" id="text-orgd02ca67">
+<div id="outline-container-orgfaf50ae" class="outline-3">
+<h3 id="orgfaf50ae">Aside: Function inlining</h3>
+<div class="outline-text-3" id="text-orgfaf50ae">
 <p>
-For those who are not totally familiar with the concept of function ininling, here&rsquo;s a quick example (note that the <code>inline</code> keyword in C doesn&rsquo;t guarantee this behavior, it is just a hint to the compiler):
+For those who are not totally familiar with the concept of function ininling, here's a quick example (note that the <code>inline</code> keyword in C doesn't guarantee this behavior, it is just a hint to the compiler):
 </p>
 
 <div class="org-src-container">
 <pre class="src src-c"><span class="org-comment-delimiter">// </span><span class="org-comment">before AlwaysInlinePass</span>
-<span class="org-keyword">inline</span> <span class="org-type">int</span> <span class="org-function-name">foo</span>() { <span class="org-keyword">return</span> <span class="org-highlight-numbers-number">12</span>; }
+<span class="org-keyword">inline</span> <span class="org-type">int</span> <span class="org-function-name">foo</span>() { <span class="org-keyword">return</span> 12; }
 
 <span class="org-type">int</span> <span class="org-function-name">bar</span>() {
-    <span class="org-keyword">for</span> (<span class="org-type">size_t</span> <span class="org-variable-name">i</span> = <span class="org-highlight-numbers-number">0</span>; i &lt; <span class="org-highlight-numbers-number">100</span>; i++) {
-        <span class="org-keyword">if</span> (foo() &gt; <span class="org-highlight-numbers-number">13</span>) <span class="org-keyword">return</span> <span class="org-highlight-numbers-number">1</span>;
+    <span class="org-keyword">for</span> (<span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; 100; i++) {
+        <span class="org-keyword">if</span> (foo() &gt; 13) <span class="org-keyword">return</span> 1;
     }
 
-    <span class="org-keyword">return</span> <span class="org-highlight-numbers-number">0</span>;
+    <span class="org-keyword">return</span> 0;
 }
- 
+
 <span class="org-comment-delimiter">// </span><span class="org-comment">after AlwaysInlinePass</span>
 <span class="org-type">int</span> <span class="org-function-name">bar</span>() {
-    <span class="org-keyword">for</span> (<span class="org-type">size_t</span> <span class="org-variable-name">i</span> = <span class="org-highlight-numbers-number">0</span>; i &lt; <span class="org-highlight-numbers-number">100</span>; i++) {
-        <span class="org-keyword">if</span> (<span class="org-highlight-numbers-number">12</span> &gt; <span class="org-highlight-numbers-number">13</span>) <span class="org-keyword">return</span> <span class="org-highlight-numbers-number">1</span>;
+    <span class="org-keyword">for</span> (<span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; 100; i++) {
+        <span class="org-keyword">if</span> (12 &gt; 13) <span class="org-keyword">return</span> 1;
     }
 
-    <span class="org-keyword">return</span> <span class="org-highlight-numbers-number">0</span>;
+    <span class="org-keyword">return</span> 0;
 }
 </pre>
 </div>
 
 <p>
 It may seem that this optimization is useful because it removes function call overhead.
-This is true, but it isn&rsquo;t the only critical reason that the optimization is useful.
+This is true, but it isn't the only critical reason that the optimization is useful.
 Many compiler optimizations cannot (or do not) cross function boundaries.
 Instead, they often view functions as black boxes about which nothing can be known (this is obviously an oversimplification).
 This often makes sense because functions may be defined in different compilations units or in shared libraries, where the compiler cannot access their source.
-Function inlining allows the compiler to &ldquo;see&rdquo; inside functions, then perform additional optimizations which would not have been possible otherwise.
+Function inlining allows the compiler to "see" inside functions, then perform additional optimizations which would not have been possible otherwise.
 For example, because the call to <code>foo</code> has been inlined, the compiler can now (easily) optimize the function <code>bar</code> to:
 </p>
 
 <div class="org-src-container">
 <pre class="src src-c"><span class="org-type">int</span> <span class="org-function-name">bar</span>() {
-    <span class="org-keyword">return</span> <span class="org-highlight-numbers-number">0</span>;
+    <span class="org-keyword">return</span> 0;
 }
 </pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org7151a31" class="outline-3">
-<h3 id="org7151a31">Impact</h3>
-<div class="outline-text-3" id="text-org7151a31">
+<div id="outline-container-orgdb68d18" class="outline-3">
+<h3 id="orgdb68d18">Impact</h3>
+<div class="outline-text-3" id="text-orgdb68d18">
 <p>
 Aggressive function inlining gives me lots of freedom in my code generation.
 I can generate code which is totally inefficient, then inline everything and let the compiler do some of its magic.
-If course, this isn&rsquo;t a general rule, but for this problem the generated code is highly uniform, doesn&rsquo;t do much with memory (other than reading from <code>readonly</code> images), and has a few other compiler freindly properties.
+If course, this isn't a general rule, but for this problem the generated code is highly uniform, doesn't do much with memory (other than reading from <code>readonly</code> images), and has a few other compiler freindly properties.
 It the end of the day, LLVM is doing a pretty good job turning my functional style code into a big fat loop and eliminating redundant computations.
-If you&rsquo;re interested in looking at the optimized sobel LLVM module, here it is: <a href="https://gist.github.com/dpzmick/95587dbb2972e256e51b888add3364a6">gist</a>.
+If you're interested in looking at the optimized sobel LLVM module, here it is: <a href="https://gist.github.com/dpzmick/95587dbb2972e256e51b888add3364a6">gist</a>.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org5e330a9" class="outline-3">
-<h3 id="org5e330a9">Numbers</h3>
-<div class="outline-text-3" id="text-org5e330a9">
+<div id="outline-container-org4d92de2" class="outline-3">
+<h3 id="org4d92de2">Numbers</h3>
+<div class="outline-text-3" id="text-org4d92de2">
 <p>
 To benchmark this code, I compared the JITed code with an implementation of the exact same thing written directly in Rust.
-My benchmarking is not extremely rigorous, but I&rsquo;ve taken steps to try to create an honest benchmark.
+My benchmarking is not extremely rigorous, but I've taken steps to try to create an honest benchmark.
 </p>
 
 <p>
@@ -381,21 +366,21 @@ Here is a plot of image vs average speedup (the images are sorted by the total n
 </p>
 
 
-<figure>
+<figure id="org46eb123">
 <img src="../static/rust_img/img_vs_speedup.png" alt="img_vs_speedup.png" class="light-invert">
 
 </figure>
 
 <p>
-There are many more plots, but the overall conclusion is pretty clear: compared to the Rust, I&rsquo;m not performing very poorly.
+There are many more plots, but the overall conclusion is pretty clear: compared to the Rust, I'm not performing very poorly.
 Is this a win? I am not sure, I would need to do many more comparisons.
 These results do indicate to me that I have at least achieved reasonable performance, with a dramatically different programming style.
 </p>
 </div>
 
-<div id="outline-container-orgcb4d27a" class="outline-4">
-<h4 id="orgcb4d27a">Final performance notes</h4>
-<div class="outline-text-4" id="text-orgcb4d27a">
+<div id="outline-container-org201524c" class="outline-4">
+<h4 id="org201524c">Final performance notes</h4>
+<div class="outline-text-4" id="text-org201524c">
 <p>
 It should be noted that these results are not entirely surprising.
 Rust is also using LLVM as a backend.
@@ -403,16 +388,16 @@ It is probably reasonable to assume that the code Rust is generating looks prett
 </p>
 
 <p>
-If you&rsquo;ve been nodding your head along with me, I have a confession to make: I&rsquo;ve tricked you a little bit.
-LLVM is doing an awesome job (considering the code I&rsquo;ve generated), but I&rsquo;m certainly missing out on lots of opportunities for performance because of my code generation technique.
+If you've been nodding your head along with me, I have a confession to make: I've tricked you a little bit.
+LLVM is doing an awesome job (considering the code I've generated), but I'm certainly missing out on lots of opportunities for performance because of my code generation technique.
 Also, LLVM (or any compiler) should never be expected to be able to totally understand the problem a piece of code is trying to solve and optimize it perfectly.
 To really get good performance, I would need to pay attention to caching and quite a few other things which I have totally ignored.
-Hand tuned code should (and certainly would) run in circles around the code JIT compiled algorithm I&rsquo;ve generated here.
+Hand tuned code should (and certainly would) run in circles around the code JIT compiled algorithm I've generated here.
 </p>
 
 <p>
 If you want something that gives you an awesome DSL AND all sorts of control over cache scheduling and whatnot, take a look at Halide.
-If you have no idea what I&rsquo;m talking about or why any of this matters, take a look at Halide anyway.
+If you have no idea what I'm talking about or why any of this matters, take a look at Halide anyway.
 The Halide talks give fantastic descriptions of many of the problems it aims to solve.
 </p>
 </div>
@@ -420,9 +405,9 @@ The Halide talks give fantastic descriptions of many of the problems it aims to 
 </div>
 </div>
 
-<div id="outline-container-org7ac21be" class="outline-2">
-<h2 id="org7ac21be">Conclusions</h2>
-<div class="outline-text-2" id="text-org7ac21be">
+<div id="outline-container-org1537649" class="outline-2">
+<h2 id="org1537649">Conclusions</h2>
+<div class="outline-text-2" id="text-org1537649">
 <p>
 Overall, this project was extremely enjoyable.
 I had yet another opportunity to fiddle with LLVM, which is always lots of fun (but sometimes very painful).
@@ -433,9 +418,18 @@ Go learn Rust.
 </p>
 </div>
 </div>
-</div>
-<div id="postamble" class="status">
-<div id='#postamble'><a href='/'>home</a><a href=https://gitlab.com/dpzmick/dpzmick.com/raw/master/posts/2016-08-11-rust-jit-image-processing.org>view-source</a><a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a></div>
-</div>
+
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
 </body>
+</html>
+
+</body>
+
 </html>
