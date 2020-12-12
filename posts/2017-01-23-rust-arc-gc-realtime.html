@@ -40,9 +40,9 @@ There are many, many techniques which can be used to work around this trickiness
 This post is a discussion of one such method (presented in <a href="https://www.youtube.com/watch?v=boPEO2auJj4">this cppcon talk</a>) implemented in <a href="https://www.rust-lang.org/en-US/">Rust</a>.
 </p>
 
-<div id="outline-container-org6fcdefb" class="outline-2">
-<h2 id="org6fcdefb">Messaging between threads</h2>
-<div class="outline-text-2" id="text-org6fcdefb">
+<div id="outline-container-org192b6af" class="outline-2">
+<h2 id="org192b6af">Messaging between threads</h2>
+<div class="outline-text-2" id="text-org192b6af">
 <p>
 Suppose we are developing a synthesizer which produces sounds when keys are pressed on a <a href="https://en.wikipedia.org/wiki/MIDI_controller#Keyboards">MIDI keyboard</a>.
 The audio library calls a function we provide once ever 6 or so milliseconds to request a list of samples from us.
@@ -71,9 +71,9 @@ If messages lives on the heap, we must ensure they are allocated and freed outsi
 </p>
 </div>
 
-<div id="outline-container-org67b5143" class="outline-3">
-<h3 id="org67b5143">Reference counted garbage collection</h3>
-<div class="outline-text-3" id="text-org67b5143">
+<div id="outline-container-orge743181" class="outline-3">
+<h3 id="orge743181">Reference counted garbage collection</h3>
+<div class="outline-text-3" id="text-orge743181">
 <p>
 It is totally fine to allocate on the UI thread, so when the UI thread handles an event it will compute a new list of samples and stick them into a freshly allocated block of memory.
 Then we will ship this message over to the realtime thread.
@@ -103,9 +103,9 @@ Sometime later, the collector thread will observe the decreased reference count 
 </div>
 </div>
 
-<div id="outline-container-org22634f7" class="outline-3">
-<h3 id="org22634f7">Tradeoffs</h3>
-<div class="outline-text-3" id="text-org22634f7">
+<div id="outline-container-org489b829" class="outline-3">
+<h3 id="org489b829">Tradeoffs</h3>
+<div class="outline-text-3" id="text-org489b829">
 <p>
 Let's consider the theoretical behavior of this approach.
 Note that anything I have to say should be taken with grain of salt; I haven't benchmarked anything, so I really have no evidence to support anything I'm claiming.
@@ -154,9 +154,9 @@ Regardless of the actual efficacy of this approach, it will be interesting to tr
 </div>
 </div>
 
-<div id="outline-container-org87b8eaf" class="outline-2">
-<h2 id="org87b8eaf">Let's make one</h2>
-<div class="outline-text-2" id="text-org87b8eaf">
+<div id="outline-container-orgb38b496" class="outline-2">
+<h2 id="orgb38b496">Let's make one</h2>
+<div class="outline-text-2" id="text-orgb38b496">
 <p>
 For the sake of these examples, let's assume that the built-in Rust <a href="https://doc.rust-lang.org/std/sync/mpsc/index.html">mpsc channel</a> is an appropriate lock free queue.
 It will be pretty easy to swap this with something different later, and, if we use the standard library, all of the examples will easily run in the Rust playground.
@@ -164,9 +164,9 @@ We are also going to fake a bunch of the details of the audio library.
 </p>
 </div>
 
-<div id="outline-container-org414c22a" class="outline-3">
-<h3 id="org414c22a">Fake audio library</h3>
-<div class="outline-text-3" id="text-org414c22a">
+<div id="outline-container-org3aec7a0" class="outline-3">
+<h3 id="org3aec7a0">Fake audio library</h3>
+<div class="outline-text-3" id="text-org3aec7a0">
 <p>
 <a href="https://play.rust-lang.org/?gist=27d1b7a693ffe01ac899b991317b170f&amp;version=stable&amp;backtrace=0">Rust Playground Link</a>.
 </p>
@@ -259,9 +259,9 @@ Output (one of many possible):
 </div>
 
 
-<div id="outline-container-org0c28e72" class="outline-3">
-<h3 id="org0c28e72">Sending Arcs between threads</h3>
-<div class="outline-text-3" id="text-org0c28e72">
+<div id="outline-container-orgff50b11" class="outline-3">
+<h3 id="orgff50b11">Sending Arcs between threads</h3>
+<div class="outline-text-3" id="text-orgff50b11">
 <p>
 Now that we have an "audio library," let's try to make some messages and pass them between threads.
 </p>
@@ -349,9 +349,9 @@ Now that we've done all of that, we need to send the samples between threads.
 </div>
 </div>
 
-<div id="outline-container-org125b402" class="outline-3">
-<h3 id="org125b402">Message type</h3>
-<div class="outline-text-3" id="text-org125b402">
+<div id="outline-container-orge2d17aa" class="outline-3">
+<h3 id="orge2d17aa">Message type</h3>
+<div class="outline-text-3" id="text-orge2d17aa">
 <p>
 As discussed previously, we will create the <code>Arc</code> on the UI thread, then send it to the realtime thread.
 </p>
@@ -522,9 +522,9 @@ Here is an example output:
 </div>
 </div>
 
-<div id="outline-container-org0831a69" class="outline-3">
-<h3 id="org0831a69">Problems?</h3>
-<div class="outline-text-3" id="text-org0831a69">
+<div id="outline-container-org00446f5" class="outline-3">
+<h3 id="org00446f5">Problems?</h3>
+<div class="outline-text-3" id="text-org00446f5">
 <p>
 The last example <b>seems</b> to do the right thing, let's take a look at what the realtime callback does when it receives a new set of samples.
 </p>
@@ -575,9 +575,9 @@ We can't let our realtime callback perform memory allocation.
 </div>
 </div>
 
-<div id="outline-container-org113ce4b" class="outline-2">
-<h2 id="org113ce4b">Build the GC</h2>
-<div class="outline-text-2" id="text-org113ce4b">
+<div id="outline-container-org9db65d7" class="outline-2">
+<h2 id="org9db65d7">Build the GC</h2>
+<div class="outline-text-2" id="text-org9db65d7">
 <p>
 We now need to build the GC that I promised we would build, to clean up after us, outside of the realtime thread.
 Sneak peak, once the GC is implemented, all we have to change is <code>UIThread::run</code>, in a very small way:
@@ -1109,9 +1109,9 @@ There are only a few things left to do.
 </p>
 </div>
 
-<div id="outline-container-org807a48e" class="outline-3">
-<h3 id="org807a48e">Start and Stop the GC</h3>
-<div class="outline-text-3" id="text-org807a48e">
+<div id="outline-container-org3880858" class="outline-3">
+<h3 id="org3880858">Start and Stop the GC</h3>
+<div class="outline-text-3" id="text-org3880858">
 <p>
 The GC thread that we have created will never terminate.
 </p>
@@ -1199,9 +1199,9 @@ Next, update the <code>UIThread::run</code> method:
 </div>
 </div>
 
-<div id="outline-container-org586a672" class="outline-3">
-<h3 id="org586a672">Drop the GC</h3>
-<div class="outline-text-3" id="text-org586a672">
+<div id="outline-container-orgb070af3" class="outline-3">
+<h3 id="orgb070af3">Drop the GC</h3>
+<div class="outline-text-3" id="text-orgb070af3">
 <p>
 Rust will make sure that <code>Drop</code> is called when the struct goes out of scope.
 This gives us a change to shut down the GC thread.
@@ -1260,9 +1260,9 @@ Example output:
 </div>
 </div>
 
-<div id="outline-container-orgc18e44c" class="outline-3">
-<h3 id="orgc18e44c">Proof</h3>
-<div class="outline-text-3" id="text-orgc18e44c">
+<div id="outline-container-org0cf2d04" class="outline-3">
+<h3 id="org0cf2d04">Proof</h3>
+<div class="outline-text-3" id="text-org0cf2d04">
 <p>
 Let's add some logging so we can see when things are getting freed:
 </p>
@@ -1313,9 +1313,9 @@ Example Output:
 </div>
 </div>
 
-<div id="outline-container-orgda46afc" class="outline-2">
-<h2 id="orgda46afc">Conclusion</h2>
-<div class="outline-text-2" id="text-orgda46afc">
+<div id="outline-container-org541b37a" class="outline-2">
+<h2 id="org541b37a">Conclusion</h2>
+<div class="outline-text-2" id="text-org541b37a">
 <p>
 We did it!
 </p>
