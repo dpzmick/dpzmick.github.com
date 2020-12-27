@@ -71,9 +71,9 @@ Clearly moving is significant here, what does that mean exactly, and
 why is this such a big deal?
 </p>
 
-<div id="outline-container-org2e57d29" class="outline-2">
-<h2 id="org2e57d29">C++</h2>
-<div class="outline-text-2" id="text-org2e57d29">
+<div id="outline-container-org80211e2" class="outline-2">
+<h2 id="org80211e2">C++</h2>
+<div class="outline-text-2" id="text-org80211e2">
 <p>
 I'm more familiar with C++ and my familiarity is probably where my
 misunderstandings are coming from. Let's start by understanding what
@@ -85,7 +85,7 @@ Consider the following <code>struct</code>:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="orgffd11e6"><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
+<pre class="src src-cpp" id="org9110bac"><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
   <span class="org-function-name">Thing</span>(<span class="org-type">uint64_t</span> <span class="org-variable-name">id</span>)
     : id(id)
   { }
@@ -170,7 +170,7 @@ Let's consider one last struct.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="org07a9f6f"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
+<pre class="src src-cpp" id="org0d23069"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
 <span class="org-keyword">struct</span> <span class="org-type">ring_buffer</span> {
   <span class="org-constant">std</span>::<span class="org-type">array</span>&lt;<span class="org-type">T</span>, N+1&gt; <span class="org-variable-name">entries</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">use one extra element for easy book-keeping</span>
 
@@ -210,9 +210,9 @@ can take advantage of in some special places.
 </div>
 </div>
 
-<div id="outline-container-org3705285" class="outline-2">
-<h2 id="org3705285">Rust</h2>
-<div class="outline-text-2" id="text-org3705285">
+<div id="outline-container-org18b2d1e" class="outline-2">
+<h2 id="org18b2d1e">Rust</h2>
+<div class="outline-text-2" id="text-org18b2d1e">
 <p>
 Let's do the same exercises again in Rust, starting with the <code>Thing</code>
 struct.
@@ -400,9 +400,9 @@ following these rules, but that's a topic for another time.
 </div>
 </div>
 
-<div id="outline-container-org465b235" class="outline-2">
-<h2 id="org465b235">Futures/async.await</h2>
-<div class="outline-text-2" id="text-org465b235">
+<div id="outline-container-org730b6f7" class="outline-2">
+<h2 id="org730b6f7">Futures/async.await</h2>
+<div class="outline-text-2" id="text-org730b6f7">
 <p>
 Hopefully now, we can understand why this is prerequisite for
 async.await support in Rust.
