@@ -34,9 +34,9 @@ To start off this series, here's a short article about audio
 programming.
 </p>
 
-<div id="outline-container-org21b96f7" class="outline-2">
-<h2 id="org21b96f7">Digital audio</h2>
-<div class="outline-text-2" id="text-org21b96f7">
+<div id="outline-container-orgbe451bf" class="outline-2">
+<h2 id="orgbe451bf">Digital audio</h2>
+<div class="outline-text-2" id="text-orgbe451bf">
 <p>
 To generate audio, audio software sends some digital audio signals to
 the audio card. Digital audio signals are just lists of floating point
@@ -53,7 +53,7 @@ wave like this (from Wikipedia):
 </p>
 
 
-<figure id="orgf6f9600">
+<figure id="org0929d15">
 <img src="../static/sound/sine_samples.png" alt="sine_samples.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 1: </span>Samples</figcaption>
@@ -65,9 +65,9 @@ audio, which is then played through the speakers.
 </p>
 </div>
 
-<div id="outline-container-orgb9844d0" class="outline-3">
-<h3 id="orgb9844d0">Types of audio software</h3>
-<div class="outline-text-3" id="text-orgb9844d0">
+<div id="outline-container-org9323196" class="outline-3">
+<h3 id="org9323196">Types of audio software</h3>
+<div class="outline-text-3" id="text-org9323196">
 <p>
 Next let's think about a few different kinds of audio software (this
 list is by no means complete):
@@ -91,7 +91,7 @@ interfaces.
 </p>
 
 
-<figure id="orgf9d5707">
+<figure id="orgb549159">
 <img src="../static/sound/reason_drums.jpg" alt="reason_drums.jpg"> 
 
 <figcaption><span class="figure-number">Figure 2: </span>drum machine in some software</figcaption>
@@ -105,7 +105,7 @@ frequency ranges (make the bass louder, make the treble quieter):
 </p>
 
 
-<figure id="orgf40a6be">
+<figure id="org2a6a544">
 <img src="../static/sound/itunes_eq.jpg" alt="itunes_eq.jpg">
 
 <figcaption><span class="figure-number">Figure 3: </span>equalizer</figcaption>
@@ -120,7 +120,7 @@ little mixer thing:
 </p>
 
 
-<figure id="orgc6441a6">
+<figure id="org3879684">
 <img src="../static/sound/win_mixer.png" alt="win_mixer.png">
 
 <figcaption><span class="figure-number">Figure 4: </span>windows mixer</figcaption>
@@ -140,9 +140,9 @@ developers use to develop audio applications.
 </div>
 </div>
 
-<div id="outline-container-org291b985" class="outline-2">
-<h2 id="org291b985">Software audio systems</h2>
-<div class="outline-text-2" id="text-org291b985">
+<div id="outline-container-orgdc743d9" class="outline-2">
+<h2 id="orgdc743d9">Software audio systems</h2>
+<div class="outline-text-2" id="text-orgdc743d9">
 <p>
 Most software audio systems (as far as I know) tend to work the same
 way. There is a realtime thread that generates samples and a bunch of
@@ -153,9 +153,9 @@ audio card.
 </p>
 </div>
 
-<div id="outline-container-org1d4b8a6" class="outline-3">
-<h3 id="org1d4b8a6">How fast is realtime?</h3>
-<div class="outline-text-3" id="text-org1d4b8a6">
+<div id="outline-container-org9f54380" class="outline-3">
+<h3 id="org9f54380">How fast is realtime?</h3>
+<div class="outline-text-3" id="text-org9f54380">
 <p>
 In the previous section, I claimed that, at 44.1 kHz (the standard CD
 sample rate), we need to take one audio sample approximately every 23
@@ -252,9 +252,9 @@ milliseconds can slow everyone else down.
 </div>
 </div>
 
-<div id="outline-container-org13550d3" class="outline-3">
-<h3 id="org13550d3">Time keeps on ticking</h3>
-<div class="outline-text-3" id="text-org13550d3">
+<div id="outline-container-org880356d" class="outline-3">
+<h3 id="org880356d">Time keeps on ticking</h3>
+<div class="outline-text-3" id="text-org880356d">
 <p>
 If our callback function fails to generate samples quickly enough (or
 uses up all of the CPU time), the audio system will produce crackles,
@@ -360,9 +360,9 @@ allocators</a> which do not violate our realtime constraints.
 </div>
 </div>
 
-<div id="outline-container-org770d183" class="outline-2">
-<h2 id="org770d183">What do we do?</h2>
-<div class="outline-text-2" id="text-org770d183">
+<div id="outline-container-org84923ca" class="outline-2">
+<h2 id="org84923ca">What do we do?</h2>
+<div class="outline-text-2" id="text-org84923ca">
 <p>
 In general, there are a few cool tricks we can use to design around
 these problems, but I'm not going to discuss any of them in this post.

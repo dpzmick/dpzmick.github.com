@@ -30,9 +30,9 @@ We can fortunately easily look under the covers with the Teensy's Arduino implem
 In this post I'm going to walk through a few bad ways this can be done, and the correct way (for Teensy 4.1).
 </p>
 
-<div id="outline-container-org9a6b348" class="outline-2">
-<h2 id="org9a6b348">Naive Implementation</h2>
-<div class="outline-text-2" id="text-org9a6b348">
+<div id="outline-container-org5464fa7" class="outline-2">
+<h2 id="org5464fa7">Naive Implementation</h2>
+<div class="outline-text-2" id="text-org5464fa7">
 <p>
 The simplest possible way to set multiple pins is to just set them one at a time.
 </p>
@@ -86,7 +86,7 @@ Rising edge:
 </p>
 
 
-<figure id="org592f8f8">
+<figure id="org388dee7">
 <img src="../static/teensy-many-pins/naive_rise.png" alt="naive_rise.png">
 
 </figure>
@@ -96,7 +96,7 @@ Falling edge:
 </p>
 
 
-<figure id="org3ed12ac">
+<figure id="org5788d68">
 <img src="../static/teensy-many-pins/naive_fall.png" alt="naive_fall.png">
 
 </figure>
@@ -120,9 +120,9 @@ Let's dig in.
 </p>
 </div>
 
-<div id="outline-container-org035dee9" class="outline-3">
-<h3 id="org035dee9">ARM assembly</h3>
-<div class="outline-text-3" id="text-org035dee9">
+<div id="outline-container-orgc32c727" class="outline-3">
+<h3 id="orgc32c727">ARM assembly</h3>
+<div class="outline-text-3" id="text-orgc32c727">
 <p>
 This code compiles to something much more complicated that the simple "set pin x to value v" function calls would indicate.
 The Teensy 4.1 doesn't actually have any facility with which it can set a <span class="underline">single</span> output pin!
@@ -143,9 +143,9 @@ When the memory system for the microcontroller observes a store to these magic a
 For each port, there are two registers that we care about (and one that we could use, but aren't):
 </p>
 <ul class="org-ul">
-<li>A "set" register which turns "on" certain pins mapped to a given port</li>
-<li>A "clear" register which turns "off" certain pins mapped to a given port</li>
-<li>A "toggle" register to toggle the value on certain pins mapped to a given port</li>
+<li>A "set" register which turns "on" certain pins mapped to a given port (any pins that are already "on" stay "on")</li>
+<li>A "clear" register which turns "off" certain pins mapped to a given port (any pins that are already "off" stay "off")</li>
+<li>A "toggle" register to toggle the value on certain pins mapped to a given port (didn't use this one, but could have)</li>
 </ul>
 
 <p>
@@ -161,15 +161,15 @@ Rephrasing the code above in these terms, we actually are doing something like:
 <span class="org-keyword">while</span>( 1 ) {
   <span class="org-keyword">if</span>( state ) {
     assign_to_set_register( 0b1000 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1</span>
-    assign_to_set_register( 0b1100 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1 and 2</span>
-    assign_to_set_register( 0b1110 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, and 3</span>
-    assign_to_set_register( 0b1111 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, 3, and 4</span>
+    assign_to_set_register( 0b0100 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 2 (Pin 1 stays on)</span>
+    assign_to_set_register( 0b0010 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 3 (Pin 1 and 2 stay on)</span>
+    assign_to_set_register( 0b0001 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 4 (Pin 1, 2, and 3 stay on)</span>
   }
   <span class="org-keyword">else</span> {
-    assign_to_clear_register( 0b1000 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1</span>
-    assign_to_clear_register( 0b1100 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1 and 2</span>
-    assign_to_clear_register( 0b1110 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, and 3</span>
-    assign_to_clear_register( 0b1111 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, 3, and 4</span>
+    assign_to_clear_register( 0b1000 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn off Pin 1 (Pin 2, 3, 4 stay on)</span>
+    assign_to_clear_register( 0b0100 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn off Pin 2 (Pin 3, and 4 stay on)</span>
+    assign_to_clear_register( 0b0010 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn off Pin 3 (Pin 4 stays on)</span>
+    assign_to_clear_register( 0b0001 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn off Pin 4</span>
   }
 }
 </pre>
@@ -177,7 +177,7 @@ Rephrasing the code above in these terms, we actually are doing something like:
 
 <p>
 Expressed this way, it looks really silly!
-We should clearly just turning every pin on in the first assignment (we'll get there, be patient).
+We should clearly just turn on every pin on in the first assignment (we'll get there, be patient).
 </p>
 
 <p>
@@ -217,9 +217,9 @@ But, of course, we can do much better than this by getting away from the arduino
 </div>
 </div>
 
-<div id="outline-container-org0b320e7" class="outline-2">
-<h2 id="org0b320e7">Port implementation</h2>
-<div class="outline-text-2" id="text-org0b320e7">
+<div id="outline-container-org5787c2c" class="outline-2">
+<h2 id="org5787c2c">Port implementation</h2>
+<div class="outline-text-2" id="text-org5787c2c">
 <p>
 It's easy to implement the appropriate GPIO port code by grabbing bits and pieces from the teensy arduino headers.
 </p>
@@ -276,9 +276,9 @@ And, the scope shows a much nicer shape for both the rising edge and falling edg
 </div>
 </div>
 
-<div id="outline-container-org552f456" class="outline-2">
-<h2 id="org552f456">Conclusion</h2>
-<div class="outline-text-2" id="text-org552f456">
+<div id="outline-container-org5569a81" class="outline-2">
+<h2 id="org5569a81">Conclusion</h2>
+<div class="outline-text-2" id="text-org5569a81">
 <p>
 The Arduino APIs are fantastically useful for getting started quickly, but dropping to lower level APIs can be important.
 Fortunately, the Teensy makes it fantastically easy to dig around and use the chip when needed, and, the headers are even documented with where to look in the official manual!
@@ -291,9 +291,9 @@ So far the Teensy is filling that role well.
 </p>
 </div>
 
-<div id="outline-container-org2abad2e" class="outline-3">
-<h3 id="org2abad2e">Additional Recommended Reading</h3>
-<div class="outline-text-3" id="text-org2abad2e">
+<div id="outline-container-org06c1975" class="outline-3">
+<h3 id="org06c1975">Additional Recommended Reading</h3>
+<div class="outline-text-3" id="text-org06c1975">
 <ul class="org-ul">
 <li>Arduino docs on port manipulation: <a href="https://www.arduino.cc/en/Reference/PortManipulation">https://www.arduino.cc/en/Reference/PortManipulation</a></li>
 <li>Manipulating Teensy 3.6 pins without the arduino APIs: <a href="http://l0ner.github.io/2020-08-24_teensy-the-hard-way-blink/">http://l0ner.github.io/2020-08-24_teensy-the-hard-way-blink/</a></li>
@@ -303,9 +303,9 @@ So far the Teensy is filling that role well.
 </div>
 </div>
 
-<div id="outline-container-orgaaece0e" class="outline-2">
-<h2 id="orgaaece0e">Appendix 1: Array Implementation</h2>
-<div class="outline-text-2" id="text-orgaaece0e">
+<div id="outline-container-orgda85b2d" class="outline-2">
+<h2 id="orgda85b2d">Appendix 1: Array Implementation</h2>
+<div class="outline-text-2" id="text-orgda85b2d">
 <p>
 Suppose we replace the code with something a bit more flexible (and that was recommended in the arduino forums).
 </p>
@@ -340,7 +340,7 @@ Something bad clearly happens when we run this code:
 </p>
 
 
-<figure id="org7c7ee30">
+<figure id="org3be1d5e">
 <img src="../static/teensy-many-pins/array_rise.png" alt="array_rise.png">
 
 </figure>
