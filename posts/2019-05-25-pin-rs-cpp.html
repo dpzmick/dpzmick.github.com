@@ -25,7 +25,7 @@
 
     <p>
 <a href="https://doc.rust-lang.org/std/pin/">Pin</a> is pretty important for Rust's recently-released <code>async.await</code>
-features. I read the docs. I didn't get it<sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>. This exercise is what it
+features. I read the docs. I didn't get it<sup><a id="fnr.1" class="footref" href="#fn.1" role="doc-backlink">1</a></sup>. This exercise is what it
 took for me to understand why <code>Pin</code> is important.
 </p>
 
@@ -71,9 +71,9 @@ Clearly moving is significant here, what does that mean exactly, and
 why is this such a big deal?
 </p>
 
-<div id="outline-container-org9c9abae" class="outline-2">
-<h2 id="org9c9abae">C++</h2>
-<div class="outline-text-2" id="text-org9c9abae">
+<div id="outline-container-orgd38e9c4" class="outline-2">
+<h2 id="orgd38e9c4">C++</h2>
+<div class="outline-text-2" id="text-orgd38e9c4">
 <p>
 I'm more familiar with C++ and my familiarity is probably where my
 misunderstandings are coming from. Let's start by understanding what
@@ -85,7 +85,7 @@ Consider the following <code>struct</code>:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="orgc9ea71c"><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
+<pre class="src src-cpp" id="org405be0b"><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
   <span class="org-function-name">Thing</span>(<span class="org-type">uint64_t</span> <span class="org-variable-name">id</span>)
     : id(id)
   { }
@@ -133,7 +133,7 @@ undefined, <b>but valid</b> state.
 </div>
 
 <p>
-Next, consider this<sup><a id="fnr.2" class="footref" href="#fn.2">2</a></sup> implementation of <code>swap</code> and it's usage:
+Next, consider this<sup><a id="fnr.2" class="footref" href="#fn.2" role="doc-backlink">2</a></sup> implementation of <code>swap</code> and it's usage:
 </p>
 
 <div class="org-src-container">
@@ -170,7 +170,7 @@ Let's consider one last struct.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="org66d21fd"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
+<pre class="src src-cpp" id="org9eceb88"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
 <span class="org-keyword">struct</span> <span class="org-type">ring_buffer</span> {
   <span class="org-constant">std</span>::<span class="org-type">array</span>&lt;<span class="org-type">T</span>, N+1&gt; <span class="org-variable-name">entries</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">use one extra element for easy book-keeping</span>
 
@@ -210,9 +210,9 @@ can take advantage of in some special places.
 </div>
 </div>
 
-<div id="outline-container-org83cece6" class="outline-2">
-<h2 id="org83cece6">Rust</h2>
-<div class="outline-text-2" id="text-org83cece6">
+<div id="outline-container-org0138094" class="outline-2">
+<h2 id="org0138094">Rust</h2>
+<div class="outline-text-2" id="text-org0138094">
 <p>
 Let's do the same exercises again in Rust, starting with the <code>Thing</code>
 struct.
@@ -366,7 +366,7 @@ Rule number 2: Rust move is always <span class="underline">just</span> a <code>m
 <p>
 Now, let's think about the ring buffer. It is not even remotely
 idiomatic to write anything like the C++ version of the ring-buffer in
-Rust<sup><a id="fnr.3" class="footref" href="#fn.3">3</a></sup>, but let's do it anyway. I'm also going to pretend that <a href="https://github.com/rust-lang/rust/issues/44580">const
+Rust<sup><a id="fnr.3" class="footref" href="#fn.3" role="doc-backlink">3</a></sup>, but let's do it anyway. I'm also going to pretend that <a href="https://github.com/rust-lang/rust/issues/44580">const
 generics</a> are finished for the sake of clarity.
 </p>
 
@@ -400,9 +400,9 @@ following these rules, but that's a topic for another time.
 </div>
 </div>
 
-<div id="outline-container-orge7e9e8a" class="outline-2">
-<h2 id="orge7e9e8a">Futures/async.await</h2>
-<div class="outline-text-2" id="text-orge7e9e8a">
+<div id="outline-container-orgc03c284" class="outline-2">
+<h2 id="orgc03c284">Futures/async.await</h2>
+<div class="outline-text-2" id="text-orgc03c284">
 <p>
 Hopefully now, we can understand why this is prerequisite for
 async.await support in Rust.
@@ -451,15 +451,15 @@ intermediate state, we'll be messing up our pointers. This is why
 <h2 class="footnotes">Footnotes: </h2>
 <div id="text-footnotes">
 
-<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1">1</a></sup> <div class="footpara"><p class="footpara">
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1" role="doc-backlink">1</a></sup> <div class="footpara" role="doc-footnote"><p class="footpara">
 The docs are great, but something just wasn't clicking for me.
 </p></div></div>
 
-<div class="footdef"><sup><a id="fn.2" class="footnum" href="#fnr.2">2</a></sup> <div class="footpara"><p class="footpara">
+<div class="footdef"><sup><a id="fn.2" class="footnum" href="#fnr.2" role="doc-backlink">2</a></sup> <div class="footpara" role="doc-footnote"><p class="footpara">
 probably incorrect. there's no such thing as correct C++ code.
 </p></div></div>
 
-<div class="footdef"><sup><a id="fn.3" class="footnum" href="#fnr.3">3</a></sup> <div class="footpara"><p class="footpara">
+<div class="footdef"><sup><a id="fn.3" class="footnum" href="#fnr.3" role="doc-backlink">3</a></sup> <div class="footpara" role="doc-footnote"><p class="footpara">
 The idiomatic Rust version is better (use indicies instead of pointers).
 This isn't an indictment of Rust. The idiomatic Rust version would be
 better in C++ too.

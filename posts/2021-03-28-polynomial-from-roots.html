@@ -29,7 +29,7 @@ These plots show where a filter's<a href="https://ccrma.stanford.edu/~jos/filter
 </p>
 
 
-<figure id="org1b60196">
+<figure id="org98e7dfd">
 <img src="../static/poly-roots/pole-zero.png" alt="pole-zero.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 1: </span>pole-zero diagram</figcaption>
@@ -46,9 +46,9 @@ This took me more time than it should have; I already knew most of what I needed
 Fortunately, it was fun to figure this out, so here's the whole story, including the missteps.
 </p>
 
-<div id="outline-container-org7215317" class="outline-2">
-<h2 id="org7215317">Symbolic Pole-Zero expansion</h2>
-<div class="outline-text-2" id="text-org7215317">
+<div id="outline-container-org73ac204" class="outline-2">
+<h2 id="org73ac204">Symbolic Pole-Zero expansion</h2>
+<div class="outline-text-2" id="text-org73ac204">
 <p>
 A Pole-Zero plot implies a transfer function in this form (\(q_i\) are zeros and all \(p_i\) are poles):
 </p>
@@ -75,9 +75,9 @@ This algebra is pretty straightforward by hand or with a computer algebra system
 </p>
 </div>
 
-<div id="outline-container-orgc6d84de" class="outline-3">
-<h3 id="orgc6d84de">Closed Form (Wild Goose Chase)</h3>
-<div class="outline-text-3" id="text-orgc6d84de">
+<div id="outline-container-org49b16bf" class="outline-3">
+<h3 id="org49b16bf">Closed Form (Wild Goose Chase)</h3>
+<div class="outline-text-3" id="text-org49b16bf">
 <p>
 I correctly didn't want to import an entire Computer Algebra System into my app to do this algebra.
 I <b>incorrectly</b> assumed that doing the multiplication without a computer algebra system would be tricky.
@@ -222,9 +222,9 @@ Next question, what does <code>zpk2tf</code> do?
 </div>
 </div>
 
-<div id="outline-container-org9aefb7f" class="outline-2">
-<h2 id="org9aefb7f">The Correct Way</h2>
-<div class="outline-text-2" id="text-org9aefb7f">
+<div id="outline-container-org62b985d" class="outline-2">
+<h2 id="org62b985d">The Correct Way</h2>
+<div class="outline-text-2" id="text-org62b985d">
 <p>
 I grab the scipy source and start reading.
 The function <code>zpk2tf</code> essentially just calls a numpy function <code>poly</code> to compute the coefficients of the polynomials \(A(z)\) and \(B(z)\) from their respective roots.

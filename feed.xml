@@ -9,6 +9,406 @@
     <email>david@dpzmick.com</email>
   </author>
   <entry>
+    <title>Setting many Teensy 4.1 Pins at the same time</title>
+    <link rel="alternate" type="text/html" href="http://dpzmick.com/posts/2021-10-26-teensy-4.1-set-many-pins.html"/>
+    <id>urn:uuid:c567645f-5a21-569d-8c2f-1b488ff59822</id>
+    <updated>2021-10-26</updated>
+    <content type="html">
+      <![CDATA[<style>.org-src-container {white-space: pre; font-family: monospace }</style>
+               <p>
+A project I've been working on recently requires that I set a group of pins (4 of them) on a Teensy 4.1 to certain values at roughly the same time.
+For simplicity, I'm using the Arduino libraries for this project (but writing C++).
+We can fortunately easily look under the covers with the Teensy's Arduino implementation.
+In this post I'm going to walk through a few bad ways this can be done, and the correct way (for Teensy 4.1).
+</p>
+
+<div id="outline-container-org5ee7de9" class="outline-2">
+<h2 id="org5ee7de9">Naive Implementation</h2>
+<div class="outline-text-2" id="text-org5ee7de9">
+<p>
+The simplest possible way to set multiple pins is to just set them one at a time.
+</p>
+
+<p>
+For example, we could write:
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
+{
+  <span class="org-comment-delimiter">// </span><span class="org-comment">configure a few pins as output pins</span>
+  pinMode( 23, OUTPUT );
+  pinMode( 22, OUTPUT );
+  pinMode( 21, OUTPUT );
+  pinMode( 20, OUTPUT );
+
+  <span class="org-type">int</span> <span class="org-variable-name">state</span> = 0;
+  <span class="org-keyword">while</span>( 1 ) {
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- writes happen here"</span> ); <span class="org-comment-delimiter">// </span><span class="org-comment">helpful for navigating generated asm</span>
+    digitalWriteFast( 23, state );
+    digitalWriteFast( 22, state );
+    digitalWriteFast( 21, state );
+    digitalWriteFast( 20, state );
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- done with writes"</span> );
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">toggle state and wait for a bit</span>
+    state = <span class="org-negation-char">!</span>state;
+    delayMicroseconds( 10 );
+  }
+}
+</pre>
+</div>
+
+<p>
+Compiling and running this code against a teensy and some LEDs, we can see (if we bump up the delay) that the lights flash on and off at about the same time.
+Let's try measuring the behavior with a slightly better tool than our eyes.
+I connected each pin to an oscilloscope.
+Channel 1 is pin 23, channel 2 is pin 22, and so on.
+</p>
+
+<p>
+Let's take a look at both the:
+</p>
+<ul class="org-ul">
+<li>Rising Edge. <code>state</code> was 0, is now 1. The pin output moves from 0V to 3.3V</li>
+<li>Falling Edge. <code>state</code> was 1, is now 0. The pin output moves from 3.3V to 0V.</li>
+</ul>
+
+<p>
+Rising edge:
+</p>
+
+
+<figure id="org4cf218e">
+<img src="../static/teensy-many-pins/naive_rise.png" alt="naive_rise.png">
+
+</figure>
+
+<p>
+Falling edge:
+</p>
+
+
+<figure id="org611c38b">
+<img src="../static/teensy-many-pins/naive_fall.png" alt="naive_fall.png">
+
+</figure>
+
+<p>
+The scope conveniently measured a roughly 4ish nanosecond rise time and a 3ish ns fall time for each individual pin outputs.
+This is pretty fast (I think) for each <span class="underline">individual</span> pin, but for this project I want to set all of the pins <span class="underline">at the same time</span>.
+</p>
+
+<p>
+These pin outputs are clearly not changing at the same time.
+Eyeballing, pin 23 reaches it's steady state output value roughly 4-5ish nanoseconds before pin 22.
+</p>
+
+<p>
+Of course, this should not be surprising given that the code is setting the pin values one at a time.
+</p>
+
+<p>
+Let's dig in.
+</p>
+</div>
+
+<div id="outline-container-orgbbb66bd" class="outline-3">
+<h3 id="orgbbb66bd">ARM assembly</h3>
+<div class="outline-text-3" id="text-orgbbb66bd">
+<p>
+This code compiles to something much more complicated that the simple "set pin x to value v" function calls would indicate.
+The Teensy 4.1 doesn't actually have any facility with which it can set a <span class="underline">single</span> output pin!
+</p>
+
+<p>
+Instead, the output pins are mapped to GPIO port.
+Each port controls some number of pins, and, any assignment to a port will change the state of all the pins controlled by that port.
+</p>
+
+<p>
+These ports are "mapped" into memory at well-documented address.
+To write to a port from a program running on the Teensy, the program just needs to write a value to a well-known address in memory (also called "registers").
+When the memory system for the microcontroller observes a store to these magic addresses, it will do the electrical magic required to change the voltage on the appropriate pins.
+</p>
+
+<p>
+For each port, there are two registers that we care about (and one that we could use, but aren't):
+</p>
+<ul class="org-ul">
+<li>A "set" register which turns "on" certain pins mapped to a given port</li>
+<li>A "clear" register which turns "off" certain pins mapped to a given port</li>
+<li>A "toggle" register to toggle the value on certain pins mapped to a given port</li>
+</ul>
+
+<p>
+When writing to each of these registers, we supply a bitmask of the pins to modify.
+For example, we could write a mask like <code>1010</code> to some "set" register to turn on every other pin, then write <code>1010</code> to a "clear" register to turn them all off again.
+</p>
+
+<p>
+Rephrasing the code above in these terms, we actually are doing something like:
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">int</span> <span class="org-variable-name">state</span> = 0;
+<span class="org-keyword">while</span>( 1 ) {
+  <span class="org-keyword">if</span>( state ) {
+    assign_to_set_register( 0b1000 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1</span>
+    assign_to_set_register( 0b1100 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1 and 2</span>
+    assign_to_set_register( 0b1110 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, and 3</span>
+    assign_to_set_register( 0b1111 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, 3, and 4</span>
+  }
+  <span class="org-keyword">else</span> {
+    assign_to_clear_register( 0b1000 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1</span>
+    assign_to_clear_register( 0b1100 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1 and 2</span>
+    assign_to_clear_register( 0b1110 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, and 3</span>
+    assign_to_clear_register( 0b1111 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, 3, and 4</span>
+  }
+}
+</pre>
+</div>
+
+<p>
+Expressed this way, it looks really silly!
+We should clearly just turning every pin on in the first assignment (we'll get there, be patient).
+</p>
+
+<p>
+Inspecting the generated assembly code (which is actually how I figured out what is going on), we can see this behavior:
+</p>
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-comment-delimiter">; </span><span class="org-comment">compute the bitmask values into r9, r8, ip, lr</span>
+<span class="org-comment-delimiter">;</span>
+<span class="org-comment-delimiter">; </span><span class="org-comment">.... some other code ....</span>
+<span class="org-comment-delimiter">;</span>
+<span class="org-comment-delimiter">; </span><span class="org-comment">--- turn on using the SET registers</span>
+<span class="org-function-name">str</span>     <span class="org-keyword">r9</span>, [r4, #132]  @ tmp149, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
+<span class="org-function-name">str</span>     <span class="org-keyword">r8</span>, [r4, #132]  @ tmp150, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
+<span class="org-function-name">str</span>     <span class="org-keyword">ip</span>, [r4, #132]  @ tmp151, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
+<span class="org-function-name">str</span>     <span class="org-keyword">lr</span>, [r4, #132]  @ tmp152, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
+<span class="org-comment-delimiter">;</span>
+<span class="org-comment-delimiter">; </span><span class="org-comment">.... some other code ....</span>
+<span class="org-comment-delimiter">;</span>
+<span class="org-comment-delimiter">; </span><span class="org-comment">--- turn off using the CLEAR registers</span>
+<span class="org-function-name">str</span>     <span class="org-keyword">r9</span>, [r4, #136]  @ tmp149, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
+<span class="org-function-name">str</span>     <span class="org-keyword">r8</span>, [r4, #136]  @ tmp150, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
+<span class="org-function-name">str</span>     <span class="org-keyword">ip</span>, [r4, #136]  @ tmp151, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
+<span class="org-function-name">str</span>     <span class="org-keyword">lr</span>, [r4, #136]  @ tmp152, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
+</pre>
+</div>
+
+<p>
+In this code above, <code>r4</code> contains a base address for the list of registers.
+The offset <code>[r4, #132]</code> contains the SET register for the pins we care about and <code>[r4, #136]</code> is the CLEAR register.
+</p>
+
+<p>
+As demonstrated by the scope, we see a small (but predictable) amount of latency on each of these sets because we're running 4 store instructions in quick succession.
+But, of course, we can do much better than this by getting away from the arduino apis.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org4216265" class="outline-2">
+<h2 id="org4216265">Port implementation</h2>
+<div class="outline-text-2" id="text-org4216265">
+<p>
+It's easy to implement the appropriate GPIO port code by grabbing bits and pieces from the teensy arduino headers.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
+{
+  <span class="org-comment-delimiter">// </span><span class="org-comment">use ardino functions for configuration</span>
+  <span class="org-type">uint8_t</span> <span class="org-variable-name">pins</span>[] = { 23, 22, 21, 20 };
+  <span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; ARRAY_SIZE( pins ); ++i ) {
+    pinMode( pins[i], OUTPUT );
+  }
+
+  <span class="org-comment-delimiter">// </span><span class="org-comment">bit pattern to set/clear bits</span>
+  <span class="org-comment-delimiter">// </span><span class="org-comment">use the helpful bit patterns defined by core_pins.h as part of teensy support code</span>
+  <span class="org-type">uint32_t</span> <span class="org-variable-name">pattern</span> = CORE_PIN23_BITMASK | CORE_PIN22_BITMASK | CORE_PIN21_BITMASK | CORE_PIN20_BITMASK;
+
+  <span class="org-type">int</span> <span class="org-variable-name">state</span> = 0;
+  <span class="org-keyword">while</span>( 1 ) {
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- writes happen here"</span> ); <span class="org-comment-delimiter">// </span><span class="org-comment">helpful for navigating generated asm</span>
+
+    <span class="org-keyword">if</span>( state ) {
+      GPIO6_DR_SET = pattern; <span class="org-comment-delimiter">// </span><span class="org-comment">turn pins on with SET register</span>
+    }
+    <span class="org-keyword">else</span> {
+      GPIO6_DR_CLEAR = pattern; <span class="org-comment-delimiter">// </span><span class="org-comment">turn pins off with CLEAR register</span>
+    }
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- done with writes"</span> );
+
+    state = <span class="org-negation-char">!</span>state;
+    delayMicroseconds( 10 );
+  }
+}
+</pre>
+</div>
+
+<p>
+The generated assembly does exactly what we're looking for:
+</p>
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-comment-delimiter">; </span><span class="org-comment">-- set</span>
+<span class="org-function-name">str</span>     <span class="org-keyword">r7</span>, [lr, #132]  @ tmp175, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
+
+<span class="org-comment-delimiter">; </span><span class="org-comment">-- clear</span>
+<span class="org-function-name">str</span>     <span class="org-keyword">r7</span>, [lr, #136]  @ tmp175, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
+</pre>
+</div>
+
+<p>
+And, the scope shows a much nicer shape for both the rising edge and falling edge:
+<img src="../static/teensy-many-pins/gpio_rise.png" alt="gpio_rise.png">
+<img src="../static/teensy-many-pins/gpio_fall.png" alt="gpio_fall.png">
+</p>
+</div>
+</div>
+
+<div id="outline-container-orge9b3704" class="outline-2">
+<h2 id="orge9b3704">Conclusion</h2>
+<div class="outline-text-2" id="text-orge9b3704">
+<p>
+The Arduino APIs are fantastically useful for getting started quickly, but dropping to lower level APIs can be important.
+Fortunately, the Teensy makes it fantastically easy to dig around and use the chip when needed, and, the headers are even documented with where to look in the official manual!
+Awesome product.
+</p>
+
+<p>
+I'm always looking for tools that have both a quick-and-easy beginner API, but don't necessarily sacrifice on depth for advanced use.
+So far the Teensy is filling that role well.
+</p>
+</div>
+
+<div id="outline-container-org1e6409a" class="outline-3">
+<h3 id="org1e6409a">Additional Recommended Reading</h3>
+<div class="outline-text-3" id="text-org1e6409a">
+<ul class="org-ul">
+<li>Arduino docs on port manipulation: <a href="https://www.arduino.cc/en/Reference/PortManipulation">https://www.arduino.cc/en/Reference/PortManipulation</a></li>
+<li>Manipulating Teensy 3.6 pins without the arduino APIs: <a href="http://l0ner.github.io/2020-08-24_teensy-the-hard-way-blink/">http://l0ner.github.io/2020-08-24_teensy-the-hard-way-blink/</a></li>
+<li>Fastest possible pin-flipping rate: <a href="https://metebalci.com/blog/stm32h7-gpio-toggling/">https://metebalci.com/blog/stm32h7-gpio-toggling/</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org0f705d9" class="outline-2">
+<h2 id="org0f705d9">Appendix 1: Array Implementation</h2>
+<div class="outline-text-2" id="text-org0f705d9">
+<p>
+Suppose we replace the code with something a bit more flexible (and that was recommended in the arduino forums).
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-preprocessor">#define</span> <span class="org-function-name">ARRAY_SIZE</span>( <span class="org-variable-name">arr</span> ) (<span class="org-keyword">sizeof</span>(arr)/<span class="org-keyword">sizeof</span>(*arr))
+
+<span class="org-keyword">extern</span> <span class="org-string">"C"</span> <span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
+{
+  <span class="org-type">uint8_t</span> <span class="org-variable-name">pins</span>[] = { 23, 22, 21, 20 };
+  <span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; ARRAY_SIZE( pins ); ++i ) {
+    pinMode( pins[i], OUTPUT );
+  }
+
+  <span class="org-type">int</span> <span class="org-variable-name">state</span> = 0;
+  <span class="org-keyword">while</span>( 1 ){
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- writes happen here"</span> ); <span class="org-comment-delimiter">// </span><span class="org-comment">helpful for navigating generated asm</span>
+    <span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; ARRAY_SIZE( pins ); ++i ) {
+      digitalWriteFast( pins[i], state );
+    }
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- done with writes"</span> );
+
+    state = <span class="org-negation-char">!</span>state;
+    delayMicroseconds( 10 );
+  }
+}
+</pre>
+</div>
+
+<p>
+Something bad clearly happens when we run this code:
+</p>
+
+
+<figure id="org5835940">
+<img src="../static/teensy-many-pins/array_rise.png" alt="array_rise.png">
+
+</figure>
+
+<p>
+First, we notice that the time delta between writes has increased dramatically.
+Second, we notice that the pin 23 and ping 22 write are further apart in time than the pin 22 and pin 21 write.
+</p>
+
+<p>
+What happened?
+</p>
+
+<p>
+The inner assignment loop this time compiled into:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-asm">    @ --- writes happen here
+    <span class="org-keyword">add</span> r3, sp, #4      @ tmp202,,
+<span class="org-function-name">.L5</span>:
+    <span class="org-keyword">ldrb</span>        r2, [r3], #1    @ zero_extendqisi2      @ D.14694, MEM[base: _138, offset: 0B]
+    <span class="org-keyword">lsls</span>        r2, r2, #4      @ tmp168, D.14694,
+    <span class="org-keyword">adds</span>        r0, r6, r2      @ tmp169, tmp193, tmp168
+    <span class="org-keyword">ldr</span> r2, [r6, r2]    @ D.14697,
+    <span class="org-keyword">ldr</span> r0, [r0, #12]   @ D.14698,
+    <span class="org-keyword">cbz</span> r5, .L3 @ state,
+    <span class="org-keyword">str</span> r0, [r2, #132]  @ D.14698, MEM[(volatile uint32_t *)_22 + 132B]
+<span class="org-function-name">.L4</span>:
+    <span class="org-keyword">cmp</span> r3, r4  @ ivtmp.15, D.14699
+    <span class="org-keyword">bne</span> .L5     @,
+    @ --- done with writes
+</pre>
+</div>
+
+<p>
+Inspecting the source for <code>digitalWriteFast</code> we can see that we've taken the non-compile-time-constant code path:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">static</span> <span class="org-keyword">inline</span> <span class="org-type">void</span> <span class="org-function-name">digitalWriteFast</span>(<span class="org-type">uint8_t</span> <span class="org-variable-name">pin</span>, <span class="org-type">uint8_t</span> <span class="org-variable-name">val</span>)
+{
+  <span class="org-keyword">if</span> (__builtin_constant_p(pin)) {
+    <span class="org-keyword">if</span> (val) {
+      <span class="org-keyword">if</span> (pin == 0) {
+        CORE_PIN0_PORTSET = CORE_PIN0_BITMASK;
+      } <span class="org-keyword">else</span> <span class="org-keyword">if</span> (pin == 1) {
+        <span class="org-comment-delimiter">// </span><span class="org-comment">.....</span>
+      }
+      <span class="org-comment-delimiter">// </span><span class="org-comment">.....</span>
+    } <span class="org-keyword">else</span> {
+      <span class="org-keyword">if</span> (pin == 0) {
+        CORE_PIN0_PORTCLEAR = CORE_PIN0_BITMASK;
+      } <span class="org-keyword">else</span> <span class="org-keyword">if</span> (pin == 1) {
+        <span class="org-comment-delimiter">// </span><span class="org-comment">.....</span>
+      }
+      <span class="org-comment-delimiter">// </span><span class="org-comment">.....</span>
+    }
+  } <span class="org-keyword">else</span> {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">not a compile time constant</span>
+    <span class="org-keyword">if</span>(val) *portSetRegister(pin) = digitalPinToBitMask(pin);
+    <span class="org-keyword">else</span> *portClearRegister(pin) = digitalPinToBitMask(pin);
+  }
+</pre>
+</div>
+
+<p>
+I'm guessing that the variability has something to do with additional memory access (lookups to figure out pin maps to what register).
+This probably could have compiled down to use all compile time constants, but this massive change in behavior for roughly the same code is reasonably spooky.
+</p>
+</div>
+</div>
+]]>
+    </content>
+  </entry>
+  <entry>
     <title>Badly Computing Polynomial Coefficients from Roots (correctly too!)</title>
     <link rel="alternate" type="text/html" href="http://dpzmick.com/posts/2021-03-28-polynomial-from-roots.html"/>
     <id>urn:uuid:2b91d6a0-0f72-5046-b22b-3ec9e513de6e</id>
@@ -21,7 +421,7 @@ These plots show where a filter's<a href="https://ccrma.stanford.edu/~jos/filter
 </p>
 
 
-<figure id="org1b60196">
+<figure id="org98e7dfd">
 <img src="../static/poly-roots/pole-zero.png" alt="pole-zero.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 1: </span>pole-zero diagram</figcaption>
@@ -38,9 +438,9 @@ This took me more time than it should have; I already knew most of what I needed
 Fortunately, it was fun to figure this out, so here's the whole story, including the missteps.
 </p>
 
-<div id="outline-container-org7215317" class="outline-2">
-<h2 id="org7215317">Symbolic Pole-Zero expansion</h2>
-<div class="outline-text-2" id="text-org7215317">
+<div id="outline-container-org73ac204" class="outline-2">
+<h2 id="org73ac204">Symbolic Pole-Zero expansion</h2>
+<div class="outline-text-2" id="text-org73ac204">
 <p>
 A Pole-Zero plot implies a transfer function in this form (\(q_i\) are zeros and all \(p_i\) are poles):
 </p>
@@ -67,9 +467,9 @@ This algebra is pretty straightforward by hand or with a computer algebra system
 </p>
 </div>
 
-<div id="outline-container-orgc6d84de" class="outline-3">
-<h3 id="orgc6d84de">Closed Form (Wild Goose Chase)</h3>
-<div class="outline-text-3" id="text-orgc6d84de">
+<div id="outline-container-org49b16bf" class="outline-3">
+<h3 id="org49b16bf">Closed Form (Wild Goose Chase)</h3>
+<div class="outline-text-3" id="text-org49b16bf">
 <p>
 I correctly didn't want to import an entire Computer Algebra System into my app to do this algebra.
 I <b>incorrectly</b> assumed that doing the multiplication without a computer algebra system would be tricky.
@@ -214,9 +614,9 @@ Next question, what does <code>zpk2tf</code> do?
 </div>
 </div>
 
-<div id="outline-container-org9aefb7f" class="outline-2">
-<h2 id="org9aefb7f">The Correct Way</h2>
-<div class="outline-text-2" id="text-org9aefb7f">
+<div id="outline-container-org62b985d" class="outline-2">
+<h2 id="org62b985d">The Correct Way</h2>
+<div class="outline-text-2" id="text-org62b985d">
 <p>
 I grab the scipy source and start reading.
 The function <code>zpk2tf</code> essentially just calls a numpy function <code>poly</code> to compute the coefficients of the polynomials \(A(z)\) and \(B(z)\) from their respective roots.
@@ -307,9 +707,9 @@ Results like this should not be surprising on a multi-socket system, but this sy
 I believe this micro-benchmark is highlighting some of the features of the novel architecture on the new AMD chips.
 </p>
 
-<div id="outline-container-orgc892d86" class="outline-2">
-<h2 id="orgc892d86">Caches</h2>
-<div class="outline-text-2" id="text-orgc892d86">
+<div id="outline-container-org0bf78e1" class="outline-2">
+<h2 id="org0bf78e1">Caches</h2>
+<div class="outline-text-2" id="text-org0bf78e1">
 <p>
 Before diving in to Zen, I'd like to talk briefly CPU memory-caching systems.
 </p>
@@ -367,9 +767,9 @@ This style of L1/L2/L3 cache has been common in CPU designs for many years.
 </div>
 </div>
 
-<div id="outline-container-orge4e78b4" class="outline-2">
-<h2 id="orge4e78b4">Ryzen Architecture</h2>
-<div class="outline-text-2" id="text-orge4e78b4">
+<div id="outline-container-org1e541ee" class="outline-2">
+<h2 id="org1e541ee">Ryzen Architecture</h2>
+<div class="outline-text-2" id="text-org1e541ee">
 <p>
 To talk about AMD's Zen architecture, there's a few terms we need to define:
 </p>
@@ -412,9 +812,9 @@ If cores from different CCXs need to communicate, they will have to use the infi
 </div>
 </div>
 
-<div id="outline-container-org2f890c8" class="outline-2">
-<h2 id="org2f890c8">Latency Test</h2>
-<div class="outline-text-2" id="text-org2f890c8">
+<div id="outline-container-org9e91631" class="outline-2">
+<h2 id="org9e91631">Latency Test</h2>
+<div class="outline-text-2" id="text-org9e91631">
 <p>
 To verify my hypothesis, lets start with a classic pingpong roundtrip latency test.
 </p>
@@ -471,18 +871,18 @@ Few applications actually have any reason to bounce a single value back and fort
 </div>
 </div>
 
-<div id="outline-container-org65209c9" class="outline-2">
-<h2 id="org65209c9">Bandwidth Test</h2>
-<div class="outline-text-2" id="text-org65209c9">
+<div id="outline-container-orgdfd7627" class="outline-2">
+<h2 id="orgdfd7627">Bandwidth Test</h2>
+<div class="outline-text-2" id="text-orgdfd7627">
 <p>
 When discussing latency, programmers who are more bandwidth focused will often (rightly) say something like "the latency doesn't matter, I only care about bandwidth."
 Most programmers are more focused on bandwidth than latency, because generally we care a lot more about throughput than latency.
 </p>
 </div>
 
-<div id="outline-container-org5926b1f" class="outline-3">
-<h3 id="org5926b1f">Baseline with large core-to-core copies</h3>
-<div class="outline-text-3" id="text-org5926b1f">
+<div id="outline-container-orgf2f8119" class="outline-3">
+<h3 id="orgf2f8119">Baseline with large core-to-core copies</h3>
+<div class="outline-text-3" id="text-orgf2f8119">
 <p>
 Let's start by proving that, when moving around large chunks of data, none of this matters.
 </p>
@@ -521,9 +921,9 @@ For full details about this benchmark, please see the source and my results <a h
 </div>
 </div>
 
-<div id="outline-container-org6140e65" class="outline-3">
-<h3 id="org6140e65">When might it matter?</h3>
-<div class="outline-text-3" id="text-org6140e65">
+<div id="outline-container-org4bf452f" class="outline-3">
+<h3 id="org4bf452f">When might it matter?</h3>
+<div class="outline-text-3" id="text-org4bf452f">
 <p>
 We are often able to amortize high latency operations over large transfers or by work on something else to hide the costs of high latency.
 However, as data sizes shrink, it becomes harder and harder to hide latency.
@@ -605,16 +1005,16 @@ I've kept the size low to highlight the effects I'm looking for, but, these effe
 </div>
 </div>
 
-<div id="outline-container-org9562146" class="outline-3">
-<h3 id="org9562146">Results</h3>
-<div class="outline-text-3" id="text-org9562146">
+<div id="outline-container-orgb1c1209" class="outline-3">
+<h3 id="orgb1c1209">Results</h3>
+<div class="outline-text-3" id="text-orgb1c1209">
 <p>
 Using the same style of plots that we've already see, let's first look at bandwidth reported by the writer.
 This plot shows the write rate when Y-axis core is sending data to X-axis core (rate is in GiB/s, I've again included the SMT cores):
 </p>
 
 
-<figure id="org54d2b6a">
+<figure id="org2b45e1c">
 <img src="../static/ryzen_numa/writerplot.png" alt="writerplot.png">
 
 </figure>
@@ -652,9 +1052,9 @@ For full details about this benchmark, please see the source and my results <a h
 </div>
 </div>
 
-<div id="outline-container-orgec7d9a0" class="outline-2">
-<h2 id="orgec7d9a0">Conclusions</h2>
-<div class="outline-text-2" id="text-orgec7d9a0">
+<div id="outline-container-org0f4901e" class="outline-2">
+<h2 id="org0f4901e">Conclusions</h2>
+<div class="outline-text-2" id="text-org0f4901e">
 <p>
 This sort of behavior will not come as a surprised for programmers used to programming for multi-socket (multiple physical CPU) server systems (see <a href="https://en.wikipedia.org/wiki/Non-uniform_memory_access">NUMA</a>).
 However, for those writing parallel applications, I feel like this effect is still notable and warrants slightly different considerations than traditional NUMA.
@@ -725,13 +1125,13 @@ I'll be writing a few posts explaining the steps I took.
 Now that I have a VPN, a server, a "desktop computer" connected to the server over a fast network, and fast storage, I should do something useful.
 </p>
 
-<div id="outline-container-org021aedb" class="outline-2">
-<h2 id="org021aedb">Administration Tools</h2>
-<div class="outline-text-2" id="text-org021aedb">
+<div id="outline-container-org745b1a5" class="outline-2">
+<h2 id="org745b1a5">Administration Tools</h2>
+<div class="outline-text-2" id="text-org745b1a5">
 </div>
-<div id="outline-container-orga1970e2" class="outline-3">
-<h3 id="orga1970e2"><a href="https://www.influxdata.com/">InfluxDB</a>, <a href="https://grafana.com/">Grafana</a>, and <a href="https://www.influxdata.com/time-series-platform/telegraf/">Telegraf</a></h3>
-<div class="outline-text-3" id="text-orga1970e2">
+<div id="outline-container-org8201ee1" class="outline-3">
+<h3 id="org8201ee1"><a href="https://www.influxdata.com/">InfluxDB</a>, <a href="https://grafana.com/">Grafana</a>, and <a href="https://www.influxdata.com/time-series-platform/telegraf/">Telegraf</a></h3>
+<div class="outline-text-3" id="text-org8201ee1">
 <p>
 These tools are useful for general system monitoring.
 </p>
@@ -749,9 +1149,9 @@ See <a href="https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMAT
 </div>
 </div>
 
-<div id="outline-container-orga131f09" class="outline-3">
-<h3 id="orga131f09"><a href="https://healthchecks.io">healthchecks.io</a> for alerting</h3>
-<div class="outline-text-3" id="text-orga131f09">
+<div id="outline-container-org502154a" class="outline-3">
+<h3 id="org502154a"><a href="https://healthchecks.io">healthchecks.io</a> for alerting</h3>
+<div class="outline-text-3" id="text-org502154a">
 <p>
 <a href="https://healthchecks.io">healthchecks.io</a> is an altering service that sends alerts through email, slack, etc when it hasn't received a ping recently enough.
 You can run the open-source software yourself, or use a hosted version.
@@ -812,9 +1212,9 @@ Sending start/{success,fail} messages is helpful because:
 </div>
 </div>
 
-<div id="outline-container-org8437f6d" class="outline-3">
-<h3 id="org8437f6d"><a href="https://duplicacy.com/">Duplicacy</a> and <a href="https://www.backblaze.com/b2/cloud-storage.html">Backblaze B2</a> for backups</h3>
-<div class="outline-text-3" id="text-org8437f6d">
+<div id="outline-container-orgee6951a" class="outline-3">
+<h3 id="orgee6951a"><a href="https://duplicacy.com/">Duplicacy</a> and <a href="https://www.backblaze.com/b2/cloud-storage.html">Backblaze B2</a> for backups</h3>
+<div class="outline-text-3" id="text-orgee6951a">
 <p>
 Backups are tricky.
 </p>
@@ -884,9 +1284,9 @@ Setting this up obviously takes more work than just downloading CrashPlan, but, 
 </div>
 </div>
 
-<div id="outline-container-org1a86c5c" class="outline-3">
-<h3 id="org1a86c5c">Logs</h3>
-<div class="outline-text-3" id="text-org1a86c5c">
+<div id="outline-container-org9d3ae84" class="outline-3">
+<h3 id="org9d3ae84">Logs</h3>
+<div class="outline-text-3" id="text-org9d3ae84">
 <p>
 Nothing.
 </p>
@@ -899,9 +1299,9 @@ I don't need log searching/aggregation features for 3 computers.
 </div>
 </div>
 
-<div id="outline-container-org1a7bcb8" class="outline-2">
-<h2 id="org1a7bcb8">Developer Tools</h2>
-<div class="outline-text-2" id="text-org1a7bcb8">
+<div id="outline-container-orgd7d4d7f" class="outline-2">
+<h2 id="orgd7d4d7f">Developer Tools</h2>
+<div class="outline-text-2" id="text-orgd7d4d7f">
 <p>
 The personal software development projects I work on can also take advantage of this server/vpn setup.
 I'm able to ssh into both of my home machines from anywhere (because of the VPN), so I always have access to the larger CPUs available there (very handy when compiling rust/c++ code).
@@ -930,13 +1330,13 @@ I'm also using the server for:
 </div>
 </div>
 
-<div id="outline-container-org303f2a4" class="outline-2">
-<h2 id="org303f2a4">Personal Tools that worked out</h2>
-<div class="outline-text-2" id="text-org303f2a4">
+<div id="outline-container-org3bade61" class="outline-2">
+<h2 id="org3bade61">Personal Tools that worked out</h2>
+<div class="outline-text-2" id="text-org3bade61">
 </div>
-<div id="outline-container-org14851e5" class="outline-3">
-<h3 id="org14851e5">General Archival</h3>
-<div class="outline-text-3" id="text-org14851e5">
+<div id="outline-container-org21b6213" class="outline-3">
+<h3 id="org21b6213">General Archival</h3>
+<div class="outline-text-3" id="text-org21b6213">
 <p>
 I have a small archive of:
 </p>
@@ -955,9 +1355,9 @@ There's not a ton here, and there's not a ton that I want to keep readily access
 </div>
 </div>
 
-<div id="outline-container-orgfa11b27" class="outline-3">
-<h3 id="orgfa11b27">Samples and Music Projects</h3>
-<div class="outline-text-3" id="text-orgfa11b27">
+<div id="outline-container-org4fb8439" class="outline-3">
+<h3 id="org4fb8439">Samples and Music Projects</h3>
+<div class="outline-text-3" id="text-org4fb8439">
 <p>
 I currently do all of my music projects from an actual computer, so I'm storing all of the samples I've collected and recordings I've made on the NAS.
 Since I run linux everywhere, I can NFS mount this drive from anywhere in my apartment and access my samples.
@@ -965,9 +1365,9 @@ Since I run linux everywhere, I can NFS mount this drive from anywhere in my apa
 </div>
 </div>
 
-<div id="outline-container-org062affb" class="outline-3">
-<h3 id="org062affb">Email/Contact backup</h3>
-<div class="outline-text-3" id="text-org062affb">
+<div id="outline-container-orga2276c0" class="outline-3">
+<h3 id="orga2276c0">Email/Contact backup</h3>
+<div class="outline-text-3" id="text-orga2276c0">
 <p>
 As part of an experiment to try moving from GMail to literally anything else, I started trying to backup my emails and contacts.
 I'm using <a href="http://isync.sourceforge.net/">isync</a> to download my emails, because it is <b>extremely</b> configurable.
@@ -1008,9 +1408,9 @@ SyncState *
 </div>
 </div>
 
-<div id="outline-container-orgd3a61d0" class="outline-3">
-<h3 id="orgd3a61d0">RSS feeds</h3>
-<div class="outline-text-3" id="text-orgd3a61d0">
+<div id="outline-container-org6d348d9" class="outline-3">
+<h3 id="org6d348d9">RSS feeds</h3>
+<div class="outline-text-3" id="text-org6d348d9">
 <p>
 I'm running <a href="https://github.com/wking/rss2email/">rss2email</a> on the server to send RSS feeds to my email.
 Using a 32 core behemoth to run a python script daily is silly, but oh well.
@@ -1024,9 +1424,9 @@ My email is available on my phone, and I can make my email show up in emacs, so 
 </div>
 </div>
 
-<div id="outline-container-org9129042" class="outline-3">
-<h3 id="org9129042">WeeChat</h3>
-<div class="outline-text-3" id="text-org9129042">
+<div id="outline-container-orga91cb33" class="outline-3">
+<h3 id="orga91cb33">WeeChat</h3>
+<div class="outline-text-3" id="text-orga91cb33">
 <p>
 WeeChat has a pretty nifty <a href="https://weechat.org/files/doc/devel/weechat_relay_protocol.en.html">relay protocol</a> that can be used to remotely access your WeeChat instance from a browser or mobile device.
 I've been running WeeChat on my machine instead of figuring out how to configure ZNC or some other bouncer.
@@ -1036,13 +1436,13 @@ Im not super active on IRC, but I've been happy with this approach and these too
 </div>
 </div>
 
-<div id="outline-container-orgad9fd28" class="outline-2">
-<h2 id="orgad9fd28">Personal Tools that didn't work out</h2>
-<div class="outline-text-2" id="text-orgad9fd28">
+<div id="outline-container-org2f0205c" class="outline-2">
+<h2 id="org2f0205c">Personal Tools that didn't work out</h2>
+<div class="outline-text-2" id="text-org2f0205c">
 </div>
-<div id="outline-container-org2346a38" class="outline-3">
-<h3 id="org2346a38">Photos</h3>
-<div class="outline-text-3" id="text-org2346a38">
+<div id="outline-container-org47edf08" class="outline-3">
+<h3 id="org47edf08">Photos</h3>
+<div class="outline-text-3" id="text-org47edf08">
 <p>
 I have a large collection of RAW photos captured in a variety of vendor-specific RAW formats.
 Getting these onto storage I owned and controlled was the main reason I built my NAS server.
@@ -1118,9 +1518,9 @@ Maybe I'll even build my own editor/manager software that works perfectly and do
 </div>
 </div>
 
-<div id="outline-container-org60a5f42" class="outline-3">
-<h3 id="org60a5f42">Movies/TV/Music</h3>
-<div class="outline-text-3" id="text-org60a5f42">
+<div id="outline-container-orgbdfbe42" class="outline-3">
+<h3 id="orgbdfbe42">Movies/TV/Music</h3>
+<div class="outline-text-3" id="text-orgbdfbe42">
 <p>
 I considered turning this into a media streaming box, but it's nearly impossible to legally obtain copies of most of the TV and movies I want to keep around.
 If I could easily get legal digital copies of the TV shows I want to watch, I'd be happy to pay, download, and manage the storage myself.
@@ -1133,9 +1533,9 @@ For music, I've been pretty happy keeping unique, hard to stream music sitting a
 </div>
 </div>
 
-<div id="outline-container-org6a61f80" class="outline-3">
-<h3 id="org6a61f80">Notes, Papers, TODO lists</h3>
-<div class="outline-text-3" id="text-org6a61f80">
+<div id="outline-container-org1136b58" class="outline-3">
+<h3 id="org1136b58">Notes, Papers, TODO lists</h3>
+<div class="outline-text-3" id="text-org1136b58">
 <p>
 I'm currently using:
 </p>
@@ -1165,9 +1565,9 @@ Again, none of this really requires a massive server.
 </div>
 </div>
 
-<div id="outline-container-orgfd910d9" class="outline-3">
-<h3 id="orgfd910d9">Everything Else</h3>
-<div class="outline-text-3" id="text-orgfd910d9">
+<div id="outline-container-orgd1b737a" class="outline-3">
+<h3 id="orgd1b737a">Everything Else</h3>
+<div class="outline-text-3" id="text-orgd1b737a">
 <p>
 Most of the things I use on a regular basis in my life outside of work aren't realistically replacable with self-hosted versions of things.
 </p>
@@ -1187,9 +1587,9 @@ I'm not going to self-host a password manager because I'll be royally screwed if
 </div>
 </div>
 
-<div id="outline-container-orgde0de72" class="outline-2">
-<h2 id="orgde0de72">(false) Dichotomy?</h2>
-<div class="outline-text-2" id="text-orgde0de72">
+<div id="outline-container-orgd5c7d88" class="outline-2">
+<h2 id="orgd5c7d88">(false) Dichotomy?</h2>
+<div class="outline-text-2" id="text-orgd5c7d88">
 <p>
 Since I like to jam the world into neat little dichotomies, here's some attempts explain why some things worked well for me and some things did not.
 I've come up with two ways to word this.
@@ -1236,9 +1636,9 @@ Reality is probably some combination of all of these.
 </div>
 </div>
 
-<div id="outline-container-org9235289" class="outline-2">
-<h2 id="org9235289">Closing Rant</h2>
-<div class="outline-text-2" id="text-org9235289">
+<div id="outline-container-org51f4340" class="outline-2">
+<h2 id="org51f4340">Closing Rant</h2>
+<div class="outline-text-2" id="text-org51f4340">
 <p>
 Having an always-on machine, that I can get a virtual terminal on for adminstration has been convenient.
 Running my own DNS server with ad-blocking baked in has been fantastic.
@@ -1321,9 +1721,9 @@ This was an expensive project; I'm not sure it was worth the time or energy.
 I'll add more discussion on the usability of something like this in the 4th part of this series.
 </p>
 
-<div id="outline-container-org0d53a25" class="outline-2">
-<h2 id="org0d53a25">Why?</h2>
-<div class="outline-text-2" id="text-org0d53a25">
+<div id="outline-container-orged6e31d" class="outline-2">
+<h2 id="orged6e31d">Why?</h2>
+<div class="outline-text-2" id="text-orged6e31d">
 <p>
 I recently had an old SSD fail.
 I had no idea it was going bad until I tried to open a handful of old photos and found that they were corrupt.
@@ -1367,9 +1767,9 @@ This post will discuss setting up the ZFS and mounting it as a NAS.
 </div>
 </div>
 
-<div id="outline-container-orgd334bda" class="outline-2">
-<h2 id="orgd334bda">Setup and Planning</h2>
-<div class="outline-text-2" id="text-orgd334bda">
+<div id="outline-container-orgfb3aeae" class="outline-2">
+<h2 id="orgfb3aeae">Setup and Planning</h2>
+<div class="outline-text-2" id="text-orgfb3aeae">
 <p>
 Since I was only using about 500 gigs of space, I wasn't going to need some super high capacity system.
 I decided to instead try and build something that would be 1) lowish power (spinning rust is power hungry), 2) pretty "fast", 3) "fun".
@@ -1467,17 +1867,17 @@ I also had to grab some disk enclosures on eBay to install these disk into the s
 </div>
 </div>
 
-<div id="outline-container-orgb305a6b" class="outline-2">
-<h2 id="orgb305a6b">Filesystem</h2>
-<div class="outline-text-2" id="text-orgb305a6b">
+<div id="outline-container-org1682ae8" class="outline-2">
+<h2 id="org1682ae8">Filesystem</h2>
+<div class="outline-text-2" id="text-org1682ae8">
 <p>
 Next thing up, I needed to pick a filesystem/RAID scheme to run on these drives.
 </p>
 </div>
 
-<div id="outline-container-orge416485" class="outline-3">
-<h3 id="orge416485">Hardware RAID</h3>
-<div class="outline-text-3" id="text-orge416485">
+<div id="outline-container-org52c20ce" class="outline-3">
+<h3 id="org52c20ce">Hardware RAID</h3>
+<div class="outline-text-3" id="text-org52c20ce">
 <p>
 I bought the "upgraded" RAID controller when purchasing the server, since I wanted to keep my options open.
 After thinking a bit harder about hardware RAID, it doesn't really seem that interesting to me.
@@ -1487,9 +1887,9 @@ Since neither of those are the case, it seems wiser to use my powerful Xeon CPUs
 </div>
 </div>
 
-<div id="outline-container-org977ace6" class="outline-3">
-<h3 id="org977ace6">ZFS</h3>
-<div class="outline-text-3" id="text-org977ace6">
+<div id="outline-container-org588c7b9" class="outline-3">
+<h3 id="org588c7b9">ZFS</h3>
+<div class="outline-text-3" id="text-org588c7b9">
 <p>
 Awesome ZFS features:
 </p>
@@ -1507,9 +1907,9 @@ Awesome ZFS features:
 </div>
 </div>
 
-<div id="outline-container-org2452d27" class="outline-3">
-<h3 id="org2452d27">Linux software RAID (mdadm and LVM)</h3>
-<div class="outline-text-3" id="text-org2452d27">
+<div id="outline-container-orgebcd588" class="outline-3">
+<h3 id="orgebcd588">Linux software RAID (mdadm and LVM)</h3>
+<div class="outline-text-3" id="text-orgebcd588">
 <p>
 Looks great, but not as featureful as ZFS.
 If I try ZFS out and it doesn't work, I figured it would be easy to switch.
@@ -1522,20 +1922,20 @@ BTRFS was eliminated early as it seems to still be fairly immature.
 </div>
 </div>
 
-<div id="outline-container-org138243e" class="outline-2">
-<h2 id="org138243e">Installation</h2>
-<div class="outline-text-2" id="text-org138243e">
+<div id="outline-container-orgcb1df24" class="outline-2">
+<h2 id="orgcb1df24">Installation</h2>
+<div class="outline-text-2" id="text-orgcb1df24">
 </div>
-<div id="outline-container-org5370a4a" class="outline-3">
-<h3 id="org5370a4a">Physical Install</h3>
-<div class="outline-text-3" id="text-org5370a4a">
+<div id="outline-container-org914a246" class="outline-3">
+<h3 id="org914a246">Physical Install</h3>
+<div class="outline-text-3" id="text-org914a246">
 <p>
 Getting these drives into the server was easy.
 Just screw them into the enclosures:
 </p>
 
 
-<figure id="orgabc6a64">
+<figure id="orga6b373c">
 <img src="../static/homelab/disk_in_enclosure.jpg" alt="disk_in_enclosure.jpg">
 
 </figure>
@@ -1547,9 +1947,9 @@ Then pop them into the front mounting slots:
 </div>
 </div>
 
-<div id="outline-container-org9f5dde6" class="outline-3">
-<h3 id="org9f5dde6">Configure RAID</h3>
-<div class="outline-text-3" id="text-org9f5dde6">
+<div id="outline-container-org6cdf6ea" class="outline-3">
+<h3 id="org6cdf6ea">Configure RAID</h3>
+<div class="outline-text-3" id="text-org6cdf6ea">
 <p>
 Next up was configuring the RAID controller to get out of the way.
 I wanted the raid controller to just pass the disks through to the operating system.
@@ -1570,9 +1970,9 @@ Fortunately, it seemed like all of the drives were at least working.
 </div>
 </div>
 
-<div id="outline-container-orga3fe721" class="outline-3">
-<h3 id="orga3fe721">Downgrade controller</h3>
-<div class="outline-text-3" id="text-orga3fe721">
+<div id="outline-container-orga9d8548" class="outline-3">
+<h3 id="orga9d8548">Downgrade controller</h3>
+<div class="outline-text-3" id="text-orga9d8548">
 <p>
 After a <b>very very</b> large amount of time spent googling around, I found some references that said that, if you get the downgraded Dell H310 mini controller, it is possible to flash the controller to an alternative LSI "IT mode" firmware.
 The IT mode firmware is supposed to allow you to just pass the disks through to the OS.
@@ -1629,9 +2029,9 @@ This is a very true statement and you'll be stuck scrathing your head for a long
 </div>
 </div>
 
-<div id="outline-container-org6058146" class="outline-3">
-<h3 id="org6058146">Disk inventory</h3>
-<div class="outline-text-3" id="text-org6058146">
+<div id="outline-container-orgf2356fa" class="outline-3">
+<h3 id="orgf2356fa">Disk inventory</h3>
+<div class="outline-text-3" id="text-orgf2356fa">
 <p>
 Since the Dell firmware integration is all broken with the new firmware, I needed to be able to keep track of which drive was which without having being able to easily toggle the chassis LEDs.
 I booted an Arch ISO and started <code>dd=ing zeros to each disk through =/dev/disk/by-id/</code>, then recording the serial numbers of the disks whose activity LEDs lit up.
@@ -1645,18 +2045,18 @@ This is probably important to have when disks need replacing.
 </div>
 </div>
 
-<div id="outline-container-org45c35d9" class="outline-3">
-<h3 id="org45c35d9">Install Operating System</h3>
-<div class="outline-text-3" id="text-org45c35d9">
+<div id="outline-container-org31f9524" class="outline-3">
+<h3 id="org31f9524">Install Operating System</h3>
+<div class="outline-text-3" id="text-org31f9524">
 <p>
 From the Arch iso, I partioned the disk in the 0th slot, and installed Arch using the standard install guide.
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgf77f5eb" class="outline-3">
-<h3 id="orgf77f5eb">rootdelay</h3>
-<div class="outline-text-3" id="text-orgf77f5eb">
+<div id="outline-container-orgbd1f788" class="outline-3">
+<h3 id="orgbd1f788">rootdelay</h3>
+<div class="outline-text-3" id="text-orgbd1f788">
 <p>
 The OS install when smoothly, so I thought I was finally done with this ordeal once Arch finished bootstrapping the system.
 </p>
@@ -1683,9 +2083,9 @@ Adding <code>rootdelay=600</code> to my kernel command line got me passed this p
 </div>
 </div>
 
-<div id="outline-container-org492b720" class="outline-3">
-<h3 id="org492b720">Configure ZFS</h3>
-<div class="outline-text-3" id="text-org492b720">
+<div id="outline-container-org02a24bb" class="outline-3">
+<h3 id="org02a24bb">Configure ZFS</h3>
+<div class="outline-text-3" id="text-org02a24bb">
 <p>
 Just follow the instructions on the <a href="https://wiki.archlinux.org/index.php/ZFS">Arch Wiki</a>.
 I installed the DKMS version of ZFS so that I would be able to <code>pacman -Syu</code> and have <code>pacman</code> attempt to rebuild ZFS with the latest kernel.
@@ -1698,9 +2098,9 @@ These are mounted, creatively, at <code>/nas</code> and <code>/server</code>.
 </p>
 </div>
 
-<div id="outline-container-orgaa80bbf" class="outline-4">
-<h4 id="orgaa80bbf"><code>nas</code></h4>
-<div class="outline-text-4" id="text-orgaa80bbf">
+<div id="outline-container-org9a60436" class="outline-4">
+<h4 id="org9a60436"><code>nas</code></h4>
+<div class="outline-text-4" id="text-org9a60436">
 <p>
 For the <code>nas</code> zpool, I'm using 12 disk with data striped across two RAIDZ2 zpools.
 In other words, each of the RAIDZ2 pools can loose two disk without failing.
@@ -1728,9 +2128,9 @@ I have no idea if this striping/raidz combination is a good idea or not, but it 
 </div>
 </div>
 
-<div id="outline-container-org48f6d06" class="outline-4">
-<h4 id="org48f6d06"><code>server</code></h4>
-<div class="outline-text-4" id="text-org48f6d06">
+<div id="outline-container-org92ff7e4" class="outline-4">
+<h4 id="org92ff7e4"><code>server</code></h4>
+<div class="outline-text-4" id="text-org92ff7e4">
 <p>
 The <code>server</code> array is just a single raidz1 array with 3 disks in it.
 This array isn't that interesting and I haven't tried to push it very hard yet.
@@ -1742,9 +2142,9 @@ Contiguous reads/writes run at a blistering ~400-500mb/s, as expected.
 </div>
 </div>
 
-<div id="outline-container-orga30077e" class="outline-4">
-<h4 id="orga30077e">Perfomance Testing</h4>
-<div class="outline-text-4" id="text-orga30077e">
+<div id="outline-container-orgc13b79d" class="outline-4">
+<h4 id="orgc13b79d">Perfomance Testing</h4>
+<div class="outline-text-4" id="text-orgc13b79d">
 <p>
 Here's some <i>naive</i> <code>dd</code> performance tests on the disk arrays.
 These tests are all performed on the server.
@@ -1782,9 +2182,9 @@ $ dd <span class="org-variable-name">if</span>=test <span class="org-variable-na
 </div>
 </div>
 
-<div id="outline-container-orgba5f2c7" class="outline-4">
-<h4 id="orgba5f2c7">Sidebar: NVMe</h4>
-<div class="outline-text-4" id="text-orgba5f2c7">
+<div id="outline-container-orgf1f6347" class="outline-4">
+<h4 id="orgf1f6347">Sidebar: NVMe</h4>
+<div class="outline-text-4" id="text-orgf1f6347">
 <p>
 My desktop has a single $300 NVMe drive in it.
 Compare:
@@ -1823,18 +2223,18 @@ In theory, if I stripped across all of these SSDs I'd be able to get competitive
 </div>
 </div>
 
-<div id="outline-container-orgb96e172" class="outline-2">
-<h2 id="orgb96e172">NFS</h2>
-<div class="outline-text-2" id="text-orgb96e172">
+<div id="outline-container-org53cce24" class="outline-2">
+<h2 id="org53cce24">NFS</h2>
+<div class="outline-text-2" id="text-org53cce24">
 <p>
 Trivial NFS is easy to setup with ZFS.
 You can simply install the right NFS servers, then tell ZFS to export the mount point.
 </p>
 </div>
 
-<div id="outline-container-org05662c4" class="outline-3">
-<h3 id="org05662c4">NFS performance</h3>
-<div class="outline-text-3" id="text-org05662c4">
+<div id="outline-container-orgb7c5410" class="outline-3">
+<h3 id="orgb7c5410">NFS performance</h3>
+<div class="outline-text-3" id="text-orgb7c5410">
 <p>
 Unfortunately, NFS over my 10 GbE network doesn't perform as well as you'd hope.
 </p>
@@ -1887,9 +2287,9 @@ Since I'm currently spending more of my time connected to the VPN from remote pl
 </div>
 </div>
 
-<div id="outline-container-org698e516" class="outline-2">
-<h2 id="org698e516">Using the system</h2>
-<div class="outline-text-2" id="text-org698e516">
+<div id="outline-container-orgd642fb7" class="outline-2">
+<h2 id="orgd642fb7">Using the system</h2>
+<div class="outline-text-2" id="text-orgd642fb7">
 <p>
 NFS works as well as I'd expect it to, but I'll discuss this and a few other details in a future post.
 </p>
@@ -1965,9 +2365,9 @@ I was hoping to set up small cloud instances to run:
 <li><a href="https://github.com/awesome-selfhosted/awesome-selfhosted">lots of stuff</a></li>
 </ul>
 
-<div id="outline-container-org9da44e7" class="outline-2">
-<h2 id="org9da44e7">Cloud Cost</h2>
-<div class="outline-text-2" id="text-org9da44e7">
+<div id="outline-container-org985cf99" class="outline-2">
+<h2 id="org985cf99">Cloud Cost</h2>
+<div class="outline-text-2" id="text-org985cf99">
 <p>
 A single, low ram, shared CPU, tiny storage cloud instance can cost something like $3.50 a month.
 If you want a real CPU, or some real storage, the prices go up quite a bit.
@@ -1988,9 +2388,9 @@ I know I've seen used rackmount servers on eBay for about this price, so I thoug
 </div>
 </div>
 
-<div id="outline-container-orgffcd474" class="outline-2">
-<h2 id="orgffcd474">eBay time</h2>
-<div class="outline-text-2" id="text-orgffcd474">
+<div id="outline-container-orge004ab0" class="outline-2">
+<h2 id="orge004ab0">eBay time</h2>
+<div class="outline-text-2" id="text-orge004ab0">
 <p>
 The first order of business was finding a "quiet, low power, expandable, powerful server."
 I eventually settled on a Dell R720 with 2.5 inch drive bays.
@@ -2018,13 +2418,13 @@ This decision wasn't easy, but after reading almost every post on <a href="https
 </p>
 </div>
 
-<div id="outline-container-orgfab4da0" class="outline-3">
-<h3 id="orgfab4da0">Barebones server setup</h3>
-<div class="outline-text-3" id="text-orgfab4da0">
+<div id="outline-container-orga0790a2" class="outline-3">
+<h3 id="orga0790a2">Barebones server setup</h3>
+<div class="outline-text-3" id="text-orga0790a2">
 </div>
-<div id="outline-container-orgf51399e" class="outline-4">
-<h4 id="orgf51399e">Setup a RAID 0 array across the two drives</h4>
-<div class="outline-text-4" id="text-orgf51399e">
+<div id="outline-container-org143b53c" class="outline-4">
+<h4 id="org143b53c">Setup a RAID 0 array across the two drives</h4>
+<div class="outline-text-4" id="text-org143b53c">
 <p>
 For testing, I just stuck a RAID 0 array across the two drives.
 This is done using the remote management web ui, or by booting the machine and tweaking settings from the remote management virtual display.
@@ -2032,9 +2432,9 @@ This is done using the remote management web ui, or by booting the machine and t
 </div>
 </div>
 
-<div id="outline-container-orgd2eb281" class="outline-4">
-<h4 id="orgd2eb281">Install an operating system</h4>
-<div class="outline-text-4" id="text-orgd2eb281">
+<div id="outline-container-org547b3c6" class="outline-4">
+<h4 id="org547b3c6">Install an operating system</h4>
+<div class="outline-text-4" id="text-org547b3c6">
 <p>
 Again, super straightforward.
 I mounted an arch ISO using the remote management tools, booted the box, and installed arch the standard way.
@@ -2053,9 +2453,9 @@ If I put a large amount of load on the machine, the fans will spin up, but that'
 </div>
 </div>
 
-<div id="outline-container-orgc579e48" class="outline-4">
-<h4 id="orgc579e48">Adding PCIe cards</h4>
-<div class="outline-text-4" id="text-orgc579e48">
+<div id="outline-container-orgf12e400" class="outline-4">
+<h4 id="orgf12e400">Adding PCIe cards</h4>
+<div class="outline-text-4" id="text-orgf12e400">
 <p>
 To install PCIe cards, all you have to do is lift the lid, pop out a little tool-less bay and plop the card in.
 Its useful to read the server documentation to make sure each card is installed is attached to the appropriate socket, if you are installing multiple cards.
@@ -2113,9 +2513,9 @@ Password:
 </div>
 </div>
 
-<div id="outline-container-orged13271" class="outline-2">
-<h2 id="orged13271">Networking</h2>
-<div class="outline-text-2" id="text-orged13271">
+<div id="outline-container-orgfa25500" class="outline-2">
+<h2 id="orgfa25500">Networking</h2>
+<div class="outline-text-2" id="text-orgfa25500">
 <p>
 As discussed in my <a href="./2020-01-09-vpn.html">previous post</a>, I already had a small TP-Link switch sitting behind the VPN/router box.
 Four ports was getting tight (I was unplugging my smart light hub to play with a network card).
@@ -2137,15 +2537,15 @@ However, as I'll discuss in my <a href="./2020-01-12-nas.html">next post</a>, I'
 </div>
 </div>
 
-<div id="outline-container-orgb3ea850" class="outline-2">
-<h2 id="orgb3ea850">Rack</h2>
-<div class="outline-text-2" id="text-orgb3ea850">
+<div id="outline-container-org886b2d3" class="outline-2">
+<h2 id="org886b2d3">Rack</h2>
+<div class="outline-text-2" id="text-org886b2d3">
 <p>
 I wired a bunch of stuff up and threw it under my desk:
 </p>
 
 
-<figure id="orgc34195d">
+<figure id="orgd65b23e">
 <img src="../static/homelab/server_desktop_wire_mess.jpg" alt="server_desktop_wire_mess.jpg">
 
 </figure>
@@ -2155,16 +2555,16 @@ That wasn't going to work, so I threw all of this into a small rack, moved my de
 </p>
 
 
-<figure id="orgd3e5e1e">
+<figure id="org36d49c9">
 <img src="../static/homelab/battlestation.jpg" alt="battlestation.jpg">
 
 </figure>
 </div>
 </div>
 
-<div id="outline-container-orgd0c2efc" class="outline-2">
-<h2 id="orgd0c2efc">Do something with it</h2>
-<div class="outline-text-2" id="text-orgd0c2efc">
+<div id="outline-container-orga595bf9" class="outline-2">
+<h2 id="orga595bf9">Do something with it</h2>
+<div class="outline-text-2" id="text-orga595bf9">
 <p>
 At first I used this server mostly to poke at the network and write kernel bypass drivers for an Intel I350-T4 quad-gigabit-port network card.
 Side note: The <a href="https://github.com/emmericp/ixy">ixy</a> project is pretty neat and 100% worth poking at if you are interested in networking.
@@ -2209,9 +2609,9 @@ I'll be writing a few posts explaining the steps I took.
 <li>Part 4 <a href="./2020-02-01-homelab4-cloud.html">Services and Applications</a></li>
 </ul>
 
-<div id="outline-container-org9b775ab" class="outline-2">
-<h2 id="org9b775ab">VPNs</h2>
-<div class="outline-text-2" id="text-org9b775ab">
+<div id="outline-container-org7a8b109" class="outline-2">
+<h2 id="org7a8b109">VPNs</h2>
+<div class="outline-text-2" id="text-org7a8b109">
 <p>
 Unfortunately, I don't have a public IP in my building, so setting up remote access had to be a little more involved than just opening a port for ssh.
 I found a tiny, passively cooled, quad-port <b>intel</b> NIC, celeron box <a href="https://www.amazon.com/Firewall-Gigabit-Celeron-AES-NI-Barebone/dp/B07G7H4M73">on amazon</a>, and figured I'd try setting up my own linux router and run my own VPN server in AWS or something.
@@ -2222,9 +2622,9 @@ This took a bit of work.
 </p>
 </div>
 
-<div id="outline-container-org1c4b9b3" class="outline-3">
-<h3 id="org1c4b9b3">Networking</h3>
-<div class="outline-text-3" id="text-org1c4b9b3">
+<div id="outline-container-org72b2a85" class="outline-3">
+<h3 id="org72b2a85">Networking</h3>
+<div class="outline-text-3" id="text-org72b2a85">
 <p>
 Before diving in, I needed to decide how to layout my network and what VPN tools to use.
 I read a ton about best practices, but this wasn't super helpful, so instead, I just started spinning up VMs and messing with VPN software and playing with my network settings.
@@ -2281,17 +2681,17 @@ Unfortunately, a local coffee shop I frequent uses an IP range that clashes with
 </div>
 </div>
 
-<div id="outline-container-orgcbdf676" class="outline-3">
-<h3 id="orgcbdf676">Install <a href="https://alpinelinux.org/">alpine linux</a> on local router</h3>
-<div class="outline-text-3" id="text-orgcbdf676">
+<div id="outline-container-org1024767" class="outline-3">
+<h3 id="org1024767">Install <a href="https://alpinelinux.org/">alpine linux</a> on local router</h3>
+<div class="outline-text-3" id="text-org1024767">
 <p>
 The official install guides are good and more up to date than anything I'd have to say about this.
 </p>
 </div>
 
-<div id="outline-container-org3a6ab81" class="outline-4">
-<h4 id="org3a6ab81">Setup Basic Networking</h4>
-<div class="outline-text-4" id="text-org3a6ab81">
+<div id="outline-container-orgf51c6b8" class="outline-4">
+<h4 id="orgf51c6b8">Setup Basic Networking</h4>
+<div class="outline-text-4" id="text-orgf51c6b8">
 <p>
 In <code>/etc/network/interfaces</code>:
 </p>
@@ -2314,9 +2714,9 @@ iface eth1 inet static
 </div>
 </div>
 
-<div id="outline-container-org7711725" class="outline-4">
-<h4 id="org7711725">Firewall and NAT</h4>
-<div class="outline-text-4" id="text-org7711725">
+<div id="outline-container-org7e01b5b" class="outline-4">
+<h4 id="org7e01b5b">Firewall and NAT</h4>
+<div class="outline-text-4" id="text-org7e01b5b">
 <p>
 After spending time banging my head against the <code>iptable</code>, I gave up and tried using a this thing built into alpine called <a href="https://wiki.alpinelinux.org/wiki/How-To_Alpine_Wall">awall</a>.
 There's a pretty good <a href="https://wiki.alpinelinux.org/wiki/Zero-To-Awall">Zero to Awall</a> guide available which can get you started.
@@ -2328,8 +2728,8 @@ I don't want to explain a full example (the docs are again better than what I ca
 </div>
 
 <ul class="org-ul">
-<li><a id="org7746d38"></a>Enable packet forwarding<br>
-<div class="outline-text-5" id="text-org7746d38">
+<li><a id="org29fea5c"></a>Enable packet forwarding<br>
+<div class="outline-text-5" id="text-org29fea5c">
 <p>
 The linux kernel must be told that it is allowed to forward packets.
 Put <code>net.ipv4.ip_forward = 1</code> in a <code>sysctl.conf</code> file on alpine, see <a href="https://wiki.alpinelinux.org/wiki/Sysctl.conf">https://wiki.alpinelinux.org/wiki/Sysctl.conf</a>
@@ -2338,8 +2738,8 @@ This is probably needed for ipv6 as well, if you aren't a bad person who is igno
 </div>
 </li>
 
-<li><a id="org2b663d7"></a>Most (all?) for awalls config files can be written in <code>yaml</code><br>
-<div class="outline-text-5" id="text-org2b663d7">
+<li><a id="org5d3de45"></a>Most (all?) for awalls config files can be written in <code>yaml</code><br>
+<div class="outline-text-5" id="text-org5d3de45">
 <p>
 The Zero To Awall guide has this example:
 </p>
@@ -2375,9 +2775,9 @@ But, you could also create an equivelent <code>/etc/awall/private/custom-service
 </ul>
 </div>
 
-<div id="outline-container-orgca96fbd" class="outline-4">
-<h4 id="orgca96fbd">Tricks</h4>
-<div class="outline-text-4" id="text-orgca96fbd">
+<div id="outline-container-orgad74c9b" class="outline-4">
+<h4 id="orgad74c9b">Tricks</h4>
+<div class="outline-text-4" id="text-orgad74c9b">
 <p>
 In case the internet every goes down, I sometimes need to refresh my ISP DHCP lease to get it to come back up.
 I stuck a <code>checkinit.sh</code> script into my <code>$PATH</code> somewhere, then added it to <code>cron</code> to run once a minute:
@@ -2424,9 +2824,9 @@ I also:
 </div>
 </div>
 
-<div id="outline-container-orgf16e964" class="outline-3">
-<h3 id="orgf16e964">Setup <a href="http://www.thekelleys.org.uk/dnsmasq/doc.html">dnsmasq</a> as a DHCP server and DNS server</h3>
-<div class="outline-text-3" id="text-orgf16e964">
+<div id="outline-container-orgc077907" class="outline-3">
+<h3 id="orgc077907">Setup <a href="http://www.thekelleys.org.uk/dnsmasq/doc.html">dnsmasq</a> as a DHCP server and DNS server</h3>
+<div class="outline-text-3" id="text-orgc077907">
 <p>
 The arch wiki has wonderful docs for this. Just go read those.
 </p>
@@ -2459,9 +2859,9 @@ All I really had to do in the end was:
 </ul>
 </div>
 
-<div id="outline-container-org8ee2c53" class="outline-4">
-<h4 id="org8ee2c53">Download <a href="https://pi-hole.net/">pi-hole</a>'s ad domain blacklist</h4>
-<div class="outline-text-4" id="text-org8ee2c53">
+<div id="outline-container-org05432b8" class="outline-4">
+<h4 id="org05432b8">Download <a href="https://pi-hole.net/">pi-hole</a>'s ad domain blacklist</h4>
+<div class="outline-text-4" id="text-org05432b8">
 <p>
 From <a href="https://github.com/notracking/hosts-blocklists">https://github.com/notracking/hosts-blocklists</a>.
 Put the tracking domain lists somewhere then just set:
@@ -2480,9 +2880,9 @@ See the dnsmasq docs for an explanation of the difference.
 </div>
 </div>
 
-<div id="outline-container-org59baa62" class="outline-3">
-<h3 id="org59baa62">Pay for and plug in some sort of Wireless Access Point</h3>
-<div class="outline-text-3" id="text-org59baa62">
+<div id="outline-container-orgadfcaaa" class="outline-3">
+<h3 id="orgadfcaaa">Pay for and plug in some sort of Wireless Access Point</h3>
+<div class="outline-text-3" id="text-orgadfcaaa">
 <p>
 I bought a Unifi AP and followed the instructions to set it up.
 It works.
@@ -2490,18 +2890,18 @@ It works.
 </div>
 </div>
 
-<div id="outline-container-orgca8233a" class="outline-3">
-<h3 id="orgca8233a">Setup alpine and DNS on a cloud server somewhere</h3>
-<div class="outline-text-3" id="text-orgca8233a">
+<div id="outline-container-org4cffa43" class="outline-3">
+<h3 id="org4cffa43">Setup alpine and DNS on a cloud server somewhere</h3>
+<div class="outline-text-3" id="text-org4cffa43">
 <p>
 Same as above mostly, just with a different made-up star trek themed subdomain.
 </p>
 </div>
 </div>
 
-<div id="outline-container-org2f4eb02" class="outline-3">
-<h3 id="org2f4eb02">Wireguard</h3>
-<div class="outline-text-3" id="text-org2f4eb02">
+<div id="outline-container-org9a3fe59" class="outline-3">
+<h3 id="org9a3fe59">Wireguard</h3>
+<div class="outline-text-3" id="text-org9a3fe59">
 <p>
 Each device that can connect to the server needs a private/public key pair.
 The server contains a list of recognized public keys; only the devices in the server config can connect.
@@ -2525,9 +2925,9 @@ Once you are done copying the contents of these files into the wireguard configs
 </p>
 </div>
 
-<div id="outline-container-orgac8f9be" class="outline-4">
-<h4 id="orgac8f9be">On the VPN server (cloud instance)</h4>
-<div class="outline-text-4" id="text-orgac8f9be">
+<div id="outline-container-org2632bc4" class="outline-4">
+<h4 id="org2632bc4">On the VPN server (cloud instance)</h4>
+<div class="outline-text-4" id="text-org2632bc4">
 <p>
 Create a wireguard server config at <code>/etc/wireguard/wg0.conf</code>.
 Note that I am not using the <code>wg-quick</code> interface for this or the apartment router.
@@ -2591,9 +2991,9 @@ iface wg0 inet static
 </div>
 </div>
 
-<div id="outline-container-orge2a4906" class="outline-4">
-<h4 id="orge2a4906">On the apartment <code>gateway</code></h4>
-<div class="outline-text-4" id="text-orge2a4906">
+<div id="outline-container-org5de5aae" class="outline-4">
+<h4 id="org5de5aae">On the apartment <code>gateway</code></h4>
+<div class="outline-text-4" id="text-org5de5aae">
 <p>
 The router in my apartment is a VPN client, maintaining a persistent connection to the VPN server.
 </p>
@@ -2634,9 +3034,9 @@ iface wg0 inet static
 </div>
 </div>
 
-<div id="outline-container-org8036f75" class="outline-4">
-<h4 id="org8036f75">On a "dynamic" VPN client</h4>
-<div class="outline-text-4" id="text-org8036f75">
+<div id="outline-container-org2a8edf9" class="outline-4">
+<h4 id="org2a8edf9">On a "dynamic" VPN client</h4>
+<div class="outline-text-4" id="text-org2a8edf9">
 <p>
 On machines like my laptop, I want to easily bring the VPN up and down.
 This is easy to do with the <code>wg-quick</code> tool.
@@ -2675,8 +3075,8 @@ Here's the config from my (arch linux/systemd) laptop:
 </div>
 
 <ul class="org-ul">
-<li><a id="org917947c"></a>Laptop Lid<br>
-<div class="outline-text-5" id="text-org917947c">
+<li><a id="orga42a6c8"></a>Laptop Lid<br>
+<div class="outline-text-5" id="text-orga42a6c8">
 <p>
 When my laptop lid closes, I kill the wireguard connection with a systemd unit file.
 This seems to minimize confusion when I close my laptop and take it somewhere.
@@ -2704,9 +3104,9 @@ In <code>/etc/systemd/system/wg-down.service</code>:
 </div>
 </div>
 
-<div id="outline-container-orgf8c2af4" class="outline-3">
-<h3 id="orgf8c2af4">Tweak dnsmasq config again</h3>
-<div class="outline-text-3" id="text-orgf8c2af4">
+<div id="outline-container-org29ee92f" class="outline-3">
+<h3 id="org29ee92f">Tweak dnsmasq config again</h3>
+<div class="outline-text-3" id="text-org29ee92f">
 <p>
 Make sure that the DNS servers know how to send queries to each other:
 </p>
@@ -2738,9 +3138,9 @@ In the cloud.me.com dnsmasq config:
 </div>
 </div>
 
-<div id="outline-container-org471be5b" class="outline-3">
-<h3 id="org471be5b">Plug it all in</h3>
-<div class="outline-text-3" id="text-org471be5b">
+<div id="outline-container-org4b7fc70" class="outline-3">
+<h3 id="org4b7fc70">Plug it all in</h3>
+<div class="outline-text-3" id="text-org4b7fc70">
 <p>
 I plugged the new router box into the wall (on port 0), and plugged a small 4-port TP-link switch into port 1.
 Everything else is plugged into the TP-link switch.
@@ -2749,13 +3149,13 @@ Everything else is plugged into the TP-link switch.
 </div>
 </div>
 
-<div id="outline-container-org6e35aa5" class="outline-2">
-<h2 id="org6e35aa5">Finally: use the system</h2>
-<div class="outline-text-2" id="text-org6e35aa5">
+<div id="outline-container-orgf2b9bc5" class="outline-2">
+<h2 id="orgf2b9bc5">Finally: use the system</h2>
+<div class="outline-text-2" id="text-orgf2b9bc5">
 </div>
-<div id="outline-container-org262a7d8" class="outline-3">
-<h3 id="org262a7d8">Good</h3>
-<div class="outline-text-3" id="text-org262a7d8">
+<div id="outline-container-org3e088c5" class="outline-3">
+<h3 id="org3e088c5">Good</h3>
+<div class="outline-text-3" id="text-org3e088c5">
 <ul class="org-ul">
 <li>Wireguard is rock solid, even on my phone and from an airplane.</li>
 <li>My local network performance is incredible</li>
@@ -2764,9 +3164,9 @@ Everything else is plugged into the TP-link switch.
 </ul>
 </div>
 </div>
-<div id="outline-container-org6f325d1" class="outline-3">
-<h3 id="org6f325d1">Bad</h3>
-<div class="outline-text-3" id="text-org6f325d1">
+<div id="outline-container-org76c96e1" class="outline-3">
+<h3 id="org76c96e1">Bad</h3>
+<div class="outline-text-3" id="text-org76c96e1">
 <ul class="org-ul">
 <li>DHCP lease refreshes are slow for me right now
 <ul class="org-ul">
@@ -2820,7 +3220,7 @@ List of c-induced misconceptions I had to clarify when learning rust:
       <![CDATA[<style>.org-src-container {white-space: pre; font-family: monospace }</style>
                <p>
 <a href="https://doc.rust-lang.org/std/pin/">Pin</a> is pretty important for Rust's recently-released <code>async.await</code>
-features. I read the docs. I didn't get it<sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>. This exercise is what it
+features. I read the docs. I didn't get it<sup><a id="fnr.1" class="footref" href="#fn.1" role="doc-backlink">1</a></sup>. This exercise is what it
 took for me to understand why <code>Pin</code> is important.
 </p>
 
@@ -2866,9 +3266,9 @@ Clearly moving is significant here, what does that mean exactly, and
 why is this such a big deal?
 </p>
 
-<div id="outline-container-org9c9abae" class="outline-2">
-<h2 id="org9c9abae">C++</h2>
-<div class="outline-text-2" id="text-org9c9abae">
+<div id="outline-container-orgd38e9c4" class="outline-2">
+<h2 id="orgd38e9c4">C++</h2>
+<div class="outline-text-2" id="text-orgd38e9c4">
 <p>
 I'm more familiar with C++ and my familiarity is probably where my
 misunderstandings are coming from. Let's start by understanding what
@@ -2880,7 +3280,7 @@ Consider the following <code>struct</code>:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="orgc9ea71c"><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
+<pre class="src src-cpp" id="org405be0b"><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
   <span class="org-function-name">Thing</span>(<span class="org-type">uint64_t</span> <span class="org-variable-name">id</span>)
     : id(id)
   { }
@@ -2928,7 +3328,7 @@ undefined, <b>but valid</b> state.
 </div>
 
 <p>
-Next, consider this<sup><a id="fnr.2" class="footref" href="#fn.2">2</a></sup> implementation of <code>swap</code> and it's usage:
+Next, consider this<sup><a id="fnr.2" class="footref" href="#fn.2" role="doc-backlink">2</a></sup> implementation of <code>swap</code> and it's usage:
 </p>
 
 <div class="org-src-container">
@@ -2965,7 +3365,7 @@ Let's consider one last struct.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="org66d21fd"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
+<pre class="src src-cpp" id="org9eceb88"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
 <span class="org-keyword">struct</span> <span class="org-type">ring_buffer</span> {
   <span class="org-constant">std</span>::<span class="org-type">array</span>&lt;<span class="org-type">T</span>, N+1&gt; <span class="org-variable-name">entries</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">use one extra element for easy book-keeping</span>
 
@@ -3005,9 +3405,9 @@ can take advantage of in some special places.
 </div>
 </div>
 
-<div id="outline-container-org83cece6" class="outline-2">
-<h2 id="org83cece6">Rust</h2>
-<div class="outline-text-2" id="text-org83cece6">
+<div id="outline-container-org0138094" class="outline-2">
+<h2 id="org0138094">Rust</h2>
+<div class="outline-text-2" id="text-org0138094">
 <p>
 Let's do the same exercises again in Rust, starting with the <code>Thing</code>
 struct.
@@ -3161,7 +3561,7 @@ Rule number 2: Rust move is always <span class="underline">just</span> a <code>m
 <p>
 Now, let's think about the ring buffer. It is not even remotely
 idiomatic to write anything like the C++ version of the ring-buffer in
-Rust<sup><a id="fnr.3" class="footref" href="#fn.3">3</a></sup>, but let's do it anyway. I'm also going to pretend that <a href="https://github.com/rust-lang/rust/issues/44580">const
+Rust<sup><a id="fnr.3" class="footref" href="#fn.3" role="doc-backlink">3</a></sup>, but let's do it anyway. I'm also going to pretend that <a href="https://github.com/rust-lang/rust/issues/44580">const
 generics</a> are finished for the sake of clarity.
 </p>
 
@@ -3195,9 +3595,9 @@ following these rules, but that's a topic for another time.
 </div>
 </div>
 
-<div id="outline-container-orge7e9e8a" class="outline-2">
-<h2 id="orge7e9e8a">Futures/async.await</h2>
-<div class="outline-text-2" id="text-orge7e9e8a">
+<div id="outline-container-orgc03c284" class="outline-2">
+<h2 id="orgc03c284">Futures/async.await</h2>
+<div class="outline-text-2" id="text-orgc03c284">
 <p>
 Hopefully now, we can understand why this is prerequisite for
 async.await support in Rust.
@@ -3246,15 +3646,15 @@ intermediate state, we'll be messing up our pointers. This is why
 <h2 class="footnotes">Footnotes: </h2>
 <div id="text-footnotes">
 
-<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1">1</a></sup> <div class="footpara"><p class="footpara">
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1" role="doc-backlink">1</a></sup> <div class="footpara" role="doc-footnote"><p class="footpara">
 The docs are great, but something just wasn't clicking for me.
 </p></div></div>
 
-<div class="footdef"><sup><a id="fn.2" class="footnum" href="#fnr.2">2</a></sup> <div class="footpara"><p class="footpara">
+<div class="footdef"><sup><a id="fn.2" class="footnum" href="#fnr.2" role="doc-backlink">2</a></sup> <div class="footpara" role="doc-footnote"><p class="footpara">
 probably incorrect. there's no such thing as correct C++ code.
 </p></div></div>
 
-<div class="footdef"><sup><a id="fn.3" class="footnum" href="#fnr.3">3</a></sup> <div class="footpara"><p class="footpara">
+<div class="footdef"><sup><a id="fn.3" class="footnum" href="#fnr.3" role="doc-backlink">3</a></sup> <div class="footpara" role="doc-footnote"><p class="footpara">
 The idiomatic Rust version is better (use indicies instead of pointers).
 This isn't an indictment of Rust. The idiomatic Rust version would be
 better in C++ too.
@@ -3437,8 +3837,8 @@ We've outsmarted the compiler!
 </p>
 
 <ul class="org-ul">
-<li><a id="org75f9a45"></a>Assertion Failed: smarter_than_compiler<br>
-<div class="outline-text-5" id="text-org75f9a45">
+<li><a id="orgb5661c4"></a>Assertion Failed: smarter_than_compiler<br>
+<div class="outline-text-5" id="text-orgb5661c4">
 <p>
 Let's set <code>PADDING1 = 16</code> and <code>PADDING2 = 17</code>.
 The code generated on clang-4.0 for <code>write(Wrapper*)</code> looks quite interesting:
@@ -3501,9 +3901,9 @@ The code has changed slightly to account for the new potential values of <code>W
 </li>
 </ul>
 
-<div id="outline-container-org17986bb" class="outline-4">
-<h4 id="org17986bb">Meaner PADDING</h4>
-<div class="outline-text-4" id="text-org17986bb">
+<div id="outline-container-org582f5fd" class="outline-4">
+<h4 id="org582f5fd">Meaner PADDING</h4>
+<div class="outline-text-4" id="text-org582f5fd">
 <p>
 Reminder: In the previous examples <code>PADDING1 = 16</code> and <code>PADDING2 = 17</code>.
 What happens to the generated code if we make the paddings completely wacky?
@@ -3551,13 +3951,13 @@ The answer to that depends on which compiler you ask.
 </div>
 </div>
 
-<div id="outline-container-org08ceb7e" class="outline-4">
-<h4 id="org08ceb7e">gcc 7.1 (&#x2013;std=c++1z -O3)</h4>
-<div class="outline-text-4" id="text-org08ceb7e">
+<div id="outline-container-orgebad7e2" class="outline-4">
+<h4 id="orgebad7e2">gcc 7.1 (&#x2013;std=c++1z -O3)</h4>
+<div class="outline-text-4" id="text-orgebad7e2">
 </div>
 <ul class="org-ul">
-<li><a id="org5a0b9a1"></a><code>PADDING1</code> <code>= =PADDING2</code><br>
-<div class="outline-text-5" id="text-org5a0b9a1">
+<li><a id="org998375e"></a><code>PADDING1</code> <code>= =PADDING2</code><br>
+<div class="outline-text-5" id="text-org998375e">
 <div class="org-src-container">
 <pre class="src src-asm"><span class="org-function-name">writeLessSafe</span>(WrapperWithOffset*):
         <span class="org-keyword">mov</span>     rax, QWORD PTR [rdi+8]
@@ -3584,8 +3984,8 @@ That's a little odd.
 </div>
 </li>
 
-<li><a id="org547657a"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 17</code><br>
-<div class="outline-text-5" id="text-org547657a">
+<li><a id="orgf315dea"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 17</code><br>
+<div class="outline-text-5" id="text-orgf315dea">
 <div class="org-src-container">
 <pre class="src src-asm"><span class="org-function-name">write</span>(Wrapper*):
         <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
@@ -3603,8 +4003,8 @@ That's a little odd.
 </div>
 </li>
 
-<li><a id="orgece2573"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 173</code><br>
-<div class="outline-text-5" id="text-orgece2573">
+<li><a id="org67b628c"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 173</code><br>
+<div class="outline-text-5" id="text-org67b628c">
 <div class="org-src-container">
 <pre class="src src-asm"><span class="org-function-name">write</span>(Wrapper*):
         <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
@@ -3630,9 +4030,9 @@ At the moment I'm not convinced that it hurts much.
 </ul>
 </div>
 
-<div id="outline-container-org9a3ff2b" class="outline-2">
-<h2 id="org9a3ff2b">Conclusion</h2>
-<div class="outline-text-2" id="text-org9a3ff2b">
+<div id="outline-container-org2aed0d4" class="outline-2">
+<h2 id="org2aed0d4">Conclusion</h2>
+<div class="outline-text-2" id="text-org2aed0d4">
 <p>
 No conclusion.
 None of my benchmarks have managed to detect any convincing cost for this branch (even when variants are randomly chosen inside of a loop in an attempt to confuse branch predictor) so none of this actually matters (probably).
@@ -3668,9 +4068,9 @@ There are many, many techniques which can be used to work around this trickiness
 This post is a discussion of one such method (presented in <a href="https://www.youtube.com/watch?v=boPEO2auJj4">this cppcon talk</a>) implemented in <a href="https://www.rust-lang.org/en-US/">Rust</a>.
 </p>
 
-<div id="outline-container-org77a7365" class="outline-2">
-<h2 id="org77a7365">Messaging between threads</h2>
-<div class="outline-text-2" id="text-org77a7365">
+<div id="outline-container-org92bddf4" class="outline-2">
+<h2 id="org92bddf4">Messaging between threads</h2>
+<div class="outline-text-2" id="text-org92bddf4">
 <p>
 Suppose we are developing a synthesizer which produces sounds when keys are pressed on a <a href="https://en.wikipedia.org/wiki/MIDI_controller#Keyboards">MIDI keyboard</a>.
 The audio library calls a function we provide once ever 6 or so milliseconds to request a list of samples from us.
@@ -3699,9 +4099,9 @@ If messages lives on the heap, we must ensure they are allocated and freed outsi
 </p>
 </div>
 
-<div id="outline-container-orge50aa4a" class="outline-3">
-<h3 id="orge50aa4a">Reference counted garbage collection</h3>
-<div class="outline-text-3" id="text-orge50aa4a">
+<div id="outline-container-orgc8cd8f9" class="outline-3">
+<h3 id="orgc8cd8f9">Reference counted garbage collection</h3>
+<div class="outline-text-3" id="text-orgc8cd8f9">
 <p>
 It is totally fine to allocate on the UI thread, so when the UI thread handles an event it will compute a new list of samples and stick them into a freshly allocated block of memory.
 Then we will ship this message over to the realtime thread.
@@ -3731,9 +4131,9 @@ Sometime later, the collector thread will observe the decreased reference count 
 </div>
 </div>
 
-<div id="outline-container-org30f72aa" class="outline-3">
-<h3 id="org30f72aa">Tradeoffs</h3>
-<div class="outline-text-3" id="text-org30f72aa">
+<div id="outline-container-org56bc4bb" class="outline-3">
+<h3 id="org56bc4bb">Tradeoffs</h3>
+<div class="outline-text-3" id="text-org56bc4bb">
 <p>
 Let's consider the theoretical behavior of this approach.
 Note that anything I have to say should be taken with grain of salt; I haven't benchmarked anything, so I really have no evidence to support anything I'm claiming.
@@ -3782,9 +4182,9 @@ Regardless of the actual efficacy of this approach, it will be interesting to tr
 </div>
 </div>
 
-<div id="outline-container-org0f4d4f8" class="outline-2">
-<h2 id="org0f4d4f8">Let's make one</h2>
-<div class="outline-text-2" id="text-org0f4d4f8">
+<div id="outline-container-orgc44e5c5" class="outline-2">
+<h2 id="orgc44e5c5">Let's make one</h2>
+<div class="outline-text-2" id="text-orgc44e5c5">
 <p>
 For the sake of these examples, let's assume that the built-in Rust <a href="https://doc.rust-lang.org/std/sync/mpsc/index.html">mpsc channel</a> is an appropriate lock free queue.
 It will be pretty easy to swap this with something different later, and, if we use the standard library, all of the examples will easily run in the Rust playground.
@@ -3792,9 +4192,9 @@ We are also going to fake a bunch of the details of the audio library.
 </p>
 </div>
 
-<div id="outline-container-org7e15690" class="outline-3">
-<h3 id="org7e15690">Fake audio library</h3>
-<div class="outline-text-3" id="text-org7e15690">
+<div id="outline-container-org2df7b62" class="outline-3">
+<h3 id="org2df7b62">Fake audio library</h3>
+<div class="outline-text-3" id="text-org2df7b62">
 <p>
 <a href="https://play.rust-lang.org/?gist=27d1b7a693ffe01ac899b991317b170f&amp;version=stable&amp;backtrace=0">Rust Playground Link</a>.
 </p>
@@ -3887,9 +4287,9 @@ Output (one of many possible):
 </div>
 
 
-<div id="outline-container-org2d6d65e" class="outline-3">
-<h3 id="org2d6d65e">Sending Arcs between threads</h3>
-<div class="outline-text-3" id="text-org2d6d65e">
+<div id="outline-container-org2a985d8" class="outline-3">
+<h3 id="org2a985d8">Sending Arcs between threads</h3>
+<div class="outline-text-3" id="text-org2a985d8">
 <p>
 Now that we have an "audio library," let's try to make some messages and pass them between threads.
 </p>
@@ -3977,9 +4377,9 @@ Now that we've done all of that, we need to send the samples between threads.
 </div>
 </div>
 
-<div id="outline-container-org326823a" class="outline-3">
-<h3 id="org326823a">Message type</h3>
-<div class="outline-text-3" id="text-org326823a">
+<div id="outline-container-orgf41450e" class="outline-3">
+<h3 id="orgf41450e">Message type</h3>
+<div class="outline-text-3" id="text-orgf41450e">
 <p>
 As discussed previously, we will create the <code>Arc</code> on the UI thread, then send it to the realtime thread.
 </p>
@@ -4150,9 +4550,9 @@ Here is an example output:
 </div>
 </div>
 
-<div id="outline-container-orgac31cee" class="outline-3">
-<h3 id="orgac31cee">Problems?</h3>
-<div class="outline-text-3" id="text-orgac31cee">
+<div id="outline-container-org3d54831" class="outline-3">
+<h3 id="org3d54831">Problems?</h3>
+<div class="outline-text-3" id="text-org3d54831">
 <p>
 The last example <b>seems</b> to do the right thing, let's take a look at what the realtime callback does when it receives a new set of samples.
 </p>
@@ -4203,9 +4603,9 @@ We can't let our realtime callback perform memory allocation.
 </div>
 </div>
 
-<div id="outline-container-orgabc837f" class="outline-2">
-<h2 id="orgabc837f">Build the GC</h2>
-<div class="outline-text-2" id="text-orgabc837f">
+<div id="outline-container-orgc57a241" class="outline-2">
+<h2 id="orgc57a241">Build the GC</h2>
+<div class="outline-text-2" id="text-orgc57a241">
 <p>
 We now need to build the GC that I promised we would build, to clean up after us, outside of the realtime thread.
 Sneak peak, once the GC is implemented, all we have to change is <code>UIThread::run</code>, in a very small way:
@@ -4737,9 +5137,9 @@ There are only a few things left to do.
 </p>
 </div>
 
-<div id="outline-container-org88f5e52" class="outline-3">
-<h3 id="org88f5e52">Start and Stop the GC</h3>
-<div class="outline-text-3" id="text-org88f5e52">
+<div id="outline-container-org3176522" class="outline-3">
+<h3 id="org3176522">Start and Stop the GC</h3>
+<div class="outline-text-3" id="text-org3176522">
 <p>
 The GC thread that we have created will never terminate.
 </p>
@@ -4827,9 +5227,9 @@ Next, update the <code>UIThread::run</code> method:
 </div>
 </div>
 
-<div id="outline-container-org27e242d" class="outline-3">
-<h3 id="org27e242d">Drop the GC</h3>
-<div class="outline-text-3" id="text-org27e242d">
+<div id="outline-container-org7138c48" class="outline-3">
+<h3 id="org7138c48">Drop the GC</h3>
+<div class="outline-text-3" id="text-org7138c48">
 <p>
 Rust will make sure that <code>Drop</code> is called when the struct goes out of scope.
 This gives us a change to shut down the GC thread.
@@ -4888,9 +5288,9 @@ Example output:
 </div>
 </div>
 
-<div id="outline-container-org0df8545" class="outline-3">
-<h3 id="org0df8545">Proof</h3>
-<div class="outline-text-3" id="text-org0df8545">
+<div id="outline-container-orgd507a80" class="outline-3">
+<h3 id="orgd507a80">Proof</h3>
+<div class="outline-text-3" id="text-orgd507a80">
 <p>
 Let's add some logging so we can see when things are getting freed:
 </p>
@@ -4941,9 +5341,9 @@ Example Output:
 </div>
 </div>
 
-<div id="outline-container-org826931a" class="outline-2">
-<h2 id="org826931a">Conclusion</h2>
-<div class="outline-text-2" id="text-org826931a">
+<div id="outline-container-org566c7bf" class="outline-2">
+<h2 id="org566c7bf">Conclusion</h2>
+<div class="outline-text-2" id="text-org566c7bf">
 <p>
 We did it!
 </p>
@@ -4997,9 +5397,9 @@ To start off this series, here's a short article about audio
 programming.
 </p>
 
-<div id="outline-container-orge706b8d" class="outline-2">
-<h2 id="orge706b8d">Digital audio</h2>
-<div class="outline-text-2" id="text-orge706b8d">
+<div id="outline-container-orgc74b899" class="outline-2">
+<h2 id="orgc74b899">Digital audio</h2>
+<div class="outline-text-2" id="text-orgc74b899">
 <p>
 To generate audio, audio software sends some digital audio signals to
 the audio card. Digital audio signals are just lists of floating point
@@ -5016,7 +5416,7 @@ wave like this (from Wikipedia):
 </p>
 
 
-<figure id="org715c52a">
+<figure id="org6e4647b">
 <img src="../static/sound/sine_samples.png" alt="sine_samples.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 1: </span>Samples</figcaption>
@@ -5028,9 +5428,9 @@ audio, which is then played through the speakers.
 </p>
 </div>
 
-<div id="outline-container-org824adc6" class="outline-3">
-<h3 id="org824adc6">Types of audio software</h3>
-<div class="outline-text-3" id="text-org824adc6">
+<div id="outline-container-orgb10b07f" class="outline-3">
+<h3 id="orgb10b07f">Types of audio software</h3>
+<div class="outline-text-3" id="text-orgb10b07f">
 <p>
 Next let's think about a few different kinds of audio software (this
 list is by no means complete):
@@ -5054,7 +5454,7 @@ interfaces.
 </p>
 
 
-<figure id="orgb4c9e33">
+<figure id="org8ef327c">
 <img src="../static/sound/reason_drums.jpg" alt="reason_drums.jpg"> 
 
 <figcaption><span class="figure-number">Figure 2: </span>drum machine in some software</figcaption>
@@ -5068,7 +5468,7 @@ frequency ranges (make the bass louder, make the treble quieter):
 </p>
 
 
-<figure id="orge0cef16">
+<figure id="orgd8cfe46">
 <img src="../static/sound/itunes_eq.jpg" alt="itunes_eq.jpg">
 
 <figcaption><span class="figure-number">Figure 3: </span>equalizer</figcaption>
@@ -5083,7 +5483,7 @@ little mixer thing:
 </p>
 
 
-<figure id="orgf695af4">
+<figure id="org8a46f73">
 <img src="../static/sound/win_mixer.png" alt="win_mixer.png">
 
 <figcaption><span class="figure-number">Figure 4: </span>windows mixer</figcaption>
@@ -5103,9 +5503,9 @@ developers use to develop audio applications.
 </div>
 </div>
 
-<div id="outline-container-org617b66c" class="outline-2">
-<h2 id="org617b66c">Software audio systems</h2>
-<div class="outline-text-2" id="text-org617b66c">
+<div id="outline-container-orgbebd7dd" class="outline-2">
+<h2 id="orgbebd7dd">Software audio systems</h2>
+<div class="outline-text-2" id="text-orgbebd7dd">
 <p>
 Most software audio systems (as far as I know) tend to work the same
 way. There is a realtime thread that generates samples and a bunch of
@@ -5116,9 +5516,9 @@ audio card.
 </p>
 </div>
 
-<div id="outline-container-org48265be" class="outline-3">
-<h3 id="org48265be">How fast is realtime?</h3>
-<div class="outline-text-3" id="text-org48265be">
+<div id="outline-container-orgbd23d3f" class="outline-3">
+<h3 id="orgbd23d3f">How fast is realtime?</h3>
+<div class="outline-text-3" id="text-orgbd23d3f">
 <p>
 In the previous section, I claimed that, at 44.1 kHz (the standard CD
 sample rate), we need to take one audio sample approximately every 23
@@ -5215,9 +5615,9 @@ milliseconds can slow everyone else down.
 </div>
 </div>
 
-<div id="outline-container-org3302505" class="outline-3">
-<h3 id="org3302505">Time keeps on ticking</h3>
-<div class="outline-text-3" id="text-org3302505">
+<div id="outline-container-org1e16b05" class="outline-3">
+<h3 id="org1e16b05">Time keeps on ticking</h3>
+<div class="outline-text-3" id="text-org1e16b05">
 <p>
 If our callback function fails to generate samples quickly enough (or
 uses up all of the CPU time), the audio system will produce crackles,
@@ -5323,9 +5723,9 @@ allocators</a> which do not violate our realtime constraints.
 </div>
 </div>
 
-<div id="outline-container-org6ad66d2" class="outline-2">
-<h2 id="org6ad66d2">What do we do?</h2>
-<div class="outline-text-2" id="text-org6ad66d2">
+<div id="outline-container-orgd47d746" class="outline-2">
+<h2 id="orgd47d746">What do we do?</h2>
+<div class="outline-text-2" id="text-orgd47d746">
 <p>
 In general, there are a few cool tricks we can use to design around
 these problems, but I'm not going to discuss any of them in this post.
@@ -5372,9 +5772,9 @@ Specifically, I've implemented a simple DSL for image processing which is JIT co
 I picked this project mostly to learn rust, so my result is certainly not production code but it may still be interesting to read a bit about.
 </p>
 
-<div id="outline-container-org93a89a5" class="outline-2">
-<h2 id="org93a89a5">Annotated example</h2>
-<div class="outline-text-2" id="text-org93a89a5">
+<div id="outline-container-org2e7e755" class="outline-2">
+<h2 id="org2e7e755">Annotated example</h2>
+<div class="outline-text-2" id="text-org2e7e755">
 <p>
 Before jumping into a discussion about how all of this works, lets look at an example of the DSL.
 In this example, we will define the sobel operator, then process an images with it.
@@ -5451,9 +5851,9 @@ They do not mutate their inputs, nor do they store any state, nor are they coupl
 </p>
 </div>
 
-<div id="outline-container-org2387c79" class="outline-3">
-<h3 id="org2387c79">Connecting functions</h3>
-<div class="outline-text-3" id="text-org2387c79">
+<div id="outline-container-org5e5ae7d" class="outline-3">
+<h3 id="org5e5ae7d">Connecting functions</h3>
+<div class="outline-text-3" id="text-org5e5ae7d">
 <p>
 Now that we have some abstract functions, we need to compose functions to create something meaningful.
 The composition of functions in my DSL is called a function chain.
@@ -5485,9 +5885,9 @@ For example, the entire sobel image processing chain looks something like this:
 </div>
 </div>
 
-<div id="outline-container-org6b8475a" class="outline-3">
-<h3 id="org6b8475a">Compiling and executing the chain</h3>
-<div class="outline-text-3" id="text-org6b8475a">
+<div id="outline-container-orgb0c94d4" class="outline-3">
+<h3 id="orgb0c94d4">Compiling and executing the chain</h3>
+<div class="outline-text-3" id="text-orgb0c94d4">
 <p>
 Now that we have built a chain representing the entire sobel algorithm, we only need to compile the chain and use the chain to process an image:
 </p>
@@ -5512,9 +5912,9 @@ Note: For the full sobel code, see <a href="https://github.com/dpzmick/rust_img_
 </div>
 </div>
 
-<div id="outline-container-orgf86f59c" class="outline-2">
-<h2 id="orgf86f59c">Details, Details, Details</h2>
-<div class="outline-text-2" id="text-orgf86f59c">
+<div id="outline-container-orgba72ec4" class="outline-2">
+<h2 id="orgba72ec4">Details, Details, Details</h2>
+<div class="outline-text-2" id="text-orgba72ec4">
 <p>
 There's lots of little details which may be interesting to discuss, but I'm only going to discuss the compilation method.
 First, we need some slightly more rigorous definitions of things:
@@ -5557,9 +5957,9 @@ The generated <code>grad</code> code roughly corresponds to:
 </div>
 </div>
 
-<div id="outline-container-org8b66080" class="outline-2">
-<h2 id="org8b66080">Execution and image inputs</h2>
-<div class="outline-text-2" id="text-org8b66080">
+<div id="outline-container-orge530507" class="outline-2">
+<h2 id="orge530507">Execution and image inputs</h2>
+<div class="outline-text-2" id="text-orge530507">
 <p>
 A driver function is injected into the module.
 This function performs some bookkeeping tasks, then just loops over the pixels in the output image, calling the appropriate function (whichever was last in the chain) for every pixel:
@@ -5589,9 +5989,9 @@ There's lots of other interesting little idiosyncrasies in this code but I don't
 </div>
 </div>
 
-<div id="outline-container-orgea50e8b" class="outline-2">
-<h2 id="orgea50e8b">Performance</h2>
-<div class="outline-text-2" id="text-orgea50e8b">
+<div id="outline-container-orgaa1a536" class="outline-2">
+<h2 id="orgaa1a536">Performance</h2>
+<div class="outline-text-2" id="text-orgaa1a536">
 <p>
 Anyone who knows a little bit about computers and performance is probably hurting a little bit thinking about how this might perform.
 You've noticed all of the function calls, don't these have lots of overhead?
@@ -5606,9 +6006,9 @@ Every generated function is marked with an LLVM attribute <code>AlwaysInline</co
 </p>
 </div>
 
-<div id="outline-container-org56bc45e" class="outline-3">
-<h3 id="org56bc45e">Aside: Function inlining</h3>
-<div class="outline-text-3" id="text-org56bc45e">
+<div id="outline-container-orgd050c4b" class="outline-3">
+<h3 id="orgd050c4b">Aside: Function inlining</h3>
+<div class="outline-text-3" id="text-orgd050c4b">
 <p>
 For those who are not totally familiar with the concept of function ininling, here's a quick example (note that the <code>inline</code> keyword in C doesn't guarantee this behavior, it is just a hint to the compiler):
 </p>
@@ -5655,9 +6055,9 @@ For example, because the call to <code>foo</code> has been inlined, the compiler
 </div>
 </div>
 
-<div id="outline-container-orgf5eeb8b" class="outline-3">
-<h3 id="orgf5eeb8b">Impact</h3>
-<div class="outline-text-3" id="text-orgf5eeb8b">
+<div id="outline-container-org607cb00" class="outline-3">
+<h3 id="org607cb00">Impact</h3>
+<div class="outline-text-3" id="text-org607cb00">
 <p>
 Aggressive function inlining gives me lots of freedom in my code generation.
 I can generate code which is totally inefficient, then inline everything and let the compiler do some of its magic.
@@ -5668,9 +6068,9 @@ If you're interested in looking at the optimized sobel LLVM module, here it is: 
 </div>
 </div>
 
-<div id="outline-container-org7adb25a" class="outline-3">
-<h3 id="org7adb25a">Numbers</h3>
-<div class="outline-text-3" id="text-org7adb25a">
+<div id="outline-container-org16c3d6b" class="outline-3">
+<h3 id="org16c3d6b">Numbers</h3>
+<div class="outline-text-3" id="text-org16c3d6b">
 <p>
 To benchmark this code, I compared the JITed code with an implementation of the exact same thing written directly in Rust.
 My benchmarking is not extremely rigorous, but I've taken steps to try to create an honest benchmark.
@@ -5703,7 +6103,7 @@ Here is a plot of image vs average speedup (the images are sorted by the total n
 </p>
 
 
-<figure id="org3b76fe1">
+<figure id="orgd0e4de1">
 <img src="../static/rust_img/img_vs_speedup.png" alt="img_vs_speedup.png" class="light-invert">
 
 </figure>
@@ -5715,9 +6115,9 @@ These results do indicate to me that I have at least achieved reasonable perform
 </p>
 </div>
 
-<div id="outline-container-org7d2f94e" class="outline-4">
-<h4 id="org7d2f94e">Final performance notes</h4>
-<div class="outline-text-4" id="text-org7d2f94e">
+<div id="outline-container-org51099be" class="outline-4">
+<h4 id="org51099be">Final performance notes</h4>
+<div class="outline-text-4" id="text-org51099be">
 <p>
 It should be noted that these results are not entirely surprising.
 Rust is also using LLVM as a backend.
@@ -5742,9 +6142,9 @@ The Halide talks give fantastic descriptions of many of the problems it aims to 
 </div>
 </div>
 
-<div id="outline-container-orgcb38446" class="outline-2">
-<h2 id="orgcb38446">Conclusions</h2>
-<div class="outline-text-2" id="text-orgcb38446">
+<div id="outline-container-orgb3f6044" class="outline-2">
+<h2 id="orgb3f6044">Conclusions</h2>
+<div class="outline-text-2" id="text-orgb3f6044">
 <p>
 Overall, this project was extremely enjoyable.
 I had yet another opportunity to fiddle with LLVM, which is always lots of fun (but sometimes very painful).
@@ -5780,9 +6180,9 @@ The simulation ran for 1 hour (53,840,103 events were recorded).
   </iframe>
 </center>
 
-<div id="outline-container-org32164b5" class="outline-2">
-<h2 id="org32164b5">Model</h2>
-<div class="outline-text-2" id="text-org32164b5">
+<div id="outline-container-orgd1e2dff" class="outline-2">
+<h2 id="orgd1e2dff">Model</h2>
+<div class="outline-text-2" id="text-orgd1e2dff">
 <p>
 I've attempted to capture two behaviors of real ants with my simulation:
 ants communicate using pheromones (scents), and they want to find food.
@@ -5797,7 +6197,7 @@ direction.
 </p>
 
 <p>
-Additionally, my ants have multiple movement modes.<sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup> They can be in
+Additionally, my ants have multiple movement modes.<sup><a id="fnr.1" class="footref" href="#fn.1" role="doc-backlink">1</a></sup> They can be in
 "away from home" mode or "towards home" mode. When an ant starts moving,
 it favors moving away from its starting cell. When it finds food, it
 switches modes and favors moving towards its starting cell. If it ever
@@ -5825,9 +6225,9 @@ model.
 </div>
 </div>
 
-<div id="outline-container-org4e5e541" class="outline-2">
-<h2 id="org4e5e541">Pheromone Propagation</h2>
-<div class="outline-text-2" id="text-org4e5e541">
+<div id="outline-container-orge426028" class="outline-2">
+<h2 id="orge426028">Pheromone Propagation</h2>
+<div class="outline-text-2" id="text-orge426028">
 <p>
 When an ant is at a given cell, it gets the max pheromone strength of
 its neighbors. It then checks if the strength of the its current cell is
@@ -5847,9 +6247,9 @@ off too quickly, but, it is easy to implement, so I stuck with it.
 </div>
 </div>
 
-<div id="outline-container-org4eba0fa" class="outline-2">
-<h2 id="org4eba0fa">The Erlang Stuff</h2>
-<div class="outline-text-2" id="text-org4eba0fa">
+<div id="outline-container-orgc8cfead" class="outline-2">
+<h2 id="orgc8cfead">The Erlang Stuff</h2>
+<div class="outline-text-2" id="text-orgc8cfead">
 <p>
 If you aren't familiar with Erlang, here is a super quick overview of
 the concurrency construct in the language.
@@ -5905,9 +6305,9 @@ who its neighbors are</li>
 </div>
 </div>
 
-<div id="outline-container-orgd0eaed3" class="outline-2">
-<h2 id="orgd0eaed3">Simulation</h2>
-<div class="outline-text-2" id="text-orgd0eaed3">
+<div id="outline-container-org19be83d" class="outline-2">
+<h2 id="org19be83d">Simulation</h2>
+<div class="outline-text-2" id="text-org19be83d">
 <p>
 When the simulator starts, it loads a config file
 specifying things like the size of the grid and the location of food,
@@ -5921,9 +6321,9 @@ over and over again until the simulation is shut down.
 </p>
 </div>
 
-<div id="outline-container-org4dd8d3f" class="outline-4">
-<h4 id="org4dd8d3f">Wakeup_and_move</h4>
-<div class="outline-text-4" id="text-org4dd8d3f">
+<div id="outline-container-orgf24aadf" class="outline-4">
+<h4 id="orgf24aadf">Wakeup_and_move</h4>
+<div class="outline-text-4" id="text-orgf24aadf">
 <p>
 When an ant receives a wakeup_and_move message, it has to figure where
 it wants to move, if it can move there, and it needs to perform the
@@ -5963,7 +6363,7 @@ back to sleep</li>
 </ol>
 
 
-<figure id="orgb04b375">
+<figure id="org0bb2ba9">
 <img src="../static/ants/sequence.png" alt="sequence.png" class="light-invert">
 
 </figure>
@@ -5978,9 +6378,9 @@ the double occupancy issue than the collision issue.
 </div>
 </div>
 
-<div id="outline-container-org4c79d16" class="outline-2">
-<h2 id="org4c79d16">Data</h2>
-<div class="outline-text-2" id="text-org4c79d16">
+<div id="outline-container-orgcdf2d23" class="outline-2">
+<h2 id="orgcdf2d23">Data</h2>
+<div class="outline-text-2" id="text-orgcdf2d23">
 <p>
 As the simulation runs, the ants are generating all sorts of data that
 should probably be recorded somewhere. This is a bit of a challenge
@@ -6024,9 +6424,9 @@ the scope of the project.
 </div>
 </div>
 
-<div id="outline-container-org4a71d88" class="outline-2">
-<h2 id="org4a71d88">Making the Video</h2>
-<div class="outline-text-2" id="text-org4a71d88">
+<div id="outline-container-org0c627aa" class="outline-2">
+<h2 id="org0c627aa">Making the Video</h2>
+<div class="outline-text-2" id="text-org0c627aa">
 <p>
 Ants are moving all the time in an uncoordinated manner, moving a lot,
 and sometimes moving at exactly the same time so there isn't a totally
@@ -6044,9 +6444,9 @@ some number of frames per second.
 </div>
 </div>
 
-<div id="outline-container-orga5ac7a2" class="outline-2">
-<h2 id="orga5ac7a2">Conclusions</h2>
-<div class="outline-text-2" id="text-orga5ac7a2">
+<div id="outline-container-org3f64528" class="outline-2">
+<h2 id="org3f64528">Conclusions</h2>
+<div class="outline-text-2" id="text-org3f64528">
 <p>
 The naive model of any movement I used almost works. If I were to
 improve the pheromone propagation mechanism and add changing food
@@ -6098,7 +6498,7 @@ The buggy, messy code is on <a href="https://github.com/dpzmick/ants">github</a>
 <h2 class="footnotes">Footnotes: </h2>
 <div id="text-footnotes">
 
-<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1">1</a></sup> <div class="footpara"><p class="footpara">
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1" role="doc-backlink">1</a></sup> <div class="footpara" role="doc-footnote"><p class="footpara">
 I like my ants like I like my editors.
 </p></div></div>
 
@@ -6127,9 +6527,9 @@ discussion about it could be quite interesting. And of course if you
 find errors, let me know!
 </p>
 
-<div id="outline-container-org1217f29" class="outline-2">
-<h2 id="org1217f29">Simulation</h2>
-<div class="outline-text-2" id="text-org1217f29">
+<div id="outline-container-org8a19f37" class="outline-2">
+<h2 id="org8a19f37">Simulation</h2>
+<div class="outline-text-2" id="text-org8a19f37">
 <p>
 I've expanded the model a bit for this one. Here is what happens:
 </p>
@@ -6199,9 +6599,9 @@ the simulation to get results.
 </div>
 </div>
 
-<div id="outline-container-org4ece5d0" class="outline-2">
-<h2 id="org4ece5d0">Criticism of the model</h2>
-<div class="outline-text-2" id="text-org4ece5d0">
+<div id="outline-container-org5d6cc46" class="outline-2">
+<h2 id="org5d6cc46">Criticism of the model</h2>
+<div class="outline-text-2" id="text-org5d6cc46">
 <p>
 There are a couple obvious problems with this model.
 </p>
@@ -6243,9 +6643,9 @@ kind of experiment I plan to run lessens the impact of this problem.
 </div>
 </div>
 
-<div id="outline-container-org213b7b1" class="outline-2">
-<h2 id="org213b7b1">The Experiment</h2>
-<div class="outline-text-2" id="text-org213b7b1">
+<div id="outline-container-org7b04134" class="outline-2">
+<h2 id="org7b04134">The Experiment</h2>
+<div class="outline-text-2" id="text-org7b04134">
 <p>
 I intend to try and figure out if group splitting or individual
 selflessness will do a better job at keeping groups close to optimal
@@ -6271,7 +6671,7 @@ for various values of selflessness and group split chance.
 </p>
 
 
-<figure id="org360bc8e">
+<figure id="org9da3a98">
 <img src="../static/study_groups/2/5_optimal.png" alt="5_optimal.png">
 
 <figcaption><span class="figure-number">Figure 1: </span>joiners=5, max=50, optimal</figcaption>
@@ -6286,14 +6686,14 @@ not going to go back all the images, sorry!
 </div>
 </div>
 
-<div id="outline-container-orgdc5b9bd" class="outline-2">
-<h2 id="orgdc5b9bd">Results</h2>
-<div class="outline-text-2" id="text-orgdc5b9bd">
+<div id="outline-container-org73c7270" class="outline-2">
+<h2 id="org73c7270">Results</h2>
+<div class="outline-text-2" id="text-org73c7270">
 <p>
 First test we are going to look at.
 </p>
 
-<pre class="example" id="org1bcf143">
+<pre class="example" id="org65f9611">
 member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=5
@@ -6307,10 +6707,10 @@ Here are the images for all the results:
 </div>
 
 <ul class="org-ul">
-<li><a id="orgdc6cf94"></a>Percentage of groups at optimal size<br>
-<div class="outline-text-5" id="text-orgdc6cf94">
+<li><a id="orgeb38e37"></a>Percentage of groups at optimal size<br>
+<div class="outline-text-5" id="text-orgeb38e37">
 
-<figure id="org6d640d1">
+<figure id="org9dd19d2">
 <img src="../static/study_groups/2/5_optimal.png" alt="5_optimal.png">
 
 <figcaption><span class="figure-number">Figure 2: </span>joiners=5, at optimal</figcaption>
@@ -6318,10 +6718,10 @@ Here are the images for all the results:
 </div>
 </li>
 
-<li><a id="org452cac5"></a>Percentage of groups above optimal size<br>
-<div class="outline-text-5" id="text-org452cac5">
+<li><a id="org5719500"></a>Percentage of groups above optimal size<br>
+<div class="outline-text-5" id="text-org5719500">
 
-<figure id="org2ed2b98">
+<figure id="orgfd5b091">
 <img src="../static/study_groups/2/5_above_optimal.png" alt="5_above_optimal.png">
 
 <figcaption><span class="figure-number">Figure 3: </span>joiners=5, above optimal</figcaption>
@@ -6329,10 +6729,10 @@ Here are the images for all the results:
 </div>
 </li>
 
-<li><a id="orgbb76c08"></a>Percentage of groups below optimal size<br>
-<div class="outline-text-5" id="text-orgbb76c08">
+<li><a id="org66341f8"></a>Percentage of groups below optimal size<br>
+<div class="outline-text-5" id="text-org66341f8">
 
-<figure id="org4096b3b">
+<figure id="org5987109">
 <img src="../static/study_groups/2/5_below_optimal.png" alt="5_below_optimal.png">
 
 <figcaption><span class="figure-number">Figure 4: </span>joiners=5, below optimal</figcaption>
@@ -6340,10 +6740,10 @@ Here are the images for all the results:
 </div>
 </li>
 
-<li><a id="org18fd050"></a>Average fitness of groups<br>
-<div class="outline-text-5" id="text-org18fd050">
+<li><a id="orge3c94fa"></a>Average fitness of groups<br>
+<div class="outline-text-5" id="text-orge3c94fa">
 
-<figure id="orgd3d7a6f">
+<figure id="orgce10dff">
 <img src="../static/study_groups/2/5_avg_fit.png" alt="5_avg_fit.png">
 
 <figcaption><span class="figure-number">Figure 5: </span>joiners=5, average fitness</figcaption>
@@ -6395,7 +6795,7 @@ I ran only a few more tests, here are the parameters and links to my
 results.
 </p>
 
-<pre class="example" id="org6b939a2">
+<pre class="example" id="org66d7e04">
 member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=10
@@ -6410,7 +6810,7 @@ trials=1000
 <a href="../static/study_groups/2/10_avg_fit.png">average fitness</a>
 </p>
 
-<pre class="example" id="org76470e3">
+<pre class="example" id="org0850808">
 member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=15
@@ -6425,7 +6825,7 @@ trials=1000
 <a href="../static/study_groups/2/15_avg_fit.png">average fitness</a>
 </p>
 
-<pre class="example" id="org43ac35a">
+<pre class="example" id="org4a381d8">
 member_contrib=1.000000
 member_detriment=0.500000
 num_joiners=20
@@ -6449,9 +6849,9 @@ consistent across my tests.
 </ul>
 </div>
 
-<div id="outline-container-org946d471" class="outline-2">
-<h2 id="org946d471">Conclusion</h2>
-<div class="outline-text-2" id="text-org946d471">
+<div id="outline-container-orgf4d5ad4" class="outline-2">
+<h2 id="orgf4d5ad4">Conclusion</h2>
+<div class="outline-text-2" id="text-orgf4d5ad4">
 <p>
 It would seem that selflessness doesn't much help, but group splitting
 does. If you are shooting to find the optimal group size, have a
@@ -6482,9 +6882,9 @@ please tell me!!
 </div>
 </div>
 
-<div id="outline-container-org16abcda" class="outline-2">
-<h2 id="org16abcda">A bit about implementation</h2>
-<div class="outline-text-2" id="text-org16abcda">
+<div id="outline-container-orga52e9e1" class="outline-2">
+<h2 id="orga52e9e1">A bit about implementation</h2>
+<div class="outline-text-2" id="text-orga52e9e1">
 <p>
 I wrote this code a couple of different ways, but eventually settled on
 Haskell as the language for the simulation. I also chose to leave
@@ -6526,9 +6926,9 @@ I plan to strengthen the model and (hopefully) present possible
 solutions to the problem.
 </p>
 
-<div id="outline-container-orgc6c752c" class="outline-2">
-<h2 id="orgc6c752c">The Model</h2>
-<div class="outline-text-2" id="text-orgc6c752c">
+<div id="outline-container-orgdcab736" class="outline-2">
+<h2 id="orgdcab736">The Model</h2>
+<div class="outline-text-2" id="text-orgdcab736">
 <p>
 The basic assumptions of the simulation we will use are as follows:
 </p>
@@ -6603,9 +7003,9 @@ optimal size is $ \frac{\alpha}{\beta} $.
 </div>
 </div>
 
-<div id="outline-container-org29185dc" class="outline-2">
-<h2 id="org29185dc">The Simulation</h2>
-<div class="outline-text-2" id="text-org29185dc">
+<div id="outline-container-org1c5731d" class="outline-2">
+<h2 id="org1c5731d">The Simulation</h2>
+<div class="outline-text-2" id="text-org1c5731d">
 <p>
 The simulation I have in mind is fairly simple.
 </p>
@@ -6621,9 +7021,9 @@ function)</li>
 </div>
 </div>
 
-<div id="outline-container-org23178e0" class="outline-2">
-<h2 id="org23178e0">Implementation and Results</h2>
-<div class="outline-text-2" id="text-org23178e0">
+<div id="outline-container-org0e1d76b" class="outline-2">
+<h2 id="org0e1d76b">Implementation and Results</h2>
+<div class="outline-text-2" id="text-org0e1d76b">
 <p>
 I wrote some python code to see how this system would perform. I will
 leave the code at the bottom of the document. The results seem to
@@ -6631,13 +7031,13 @@ correspond with reality.
 </p>
 
 
-<figure id="orgaeb1e12">
+<figure id="orgfeca3c4">
 <img src="../static/study_groups/1x.5.png" alt="1x.5.png" class="light-invert">
 
 </figure>
 
 
-<figure id="orga811099">
+<figure id="orgaea5683">
 <img src="../static/study_groups/1x.4.png" alt="1x.4.png" class="light-invert">
 
 </figure>
@@ -6658,9 +7058,9 @@ writing.
 </div>
 </div>
 
-<div id="outline-container-org804629a" class="outline-2">
-<h2 id="org804629a">Conclusion</h2>
-<div class="outline-text-2" id="text-org804629a">
+<div id="outline-container-orga9c9b6d" class="outline-2">
+<h2 id="orga9c9b6d">Conclusion</h2>
+<div class="outline-text-2" id="text-orga9c9b6d">
 <p>
 From this model, it seems like we tend to form groups larger than would
 be optimal, because people continue to join the group once their joining
@@ -6679,9 +7079,9 @@ could discuss more ideas!
 </div>
 </div>
 
-<div id="outline-container-org6f866d2" class="outline-2">
-<h2 id="org6f866d2">Simulation Code (not pythonic!)</h2>
-<div class="outline-text-2" id="text-org6f866d2">
+<div id="outline-container-orgc6569d9" class="outline-2">
+<h2 id="orgc6569d9">Simulation Code (not pythonic!)</h2>
+<div class="outline-text-2" id="text-orgc6569d9">
 <div class="org-src-container">
 <pre class="src src-python"><span class="org-keyword">from</span> math <span class="org-keyword">import</span> <span class="org-builtin">pow</span>
 <span class="org-keyword">from</span> random <span class="org-keyword">import</span> randint
@@ -6740,9 +7140,9 @@ don't forget them) and share them with others easily. I will probably
 update this document as I have new ideas.
 </p>
 
-<div id="outline-container-org09b4312" class="outline-2">
-<h2 id="org09b4312">Brief Description</h2>
-<div class="outline-text-2" id="text-org09b4312">
+<div id="outline-container-org752b9fb" class="outline-2">
+<h2 id="org752b9fb">Brief Description</h2>
+<div class="outline-text-2" id="text-org752b9fb">
 <p>
 Simply put, a decision consists of objectives and alternatives. An
 objective is something you want to fulfill by making the decision. For
@@ -6823,9 +7223,9 @@ much of a pay cut am I willing to take to continue living in Houston?"
 </div>
 </div>
 
-<div id="outline-container-orgb9d591e" class="outline-2">
-<h2 id="orgb9d591e">Mathematical Definitions</h2>
-<div class="outline-text-2" id="text-orgb9d591e">
+<div id="outline-container-org0152d7b" class="outline-2">
+<h2 id="org0152d7b">Mathematical Definitions</h2>
+<div class="outline-text-2" id="text-org0152d7b">
 <p>
 To model a decision with \(n\) objectives and \(m\) alternatives, define:
 </p>
@@ -6878,9 +7278,9 @@ The relative strengths of each alternative are given by \(A\mathbf{o}\).
 </div>
 </div>
 
-<div id="outline-container-org8e865c7" class="outline-2">
-<h2 id="org8e865c7">Example</h2>
-<div class="outline-text-2" id="text-org8e865c7">
+<div id="outline-container-orgdf6128b" class="outline-2">
+<h2 id="orgdf6128b">Example</h2>
+<div class="outline-text-2" id="text-orgdf6128b">
 <p>
 Let us revist the car example. Suppose my objectives are Cost, Style,
 and Comfort. Using a 1-5 importance scale, Cost would have an importance
@@ -6963,9 +7363,9 @@ us.
 </div>
 </div>
 
-<div id="outline-container-orged29a0c" class="outline-2">
-<h2 id="orged29a0c">Analysis</h2>
-<div class="outline-text-2" id="text-orged29a0c">
+<div id="outline-container-org7674a2d" class="outline-2">
+<h2 id="org7674a2d">Analysis</h2>
+<div class="outline-text-2" id="text-org7674a2d">
 <p>
 Now that we have a model of a decision, it is interesting to ask a few
 questions about the model, for example:
@@ -6983,9 +7383,9 @@ impact the decision.</li>
 </div>
 </div>
 
-<div id="outline-container-orgf79cb92" class="outline-2">
-<h2 id="orgf79cb92">Trade offs</h2>
-<div class="outline-text-2" id="text-orgf79cb92">
+<div id="outline-container-org1656372" class="outline-2">
+<h2 id="org1656372">Trade offs</h2>
+<div class="outline-text-2" id="text-org1656372">
 <p>
 Referring back to our car example, how can we try and understand what we
 are trading if we chose the Maserati over the Civic?
@@ -7082,7 +7482,7 @@ would make the Maserati reasonable for us.
 </p>
 
 
-<figure id="org0afbc4d">
+<figure id="org4064969">
 <img src="../static/decision_matrix/not_feasible.png" alt="not_feasible.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 1: </span>plot of feasible region</figcaption>
@@ -7097,7 +7497,7 @@ x-axis)
 </p>
 
 
-<figure id="org7261494">
+<figure id="org7af8b01">
 <img src="../static/decision_matrix/feasible.png" alt="feasible.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 2: </span>plot of feasible region</figcaption>
@@ -7111,9 +7511,9 @@ how I choose to use some of these ideas in WhichOne in a future post.
 </p>
 </div>
 
-<div id="outline-container-orgb3df8b0" class="outline-3">
-<h3 id="orgb3df8b0">Other ideas:</h3>
-<div class="outline-text-3" id="text-orgb3df8b0">
+<div id="outline-container-org357c3d3" class="outline-3">
+<h3 id="org357c3d3">Other ideas:</h3>
+<div class="outline-text-3" id="text-org357c3d3">
 <ol class="org-ol">
 <li>Determine analytically what weights to assign so that an alternative
 beats another (instead of just guessing).</li>
@@ -7124,9 +7524,9 @@ a single structure.</li>
 </div>
 </div>
 
-<div id="outline-container-orgb416250" class="outline-2">
-<h2 id="orgb416250">Objective Impact</h2>
-<div class="outline-text-2" id="text-orgb416250">
+<div id="outline-container-org3cc76d2" class="outline-2">
+<h2 id="org3cc76d2">Objective Impact</h2>
+<div class="outline-text-2" id="text-org3cc76d2">
 <p>
 Say I give you
 </p>
@@ -7253,9 +7653,9 @@ more of a theoretical question, practically variance/s.d. performs well.
 </p>
 </div>
 
-<div id="outline-container-orge664de0" class="outline-3">
-<h3 id="orge664de0">WARNING: What follows is not well structured or explained.</h3>
-<div class="outline-text-3" id="text-orge664de0">
+<div id="outline-container-org457efd7" class="outline-3">
+<h3 id="org457efd7">WARNING: What follows is not well structured or explained.</h3>
+<div class="outline-text-3" id="text-org457efd7">
 <p>
 Here is another idea for understanding trade offs and objective impact
 I've been toying with.
@@ -7315,7 +7715,7 @@ Let's plot those along with the line \(y = x\)
 </p>
 
 
-<figure id="org44622a4">
+<figure id="orgb7adbfe">
 <img src="../static/decision_matrix/impact.png" alt="impact.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 3: </span>plot of impact vectors</figcaption>
@@ -7347,7 +7747,7 @@ this.
 </p>
 
 
-<figure id="org66c7e1c">
+<figure id="orgd6d46ed">
 <img src="../static/decision_matrix/wow.png" alt="wow.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 4: </span>wow plot</figcaption>
@@ -7372,9 +7772,9 @@ way to think about objectives.
 </div>
 </div>
 
-<div id="outline-container-org8d92f49" class="outline-3">
-<h3 id="org8d92f49">Maserati and Camry example</h3>
-<div class="outline-text-3" id="text-org8d92f49">
+<div id="outline-container-org57bd40e" class="outline-3">
+<h3 id="org57bd40e">Maserati and Camry example</h3>
+<div class="outline-text-3" id="text-org57bd40e">
 <p>
 Let's do this with the Maserati and Camry again. Same objectives.
 </p>
@@ -7446,7 +7846,7 @@ Here is a plot:
 </p>
 
 
-<figure id="orgd7a8338">
+<figure id="orga6073d2">
 <img src="../static/decision_matrix/maserati_camry.png" alt="maserati_camry.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 5: </span>maserati camry plot</figcaption>
@@ -7462,9 +7862,9 @@ of see it. But, this train of though may still hold some potential.
 </div>
 </div>
 
-<div id="outline-container-orge1a6df7" class="outline-3">
-<h3 id="orge1a6df7">Other ideas:</h3>
-<div class="outline-text-3" id="text-orge1a6df7">
+<div id="outline-container-org906a0ad" class="outline-3">
+<h3 id="org906a0ad">Other ideas:</h3>
+<div class="outline-text-3" id="text-org906a0ad">
 <ol class="org-ol">
 <li>Finish determining impact using distance of impact vector to neutral
 line.</li>

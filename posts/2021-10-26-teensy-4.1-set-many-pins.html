@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+</head>
+
+<body>
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">Setting many Teensy 4.1 Pins at the same time</h1>
+    </header>
+
+    <p>
+A project I've been working on recently requires that I set a group of pins (4 of them) on a Teensy 4.1 to certain values at roughly the same time.
+For simplicity, I'm using the Arduino libraries for this project (but writing C++).
+We can fortunately easily look under the covers with the Teensy's Arduino implementation.
+In this post I'm going to walk through a few bad ways this can be done, and the correct way (for Teensy 4.1).
+</p>
+
+<div id="outline-container-org5ee7de9" class="outline-2">
+<h2 id="org5ee7de9">Naive Implementation</h2>
+<div class="outline-text-2" id="text-org5ee7de9">
+<p>
+The simplest possible way to set multiple pins is to just set them one at a time.
+</p>
+
+<p>
+For example, we could write:
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
+{
+  <span class="org-comment-delimiter">// </span><span class="org-comment">configure a few pins as output pins</span>
+  pinMode( 23, OUTPUT );
+  pinMode( 22, OUTPUT );
+  pinMode( 21, OUTPUT );
+  pinMode( 20, OUTPUT );
+
+  <span class="org-type">int</span> <span class="org-variable-name">state</span> = 0;
+  <span class="org-keyword">while</span>( 1 ) {
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- writes happen here"</span> ); <span class="org-comment-delimiter">// </span><span class="org-comment">helpful for navigating generated asm</span>
+    digitalWriteFast( 23, state );
+    digitalWriteFast( 22, state );
+    digitalWriteFast( 21, state );
+    digitalWriteFast( 20, state );
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- done with writes"</span> );
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">toggle state and wait for a bit</span>
+    state = <span class="org-negation-char">!</span>state;
+    delayMicroseconds( 10 );
+  }
+}
+</pre>
+</div>
+
+<p>
+Compiling and running this code against a teensy and some LEDs, we can see (if we bump up the delay) that the lights flash on and off at about the same time.
+Let's try measuring the behavior with a slightly better tool than our eyes.
+I connected each pin to an oscilloscope.
+Channel 1 is pin 23, channel 2 is pin 22, and so on.
+</p>
+
+<p>
+Let's take a look at both the:
+</p>
+<ul class="org-ul">
+<li>Rising Edge. <code>state</code> was 0, is now 1. The pin output moves from 0V to 3.3V</li>
+<li>Falling Edge. <code>state</code> was 1, is now 0. The pin output moves from 3.3V to 0V.</li>
+</ul>
+
+<p>
+Rising edge:
+</p>
+
+
+<figure id="org4cf218e">
+<img src="../static/teensy-many-pins/naive_rise.png" alt="naive_rise.png">
+
+</figure>
+
+<p>
+Falling edge:
+</p>
+
+
+<figure id="org611c38b">
+<img src="../static/teensy-many-pins/naive_fall.png" alt="naive_fall.png">
+
+</figure>
+
+<p>
+The scope conveniently measured a roughly 4ish nanosecond rise time and a 3ish ns fall time for each individual pin outputs.
+This is pretty fast (I think) for each <span class="underline">individual</span> pin, but for this project I want to set all of the pins <span class="underline">at the same time</span>.
+</p>
+
+<p>
+These pin outputs are clearly not changing at the same time.
+Eyeballing, pin 23 reaches it's steady state output value roughly 4-5ish nanoseconds before pin 22.
+</p>
+
+<p>
+Of course, this should not be surprising given that the code is setting the pin values one at a time.
+</p>
+
+<p>
+Let's dig in.
+</p>
+</div>
+
+<div id="outline-container-orgbbb66bd" class="outline-3">
+<h3 id="orgbbb66bd">ARM assembly</h3>
+<div class="outline-text-3" id="text-orgbbb66bd">
+<p>
+This code compiles to something much more complicated that the simple "set pin x to value v" function calls would indicate.
+The Teensy 4.1 doesn't actually have any facility with which it can set a <span class="underline">single</span> output pin!
+</p>
+
+<p>
+Instead, the output pins are mapped to GPIO port.
+Each port controls some number of pins, and, any assignment to a port will change the state of all the pins controlled by that port.
+</p>
+
+<p>
+These ports are "mapped" into memory at well-documented address.
+To write to a port from a program running on the Teensy, the program just needs to write a value to a well-known address in memory (also called "registers").
+When the memory system for the microcontroller observes a store to these magic addresses, it will do the electrical magic required to change the voltage on the appropriate pins.
+</p>
+
+<p>
+For each port, there are two registers that we care about (and one that we could use, but aren't):
+</p>
+<ul class="org-ul">
+<li>A "set" register which turns "on" certain pins mapped to a given port</li>
+<li>A "clear" register which turns "off" certain pins mapped to a given port</li>
+<li>A "toggle" register to toggle the value on certain pins mapped to a given port</li>
+</ul>
+
+<p>
+When writing to each of these registers, we supply a bitmask of the pins to modify.
+For example, we could write a mask like <code>1010</code> to some "set" register to turn on every other pin, then write <code>1010</code> to a "clear" register to turn them all off again.
+</p>
+
+<p>
+Rephrasing the code above in these terms, we actually are doing something like:
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">int</span> <span class="org-variable-name">state</span> = 0;
+<span class="org-keyword">while</span>( 1 ) {
+  <span class="org-keyword">if</span>( state ) {
+    assign_to_set_register( 0b1000 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1</span>
+    assign_to_set_register( 0b1100 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1 and 2</span>
+    assign_to_set_register( 0b1110 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, and 3</span>
+    assign_to_set_register( 0b1111 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, 3, and 4</span>
+  }
+  <span class="org-keyword">else</span> {
+    assign_to_clear_register( 0b1000 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1</span>
+    assign_to_clear_register( 0b1100 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1 and 2</span>
+    assign_to_clear_register( 0b1110 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, and 3</span>
+    assign_to_clear_register( 0b1111 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1, 2, 3, and 4</span>
+  }
+}
+</pre>
+</div>
+
+<p>
+Expressed this way, it looks really silly!
+We should clearly just turning every pin on in the first assignment (we'll get there, be patient).
+</p>
+
+<p>
+Inspecting the generated assembly code (which is actually how I figured out what is going on), we can see this behavior:
+</p>
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-comment-delimiter">; </span><span class="org-comment">compute the bitmask values into r9, r8, ip, lr</span>
+<span class="org-comment-delimiter">;</span>
+<span class="org-comment-delimiter">; </span><span class="org-comment">.... some other code ....</span>
+<span class="org-comment-delimiter">;</span>
+<span class="org-comment-delimiter">; </span><span class="org-comment">--- turn on using the SET registers</span>
+<span class="org-function-name">str</span>     <span class="org-keyword">r9</span>, [r4, #132]  @ tmp149, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
+<span class="org-function-name">str</span>     <span class="org-keyword">r8</span>, [r4, #132]  @ tmp150, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
+<span class="org-function-name">str</span>     <span class="org-keyword">ip</span>, [r4, #132]  @ tmp151, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
+<span class="org-function-name">str</span>     <span class="org-keyword">lr</span>, [r4, #132]  @ tmp152, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
+<span class="org-comment-delimiter">;</span>
+<span class="org-comment-delimiter">; </span><span class="org-comment">.... some other code ....</span>
+<span class="org-comment-delimiter">;</span>
+<span class="org-comment-delimiter">; </span><span class="org-comment">--- turn off using the CLEAR registers</span>
+<span class="org-function-name">str</span>     <span class="org-keyword">r9</span>, [r4, #136]  @ tmp149, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
+<span class="org-function-name">str</span>     <span class="org-keyword">r8</span>, [r4, #136]  @ tmp150, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
+<span class="org-function-name">str</span>     <span class="org-keyword">ip</span>, [r4, #136]  @ tmp151, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
+<span class="org-function-name">str</span>     <span class="org-keyword">lr</span>, [r4, #136]  @ tmp152, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
+</pre>
+</div>
+
+<p>
+In this code above, <code>r4</code> contains a base address for the list of registers.
+The offset <code>[r4, #132]</code> contains the SET register for the pins we care about and <code>[r4, #136]</code> is the CLEAR register.
+</p>
+
+<p>
+As demonstrated by the scope, we see a small (but predictable) amount of latency on each of these sets because we're running 4 store instructions in quick succession.
+But, of course, we can do much better than this by getting away from the arduino apis.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org4216265" class="outline-2">
+<h2 id="org4216265">Port implementation</h2>
+<div class="outline-text-2" id="text-org4216265">
+<p>
+It's easy to implement the appropriate GPIO port code by grabbing bits and pieces from the teensy arduino headers.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
+{
+  <span class="org-comment-delimiter">// </span><span class="org-comment">use ardino functions for configuration</span>
+  <span class="org-type">uint8_t</span> <span class="org-variable-name">pins</span>[] = { 23, 22, 21, 20 };
+  <span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; ARRAY_SIZE( pins ); ++i ) {
+    pinMode( pins[i], OUTPUT );
+  }
+
+  <span class="org-comment-delimiter">// </span><span class="org-comment">bit pattern to set/clear bits</span>
+  <span class="org-comment-delimiter">// </span><span class="org-comment">use the helpful bit patterns defined by core_pins.h as part of teensy support code</span>
+  <span class="org-type">uint32_t</span> <span class="org-variable-name">pattern</span> = CORE_PIN23_BITMASK | CORE_PIN22_BITMASK | CORE_PIN21_BITMASK | CORE_PIN20_BITMASK;
+
+  <span class="org-type">int</span> <span class="org-variable-name">state</span> = 0;
+  <span class="org-keyword">while</span>( 1 ) {
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- writes happen here"</span> ); <span class="org-comment-delimiter">// </span><span class="org-comment">helpful for navigating generated asm</span>
+
+    <span class="org-keyword">if</span>( state ) {
+      GPIO6_DR_SET = pattern; <span class="org-comment-delimiter">// </span><span class="org-comment">turn pins on with SET register</span>
+    }
+    <span class="org-keyword">else</span> {
+      GPIO6_DR_CLEAR = pattern; <span class="org-comment-delimiter">// </span><span class="org-comment">turn pins off with CLEAR register</span>
+    }
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- done with writes"</span> );
+
+    state = <span class="org-negation-char">!</span>state;
+    delayMicroseconds( 10 );
+  }
+}
+</pre>
+</div>
+
+<p>
+The generated assembly does exactly what we're looking for:
+</p>
+<div class="org-src-container">
+<pre class="src src-asm"><span class="org-comment-delimiter">; </span><span class="org-comment">-- set</span>
+<span class="org-function-name">str</span>     <span class="org-keyword">r7</span>, [lr, #132]  @ tmp175, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
+
+<span class="org-comment-delimiter">; </span><span class="org-comment">-- clear</span>
+<span class="org-function-name">str</span>     <span class="org-keyword">r7</span>, [lr, #136]  @ tmp175, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
+</pre>
+</div>
+
+<p>
+And, the scope shows a much nicer shape for both the rising edge and falling edge:
+<img src="../static/teensy-many-pins/gpio_rise.png" alt="gpio_rise.png">
+<img src="../static/teensy-many-pins/gpio_fall.png" alt="gpio_fall.png">
+</p>
+</div>
+</div>
+
+<div id="outline-container-orge9b3704" class="outline-2">
+<h2 id="orge9b3704">Conclusion</h2>
+<div class="outline-text-2" id="text-orge9b3704">
+<p>
+The Arduino APIs are fantastically useful for getting started quickly, but dropping to lower level APIs can be important.
+Fortunately, the Teensy makes it fantastically easy to dig around and use the chip when needed, and, the headers are even documented with where to look in the official manual!
+Awesome product.
+</p>
+
+<p>
+I'm always looking for tools that have both a quick-and-easy beginner API, but don't necessarily sacrifice on depth for advanced use.
+So far the Teensy is filling that role well.
+</p>
+</div>
+
+<div id="outline-container-org1e6409a" class="outline-3">
+<h3 id="org1e6409a">Additional Recommended Reading</h3>
+<div class="outline-text-3" id="text-org1e6409a">
+<ul class="org-ul">
+<li>Arduino docs on port manipulation: <a href="https://www.arduino.cc/en/Reference/PortManipulation">https://www.arduino.cc/en/Reference/PortManipulation</a></li>
+<li>Manipulating Teensy 3.6 pins without the arduino APIs: <a href="http://l0ner.github.io/2020-08-24_teensy-the-hard-way-blink/">http://l0ner.github.io/2020-08-24_teensy-the-hard-way-blink/</a></li>
+<li>Fastest possible pin-flipping rate: <a href="https://metebalci.com/blog/stm32h7-gpio-toggling/">https://metebalci.com/blog/stm32h7-gpio-toggling/</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org0f705d9" class="outline-2">
+<h2 id="org0f705d9">Appendix 1: Array Implementation</h2>
+<div class="outline-text-2" id="text-org0f705d9">
+<p>
+Suppose we replace the code with something a bit more flexible (and that was recommended in the arduino forums).
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-preprocessor">#define</span> <span class="org-function-name">ARRAY_SIZE</span>( <span class="org-variable-name">arr</span> ) (<span class="org-keyword">sizeof</span>(arr)/<span class="org-keyword">sizeof</span>(*arr))
+
+<span class="org-keyword">extern</span> <span class="org-string">"C"</span> <span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
+{
+  <span class="org-type">uint8_t</span> <span class="org-variable-name">pins</span>[] = { 23, 22, 21, 20 };
+  <span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; ARRAY_SIZE( pins ); ++i ) {
+    pinMode( pins[i], OUTPUT );
+  }
+
+  <span class="org-type">int</span> <span class="org-variable-name">state</span> = 0;
+  <span class="org-keyword">while</span>( 1 ){
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- writes happen here"</span> ); <span class="org-comment-delimiter">// </span><span class="org-comment">helpful for navigating generated asm</span>
+    <span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; ARRAY_SIZE( pins ); ++i ) {
+      digitalWriteFast( pins[i], state );
+    }
+    <span class="org-keyword">asm</span> <span class="org-keyword">volatile</span>( <span class="org-string">"@ --- done with writes"</span> );
+
+    state = <span class="org-negation-char">!</span>state;
+    delayMicroseconds( 10 );
+  }
+}
+</pre>
+</div>
+
+<p>
+Something bad clearly happens when we run this code:
+</p>
+
+
+<figure id="org5835940">
+<img src="../static/teensy-many-pins/array_rise.png" alt="array_rise.png">
+
+</figure>
+
+<p>
+First, we notice that the time delta between writes has increased dramatically.
+Second, we notice that the pin 23 and ping 22 write are further apart in time than the pin 22 and pin 21 write.
+</p>
+
+<p>
+What happened?
+</p>
+
+<p>
+The inner assignment loop this time compiled into:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-asm">    @ --- writes happen here
+    <span class="org-keyword">add</span> r3, sp, #4      @ tmp202,,
+<span class="org-function-name">.L5</span>:
+    <span class="org-keyword">ldrb</span>        r2, [r3], #1    @ zero_extendqisi2      @ D.14694, MEM[base: _138, offset: 0B]
+    <span class="org-keyword">lsls</span>        r2, r2, #4      @ tmp168, D.14694,
+    <span class="org-keyword">adds</span>        r0, r6, r2      @ tmp169, tmp193, tmp168
+    <span class="org-keyword">ldr</span> r2, [r6, r2]    @ D.14697,
+    <span class="org-keyword">ldr</span> r0, [r0, #12]   @ D.14698,
+    <span class="org-keyword">cbz</span> r5, .L3 @ state,
+    <span class="org-keyword">str</span> r0, [r2, #132]  @ D.14698, MEM[(volatile uint32_t *)_22 + 132B]
+<span class="org-function-name">.L4</span>:
+    <span class="org-keyword">cmp</span> r3, r4  @ ivtmp.15, D.14699
+    <span class="org-keyword">bne</span> .L5     @,
+    @ --- done with writes
+</pre>
+</div>
+
+<p>
+Inspecting the source for <code>digitalWriteFast</code> we can see that we've taken the non-compile-time-constant code path:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">static</span> <span class="org-keyword">inline</span> <span class="org-type">void</span> <span class="org-function-name">digitalWriteFast</span>(<span class="org-type">uint8_t</span> <span class="org-variable-name">pin</span>, <span class="org-type">uint8_t</span> <span class="org-variable-name">val</span>)
+{
+  <span class="org-keyword">if</span> (__builtin_constant_p(pin)) {
+    <span class="org-keyword">if</span> (val) {
+      <span class="org-keyword">if</span> (pin == 0) {
+        CORE_PIN0_PORTSET = CORE_PIN0_BITMASK;
+      } <span class="org-keyword">else</span> <span class="org-keyword">if</span> (pin == 1) {
+        <span class="org-comment-delimiter">// </span><span class="org-comment">.....</span>
+      }
+      <span class="org-comment-delimiter">// </span><span class="org-comment">.....</span>
+    } <span class="org-keyword">else</span> {
+      <span class="org-keyword">if</span> (pin == 0) {
+        CORE_PIN0_PORTCLEAR = CORE_PIN0_BITMASK;
+      } <span class="org-keyword">else</span> <span class="org-keyword">if</span> (pin == 1) {
+        <span class="org-comment-delimiter">// </span><span class="org-comment">.....</span>
+      }
+      <span class="org-comment-delimiter">// </span><span class="org-comment">.....</span>
+    }
+  } <span class="org-keyword">else</span> {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">not a compile time constant</span>
+    <span class="org-keyword">if</span>(val) *portSetRegister(pin) = digitalPinToBitMask(pin);
+    <span class="org-keyword">else</span> *portClearRegister(pin) = digitalPinToBitMask(pin);
+  }
+</pre>
+</div>
+
+<p>
+I'm guessing that the variability has something to do with additional memory access (lookups to figure out pin maps to what register).
+This probably could have compiled down to use all compile time constants, but this massive change in behavior for roughly the same code is reasonably spooky.
+</p>
+</div>
+</div>
+
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
+</body>
+</html>
+
+</body>
+
+</html>
