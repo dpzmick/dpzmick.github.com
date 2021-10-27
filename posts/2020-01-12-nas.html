@@ -42,9 +42,9 @@ This was an expensive project; I'm not sure it was worth the time or energy.
 I'll add more discussion on the usability of something like this in the 4th part of this series.
 </p>
 
-<div id="outline-container-orged6e31d" class="outline-2">
-<h2 id="orged6e31d">Why?</h2>
-<div class="outline-text-2" id="text-orged6e31d">
+<div id="outline-container-orgb167dae" class="outline-2">
+<h2 id="orgb167dae">Why?</h2>
+<div class="outline-text-2" id="text-orgb167dae">
 <p>
 I recently had an old SSD fail.
 I had no idea it was going bad until I tried to open a handful of old photos and found that they were corrupt.
@@ -88,9 +88,9 @@ This post will discuss setting up the ZFS and mounting it as a NAS.
 </div>
 </div>
 
-<div id="outline-container-orgfb3aeae" class="outline-2">
-<h2 id="orgfb3aeae">Setup and Planning</h2>
-<div class="outline-text-2" id="text-orgfb3aeae">
+<div id="outline-container-orge77f849" class="outline-2">
+<h2 id="orge77f849">Setup and Planning</h2>
+<div class="outline-text-2" id="text-orge77f849">
 <p>
 Since I was only using about 500 gigs of space, I wasn't going to need some super high capacity system.
 I decided to instead try and build something that would be 1) lowish power (spinning rust is power hungry), 2) pretty "fast", 3) "fun".
@@ -188,17 +188,17 @@ I also had to grab some disk enclosures on eBay to install these disk into the s
 </div>
 </div>
 
-<div id="outline-container-org1682ae8" class="outline-2">
-<h2 id="org1682ae8">Filesystem</h2>
-<div class="outline-text-2" id="text-org1682ae8">
+<div id="outline-container-org4389243" class="outline-2">
+<h2 id="org4389243">Filesystem</h2>
+<div class="outline-text-2" id="text-org4389243">
 <p>
 Next thing up, I needed to pick a filesystem/RAID scheme to run on these drives.
 </p>
 </div>
 
-<div id="outline-container-org52c20ce" class="outline-3">
-<h3 id="org52c20ce">Hardware RAID</h3>
-<div class="outline-text-3" id="text-org52c20ce">
+<div id="outline-container-org5e2fd09" class="outline-3">
+<h3 id="org5e2fd09">Hardware RAID</h3>
+<div class="outline-text-3" id="text-org5e2fd09">
 <p>
 I bought the "upgraded" RAID controller when purchasing the server, since I wanted to keep my options open.
 After thinking a bit harder about hardware RAID, it doesn't really seem that interesting to me.
@@ -208,9 +208,9 @@ Since neither of those are the case, it seems wiser to use my powerful Xeon CPUs
 </div>
 </div>
 
-<div id="outline-container-org588c7b9" class="outline-3">
-<h3 id="org588c7b9">ZFS</h3>
-<div class="outline-text-3" id="text-org588c7b9">
+<div id="outline-container-orgcb75351" class="outline-3">
+<h3 id="orgcb75351">ZFS</h3>
+<div class="outline-text-3" id="text-orgcb75351">
 <p>
 Awesome ZFS features:
 </p>
@@ -228,9 +228,9 @@ Awesome ZFS features:
 </div>
 </div>
 
-<div id="outline-container-orgebcd588" class="outline-3">
-<h3 id="orgebcd588">Linux software RAID (mdadm and LVM)</h3>
-<div class="outline-text-3" id="text-orgebcd588">
+<div id="outline-container-org9413fa2" class="outline-3">
+<h3 id="org9413fa2">Linux software RAID (mdadm and LVM)</h3>
+<div class="outline-text-3" id="text-org9413fa2">
 <p>
 Looks great, but not as featureful as ZFS.
 If I try ZFS out and it doesn't work, I figured it would be easy to switch.
@@ -243,20 +243,20 @@ BTRFS was eliminated early as it seems to still be fairly immature.
 </div>
 </div>
 
-<div id="outline-container-orgcb1df24" class="outline-2">
-<h2 id="orgcb1df24">Installation</h2>
-<div class="outline-text-2" id="text-orgcb1df24">
+<div id="outline-container-orge70ca2f" class="outline-2">
+<h2 id="orge70ca2f">Installation</h2>
+<div class="outline-text-2" id="text-orge70ca2f">
 </div>
-<div id="outline-container-org914a246" class="outline-3">
-<h3 id="org914a246">Physical Install</h3>
-<div class="outline-text-3" id="text-org914a246">
+<div id="outline-container-org99f192d" class="outline-3">
+<h3 id="org99f192d">Physical Install</h3>
+<div class="outline-text-3" id="text-org99f192d">
 <p>
 Getting these drives into the server was easy.
 Just screw them into the enclosures:
 </p>
 
 
-<figure id="orga6b373c">
+<figure id="org31e791a">
 <img src="../static/homelab/disk_in_enclosure.jpg" alt="disk_in_enclosure.jpg">
 
 </figure>
@@ -268,9 +268,9 @@ Then pop them into the front mounting slots:
 </div>
 </div>
 
-<div id="outline-container-org6cdf6ea" class="outline-3">
-<h3 id="org6cdf6ea">Configure RAID</h3>
-<div class="outline-text-3" id="text-org6cdf6ea">
+<div id="outline-container-orga0040a7" class="outline-3">
+<h3 id="orga0040a7">Configure RAID</h3>
+<div class="outline-text-3" id="text-orga0040a7">
 <p>
 Next up was configuring the RAID controller to get out of the way.
 I wanted the raid controller to just pass the disks through to the operating system.
@@ -291,9 +291,9 @@ Fortunately, it seemed like all of the drives were at least working.
 </div>
 </div>
 
-<div id="outline-container-orga9d8548" class="outline-3">
-<h3 id="orga9d8548">Downgrade controller</h3>
-<div class="outline-text-3" id="text-orga9d8548">
+<div id="outline-container-orgea3e387" class="outline-3">
+<h3 id="orgea3e387">Downgrade controller</h3>
+<div class="outline-text-3" id="text-orgea3e387">
 <p>
 After a <b>very very</b> large amount of time spent googling around, I found some references that said that, if you get the downgraded Dell H310 mini controller, it is possible to flash the controller to an alternative LSI "IT mode" firmware.
 The IT mode firmware is supposed to allow you to just pass the disks through to the OS.
@@ -350,9 +350,9 @@ This is a very true statement and you'll be stuck scrathing your head for a long
 </div>
 </div>
 
-<div id="outline-container-orgf2356fa" class="outline-3">
-<h3 id="orgf2356fa">Disk inventory</h3>
-<div class="outline-text-3" id="text-orgf2356fa">
+<div id="outline-container-org2b0a9c6" class="outline-3">
+<h3 id="org2b0a9c6">Disk inventory</h3>
+<div class="outline-text-3" id="text-org2b0a9c6">
 <p>
 Since the Dell firmware integration is all broken with the new firmware, I needed to be able to keep track of which drive was which without having being able to easily toggle the chassis LEDs.
 I booted an Arch ISO and started <code>dd=ing zeros to each disk through =/dev/disk/by-id/</code>, then recording the serial numbers of the disks whose activity LEDs lit up.
@@ -366,18 +366,18 @@ This is probably important to have when disks need replacing.
 </div>
 </div>
 
-<div id="outline-container-org31f9524" class="outline-3">
-<h3 id="org31f9524">Install Operating System</h3>
-<div class="outline-text-3" id="text-org31f9524">
+<div id="outline-container-orge13895b" class="outline-3">
+<h3 id="orge13895b">Install Operating System</h3>
+<div class="outline-text-3" id="text-orge13895b">
 <p>
 From the Arch iso, I partioned the disk in the 0th slot, and installed Arch using the standard install guide.
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgbd1f788" class="outline-3">
-<h3 id="orgbd1f788">rootdelay</h3>
-<div class="outline-text-3" id="text-orgbd1f788">
+<div id="outline-container-org0941e14" class="outline-3">
+<h3 id="org0941e14">rootdelay</h3>
+<div class="outline-text-3" id="text-org0941e14">
 <p>
 The OS install when smoothly, so I thought I was finally done with this ordeal once Arch finished bootstrapping the system.
 </p>
@@ -404,9 +404,9 @@ Adding <code>rootdelay=600</code> to my kernel command line got me passed this p
 </div>
 </div>
 
-<div id="outline-container-org02a24bb" class="outline-3">
-<h3 id="org02a24bb">Configure ZFS</h3>
-<div class="outline-text-3" id="text-org02a24bb">
+<div id="outline-container-orgbdeff6b" class="outline-3">
+<h3 id="orgbdeff6b">Configure ZFS</h3>
+<div class="outline-text-3" id="text-orgbdeff6b">
 <p>
 Just follow the instructions on the <a href="https://wiki.archlinux.org/index.php/ZFS">Arch Wiki</a>.
 I installed the DKMS version of ZFS so that I would be able to <code>pacman -Syu</code> and have <code>pacman</code> attempt to rebuild ZFS with the latest kernel.
@@ -419,9 +419,9 @@ These are mounted, creatively, at <code>/nas</code> and <code>/server</code>.
 </p>
 </div>
 
-<div id="outline-container-org9a60436" class="outline-4">
-<h4 id="org9a60436"><code>nas</code></h4>
-<div class="outline-text-4" id="text-org9a60436">
+<div id="outline-container-orgdb4391e" class="outline-4">
+<h4 id="orgdb4391e"><code>nas</code></h4>
+<div class="outline-text-4" id="text-orgdb4391e">
 <p>
 For the <code>nas</code> zpool, I'm using 12 disk with data striped across two RAIDZ2 zpools.
 In other words, each of the RAIDZ2 pools can loose two disk without failing.
@@ -449,9 +449,9 @@ I have no idea if this striping/raidz combination is a good idea or not, but it 
 </div>
 </div>
 
-<div id="outline-container-org92ff7e4" class="outline-4">
-<h4 id="org92ff7e4"><code>server</code></h4>
-<div class="outline-text-4" id="text-org92ff7e4">
+<div id="outline-container-org46d8c06" class="outline-4">
+<h4 id="org46d8c06"><code>server</code></h4>
+<div class="outline-text-4" id="text-org46d8c06">
 <p>
 The <code>server</code> array is just a single raidz1 array with 3 disks in it.
 This array isn't that interesting and I haven't tried to push it very hard yet.
@@ -463,9 +463,9 @@ Contiguous reads/writes run at a blistering ~400-500mb/s, as expected.
 </div>
 </div>
 
-<div id="outline-container-orgc13b79d" class="outline-4">
-<h4 id="orgc13b79d">Perfomance Testing</h4>
-<div class="outline-text-4" id="text-orgc13b79d">
+<div id="outline-container-orgac73648" class="outline-4">
+<h4 id="orgac73648">Perfomance Testing</h4>
+<div class="outline-text-4" id="text-orgac73648">
 <p>
 Here's some <i>naive</i> <code>dd</code> performance tests on the disk arrays.
 These tests are all performed on the server.
@@ -503,9 +503,9 @@ $ dd <span class="org-variable-name">if</span>=test <span class="org-variable-na
 </div>
 </div>
 
-<div id="outline-container-orgf1f6347" class="outline-4">
-<h4 id="orgf1f6347">Sidebar: NVMe</h4>
-<div class="outline-text-4" id="text-orgf1f6347">
+<div id="outline-container-org8fc0232" class="outline-4">
+<h4 id="org8fc0232">Sidebar: NVMe</h4>
+<div class="outline-text-4" id="text-org8fc0232">
 <p>
 My desktop has a single $300 NVMe drive in it.
 Compare:
@@ -544,18 +544,18 @@ In theory, if I stripped across all of these SSDs I'd be able to get competitive
 </div>
 </div>
 
-<div id="outline-container-org53cce24" class="outline-2">
-<h2 id="org53cce24">NFS</h2>
-<div class="outline-text-2" id="text-org53cce24">
+<div id="outline-container-org0637829" class="outline-2">
+<h2 id="org0637829">NFS</h2>
+<div class="outline-text-2" id="text-org0637829">
 <p>
 Trivial NFS is easy to setup with ZFS.
 You can simply install the right NFS servers, then tell ZFS to export the mount point.
 </p>
 </div>
 
-<div id="outline-container-orgb7c5410" class="outline-3">
-<h3 id="orgb7c5410">NFS performance</h3>
-<div class="outline-text-3" id="text-orgb7c5410">
+<div id="outline-container-org1715f2b" class="outline-3">
+<h3 id="org1715f2b">NFS performance</h3>
+<div class="outline-text-3" id="text-org1715f2b">
 <p>
 Unfortunately, NFS over my 10 GbE network doesn't perform as well as you'd hope.
 </p>
@@ -608,9 +608,9 @@ Since I'm currently spending more of my time connected to the VPN from remote pl
 </div>
 </div>
 
-<div id="outline-container-orgd642fb7" class="outline-2">
-<h2 id="orgd642fb7">Using the system</h2>
-<div class="outline-text-2" id="text-orgd642fb7">
+<div id="outline-container-org5398e8c" class="outline-2">
+<h2 id="org5398e8c">Using the system</h2>
+<div class="outline-text-2" id="text-org5398e8c">
 <p>
 NFS works as well as I'd expect it to, but I'll discuss this and a few other details in a future post.
 </p>
