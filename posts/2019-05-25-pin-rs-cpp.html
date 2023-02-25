@@ -20,7 +20,7 @@
   </div>
   <div id="content">
     <header>
-      <h1 class="title">Understaning Pin (for C and C++ Developers)</h1>
+      <h1 class="title">Understanding Pin (for C and C++ Developers)</h1>
     </header>
 
     <p>
@@ -71,9 +71,9 @@ Clearly moving is significant here, what does that mean exactly, and
 why is this such a big deal?
 </p>
 
-<div id="outline-container-orgde0d72a" class="outline-2">
-<h2 id="orgde0d72a">C++</h2>
-<div class="outline-text-2" id="text-orgde0d72a">
+<div id="outline-container-org337700d" class="outline-2">
+<h2 id="org337700d">C++</h2>
+<div class="outline-text-2" id="text-org337700d">
 <p>
 I'm more familiar with C++ and my familiarity is probably where my
 misunderstandings are coming from. Let's start by understanding what
@@ -85,7 +85,7 @@ Consider the following <code>struct</code>:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="orgf2aae9d"><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
+<pre class="src src-cpp" id="orgaf4ce56"><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
   <span class="org-function-name">Thing</span>(<span class="org-type">uint64_t</span> <span class="org-variable-name">id</span>)
     : id(id)
   { }
@@ -170,7 +170,7 @@ Let's consider one last struct.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="org1d3e8f6"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
+<pre class="src src-cpp" id="org06ee8c6"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
 <span class="org-keyword">struct</span> <span class="org-type">ring_buffer</span> {
   <span class="org-constant">std</span>::<span class="org-type">array</span>&lt;<span class="org-type">T</span>, N+1&gt; <span class="org-variable-name">entries</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">use one extra element for easy book-keeping</span>
 
@@ -210,9 +210,9 @@ can take advantage of in some special places.
 </div>
 </div>
 
-<div id="outline-container-org66b30e0" class="outline-2">
-<h2 id="org66b30e0">Rust</h2>
-<div class="outline-text-2" id="text-org66b30e0">
+<div id="outline-container-orgc71480f" class="outline-2">
+<h2 id="orgc71480f">Rust</h2>
+<div class="outline-text-2" id="text-orgc71480f">
 <p>
 Let's do the same exercises again in Rust, starting with the <code>Thing</code>
 struct.
@@ -238,7 +238,7 @@ Trying to port the first example directly into Rust won't work.
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
     <span class="org-keyword">let</span> <span class="org-variable-name">a</span> = <span class="org-type">Thing</span>::new(10);
-    <span class="org-keyword">let</span> <span class="org-variable-name">r</span> = &amp;a;
+    <span class="org-keyword">let</span> <span class="org-variable-name">r</span> = <span class="org-rust-ampersand">&amp;</span>a;
 
     <span class="org-keyword">let</span> <span class="org-variable-name">c</span> = a; <span class="org-comment-delimiter">// </span><span class="org-comment">this is a move, but won't compile</span>
     <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"ref </span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, r.id);
@@ -254,7 +254,7 @@ The compiler doesn't like this. It says:
 <pre class="src src-rust">error[<span class="org-type">E0505</span>]: cannot <span class="org-keyword">move</span> out of `a` because it is borrowed
   --&gt; ex1.<span class="org-variable-name">rs</span>:1<span class="org-variable-name">6</span>:13
    |
-15 |     <span class="org-keyword">let</span> <span class="org-variable-name">r</span> = &amp;a;
+15 |     <span class="org-keyword">let</span> <span class="org-variable-name">r</span> = <span class="org-rust-ampersand">&amp;</span>a;
    |             -- borrow of `a` occurs here
 16 |     <span class="org-keyword">let</span> <span class="org-variable-name">c</span> = a; <span class="org-comment-delimiter">// </span><span class="org-comment">this is a move, but won't compile</span>
    |             ^ <span class="org-keyword">move</span> out of `a` occurs here
@@ -267,7 +267,7 @@ The compiler doesn't like this. It says:
 <p>
 Rust is telling us that it knows we moved the value, and, since we
 moved it, we can't use it anymore. What does this mean though? What is
-actually going?
+actually going on?
 </p>
 
 <p>
@@ -279,7 +279,7 @@ to expect, but hopefully this example is clear.
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">main</span>() {
     <span class="org-keyword">let</span> <span class="org-variable-name">a</span> = <span class="org-type">Thing</span>::new(1);
-    <span class="org-keyword">let</span> <span class="org-variable-name">r</span>: *<span class="org-keyword">const</span> <span class="org-type">Thing</span> = &amp;a;
+    <span class="org-keyword">let</span> <span class="org-variable-name">r</span>: *<span class="org-keyword">const</span> <span class="org-type">Thing</span> = <span class="org-rust-ampersand">&amp;</span>a;
 
     <span class="org-keyword">let</span> <span class="org-variable-name">c</span> = a;
     <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"ref </span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, <span class="org-rust-unsafe">unsafe</span> { (*r).id });
@@ -288,9 +288,11 @@ to expect, but hopefully this example is clear.
 </div>
 
 <p>
-This prints "1" because the compiler reused the stack space used by
-the object named <code>a</code> to store the object named <code>b</code>. There was no
-"empty valid husk" left behind.
+This code is UB, so the output may not be stable. At the time this article was
+written though, this prints "1" because the compiler reused the stack space used
+by the object named <code>a</code> to store the object named <code>c</code>. Unlike C++, where an
+"empty husk" of <code>a</code> would need to be left behind, after <code>a</code> is moved, the
+compiler "knows" that no one can access it anymore, so it can reuse the storage.
 </p>
 
 <p>
@@ -322,7 +324,7 @@ This version of swap is adapted from Rust's standard library:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">swap</span>&lt;<span class="org-type">T</span>&gt;(<span class="org-variable-name">a</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">T</span>, <span class="org-variable-name">b</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">T</span>) {
+<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">swap</span>&lt;<span class="org-type">T</span>&gt;(<span class="org-variable-name">a</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-type">T</span>, <span class="org-variable-name">b</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-type">T</span>) {
     <span class="org-comment-delimiter">// </span><span class="org-comment">a and b are both valid pointers</span>
     <span class="org-rust-unsafe">unsafe</span> {
         <span class="org-keyword">let</span> <span class="org-variable-name">tmp</span>: <span class="org-type">T</span> = <span class="org-constant">std</span>::<span class="org-constant">ptr</span>::read(a); <span class="org-comment-delimiter">// </span><span class="org-comment">memcpy</span>
@@ -342,9 +344,9 @@ Roaming again into undefined-behavior territory:
     <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">a</span> = <span class="org-type">Thing</span>::new(1);
     <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">b</span> = <span class="org-type">Thing</span>::new(2);
 
-    <span class="org-keyword">let</span> <span class="org-variable-name">r</span>: *<span class="org-keyword">const</span> <span class="org-type">Thing</span> = &amp;a;
+    <span class="org-keyword">let</span> <span class="org-variable-name">r</span>: *<span class="org-keyword">const</span> <span class="org-type">Thing</span> = <span class="org-rust-ampersand">&amp;</span>a;
 
-    swap(&amp;<span class="org-keyword">mut</span> a, &amp;<span class="org-keyword">mut</span> b);
+    swap(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> a, <span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> b);
 
     <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"</span><span class="org-rust-string-interpolation">{}</span><span class="org-string">"</span>, <span class="org-rust-unsafe">unsafe</span> { (*r).id }); <span class="org-comment-delimiter">// </span><span class="org-comment">prints 2</span>
 }
@@ -380,10 +382,9 @@ generics</a> are finished for the sake of clarity.
 </div>
 
 <p>
-The problem now is that we can't define a custom move constructor. If
-this struct is ever moved (including the move-by-<code>memcpy</code> in
-swap/replace), the pointers stored will be point to the wrong piece of
-memory.
+The problem now is that we can't define a custom move constructor. If this
+struct is ever moved (including the move-by-<code>memcpy</code> in swap/replace), the
+pointers stored will point to the wrong piece of memory.
 </p>
 
 <p>
@@ -400,9 +401,9 @@ following these rules, but that's a topic for another time.
 </div>
 </div>
 
-<div id="outline-container-org9b6b17e" class="outline-2">
-<h2 id="org9b6b17e">Futures/async.await</h2>
-<div class="outline-text-2" id="text-org9b6b17e">
+<div id="outline-container-orgb6aa1ac" class="outline-2">
+<h2 id="orgb6aa1ac">Futures/async.await</h2>
+<div class="outline-text-2" id="text-orgb6aa1ac">
 <p>
 Hopefully now, we can understand why this is prerequisite for
 async.await support in Rust.
@@ -415,7 +416,7 @@ Consider this async function:
 <pre class="src src-rust"><span class="org-keyword">async</span> <span class="org-keyword">fn</span> <span class="org-function-name">foo</span>() -&gt; <span class="org-type">u32</span> {
     <span class="org-comment-delimiter">// </span><span class="org-comment">First call to poll runs until the line with the await</span>
     <span class="org-keyword">let</span> <span class="org-variable-name">x</span> = [1, 2, 3, 4];
-    <span class="org-keyword">let</span> <span class="org-variable-name">y</span> = &amp;x[1];
+    <span class="org-keyword">let</span> <span class="org-variable-name">y</span> = <span class="org-rust-ampersand">&amp;</span>x[1];
     <span class="org-keyword">let</span> nxt_idx= make_network_request().<span class="org-keyword">await</span>;
 
     <span class="org-comment-delimiter">// </span><span class="org-comment">next call to poll runs the last line</span>
@@ -435,7 +436,7 @@ this:
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-keyword">struct</span> <span class="org-type">StateMachineData_State1</span> {
     <span class="org-variable-name">x</span>: [<span class="org-type">u32</span>, 4],
-    <span class="org-variable-name">y</span>: &amp;<span class="org-type">u32</span>,      <span class="org-comment-delimiter">// </span><span class="org-comment">ignore lifetime. This will point into `x`</span>
+    <span class="org-variable-name">y</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-type">u32</span>,      <span class="org-comment-delimiter">// </span><span class="org-comment">ignore lifetime. This will point into `x`</span>
 }
 </pre>
 </div>

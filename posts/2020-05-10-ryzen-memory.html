@@ -33,9 +33,9 @@ Results like this should not be surprising on a multi-socket system, but this sy
 I believe this micro-benchmark is highlighting some of the features of the novel architecture on the new AMD chips.
 </p>
 
-<div id="outline-container-org7859076" class="outline-2">
-<h2 id="org7859076">Caches</h2>
-<div class="outline-text-2" id="text-org7859076">
+<div id="outline-container-org8446df3" class="outline-2">
+<h2 id="org8446df3">Caches</h2>
+<div class="outline-text-2" id="text-org8446df3">
 <p>
 Before diving in to Zen, I'd like to talk briefly CPU memory-caching systems.
 </p>
@@ -93,9 +93,9 @@ This style of L1/L2/L3 cache has been common in CPU designs for many years.
 </div>
 </div>
 
-<div id="outline-container-orged73620" class="outline-2">
-<h2 id="orged73620">Ryzen Architecture</h2>
-<div class="outline-text-2" id="text-orged73620">
+<div id="outline-container-org8bdac37" class="outline-2">
+<h2 id="org8bdac37">Ryzen Architecture</h2>
+<div class="outline-text-2" id="text-org8bdac37">
 <p>
 To talk about AMD's Zen architecture, there's a few terms we need to define:
 </p>
@@ -138,9 +138,9 @@ If cores from different CCXs need to communicate, they will have to use the infi
 </div>
 </div>
 
-<div id="outline-container-org1716486" class="outline-2">
-<h2 id="org1716486">Latency Test</h2>
-<div class="outline-text-2" id="text-org1716486">
+<div id="outline-container-org4aa13e0" class="outline-2">
+<h2 id="org4aa13e0">Latency Test</h2>
+<div class="outline-text-2" id="text-org4aa13e0">
 <p>
 To verify my hypothesis, lets start with a classic pingpong roundtrip latency test.
 </p>
@@ -197,18 +197,18 @@ Few applications actually have any reason to bounce a single value back and fort
 </div>
 </div>
 
-<div id="outline-container-org76b3ceb" class="outline-2">
-<h2 id="org76b3ceb">Bandwidth Test</h2>
-<div class="outline-text-2" id="text-org76b3ceb">
+<div id="outline-container-orgf5941ef" class="outline-2">
+<h2 id="orgf5941ef">Bandwidth Test</h2>
+<div class="outline-text-2" id="text-orgf5941ef">
 <p>
 When discussing latency, programmers who are more bandwidth focused will often (rightly) say something like "the latency doesn't matter, I only care about bandwidth."
 Most programmers are more focused on bandwidth than latency, because generally we care a lot more about throughput than latency.
 </p>
 </div>
 
-<div id="outline-container-orgb783eaf" class="outline-3">
-<h3 id="orgb783eaf">Baseline with large core-to-core copies</h3>
-<div class="outline-text-3" id="text-orgb783eaf">
+<div id="outline-container-orged930c2" class="outline-3">
+<h3 id="orged930c2">Baseline with large core-to-core copies</h3>
+<div class="outline-text-3" id="text-orged930c2">
 <p>
 Let's start by proving that, when moving around large chunks of data, none of this matters.
 </p>
@@ -247,9 +247,9 @@ For full details about this benchmark, please see the source and my results <a h
 </div>
 </div>
 
-<div id="outline-container-org80117ba" class="outline-3">
-<h3 id="org80117ba">When might it matter?</h3>
-<div class="outline-text-3" id="text-org80117ba">
+<div id="outline-container-orgf32fb11" class="outline-3">
+<h3 id="orgf32fb11">When might it matter?</h3>
+<div class="outline-text-3" id="text-orgf32fb11">
 <p>
 We are often able to amortize high latency operations over large transfers or by work on something else to hide the costs of high latency.
 However, as data sizes shrink, it becomes harder and harder to hide latency.
@@ -331,16 +331,16 @@ I've kept the size low to highlight the effects I'm looking for, but, these effe
 </div>
 </div>
 
-<div id="outline-container-org966b0b5" class="outline-3">
-<h3 id="org966b0b5">Results</h3>
-<div class="outline-text-3" id="text-org966b0b5">
+<div id="outline-container-orgdf43fb0" class="outline-3">
+<h3 id="orgdf43fb0">Results</h3>
+<div class="outline-text-3" id="text-orgdf43fb0">
 <p>
 Using the same style of plots that we've already see, let's first look at bandwidth reported by the writer.
 This plot shows the write rate when Y-axis core is sending data to X-axis core (rate is in GiB/s, I've again included the SMT cores):
 </p>
 
 
-<figure id="orga995fa6">
+<figure id="orgd4e4e66">
 <img src="../static/ryzen_numa/writerplot.png" alt="writerplot.png">
 
 </figure>
@@ -378,9 +378,9 @@ For full details about this benchmark, please see the source and my results <a h
 </div>
 </div>
 
-<div id="outline-container-org5308d0c" class="outline-2">
-<h2 id="org5308d0c">Conclusions</h2>
-<div class="outline-text-2" id="text-org5308d0c">
+<div id="outline-container-org2d09635" class="outline-2">
+<h2 id="org2d09635">Conclusions</h2>
+<div class="outline-text-2" id="text-org2d09635">
 <p>
 This sort of behavior will not come as a surprised for programmers used to programming for multi-socket (multiple physical CPU) server systems (see <a href="https://en.wikipedia.org/wiki/Non-uniform_memory_access">NUMA</a>).
 However, for those writing parallel applications, I feel like this effect is still notable and warrants slightly different considerations than traditional NUMA.

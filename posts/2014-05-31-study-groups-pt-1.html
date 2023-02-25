@@ -36,9 +36,9 @@ I plan to strengthen the model and (hopefully) present possible
 solutions to the problem.
 </p>
 
-<div id="outline-container-org4569f65" class="outline-2">
-<h2 id="org4569f65">The Model</h2>
-<div class="outline-text-2" id="text-org4569f65">
+<div id="outline-container-org17f24ed" class="outline-2">
+<h2 id="org17f24ed">The Model</h2>
+<div class="outline-text-2" id="text-org17f24ed">
 <p>
 The basic assumptions of the simulation we will use are as follows:
 </p>
@@ -113,9 +113,9 @@ optimal size is $ \frac{\alpha}{\beta} $.
 </div>
 </div>
 
-<div id="outline-container-orgd879af0" class="outline-2">
-<h2 id="orgd879af0">The Simulation</h2>
-<div class="outline-text-2" id="text-orgd879af0">
+<div id="outline-container-org2af0e08" class="outline-2">
+<h2 id="org2af0e08">The Simulation</h2>
+<div class="outline-text-2" id="text-org2af0e08">
 <p>
 The simulation I have in mind is fairly simple.
 </p>
@@ -131,9 +131,9 @@ function)</li>
 </div>
 </div>
 
-<div id="outline-container-org88485ae" class="outline-2">
-<h2 id="org88485ae">Implementation and Results</h2>
-<div class="outline-text-2" id="text-org88485ae">
+<div id="outline-container-org141d972" class="outline-2">
+<h2 id="org141d972">Implementation and Results</h2>
+<div class="outline-text-2" id="text-org141d972">
 <p>
 I wrote some python code to see how this system would perform. I will
 leave the code at the bottom of the document. The results seem to
@@ -141,13 +141,13 @@ correspond with reality.
 </p>
 
 
-<figure id="orgebd1d31">
+<figure id="org6feaf64">
 <img src="../static/study_groups/1x.5.png" alt="1x.5.png" class="light-invert">
 
 </figure>
 
 
-<figure id="org1de8cbc">
+<figure id="orge62d79a">
 <img src="../static/study_groups/1x.4.png" alt="1x.4.png" class="light-invert">
 
 </figure>
@@ -168,9 +168,9 @@ writing.
 </div>
 </div>
 
-<div id="outline-container-org022d6d3" class="outline-2">
-<h2 id="org022d6d3">Conclusion</h2>
-<div class="outline-text-2" id="text-org022d6d3">
+<div id="outline-container-org4a9c4bc" class="outline-2">
+<h2 id="org4a9c4bc">Conclusion</h2>
+<div class="outline-text-2" id="text-org4a9c4bc">
 <p>
 From this model, it seems like we tend to form groups larger than would
 be optimal, because people continue to join the group once their joining
@@ -189,9 +189,9 @@ could discuss more ideas!
 </div>
 </div>
 
-<div id="outline-container-org4845247" class="outline-2">
-<h2 id="org4845247">Simulation Code (not pythonic!)</h2>
-<div class="outline-text-2" id="text-org4845247">
+<div id="outline-container-org1020063" class="outline-2">
+<h2 id="org1020063">Simulation Code (not pythonic!)</h2>
+<div class="outline-text-2" id="text-org1020063">
 <div class="org-src-container">
 <pre class="src src-python"><span class="org-keyword">from</span> math <span class="org-keyword">import</span> <span class="org-builtin">pow</span>
 <span class="org-keyword">from</span> random <span class="org-keyword">import</span> randint
@@ -210,7 +210,7 @@ could discuss more ideas!
 
 <span class="org-comment-delimiter">##### </span><span class="org-comment">Simulation</span>
 <span class="org-keyword">if</span> <span class="org-builtin">__name__</span> == <span class="org-string">"__main__"</span>:
-    <span class="org-keyword">print</span>(<span class="org-string">"Starting the simulation"</span>)
+    <span class="org-builtin">print</span>(<span class="org-string">"Starting the simulation"</span>)
     <span class="org-keyword">for</span> i <span class="org-keyword">in</span> <span class="org-builtin">xrange</span>(0, numjoiners):
         best = (-1, <span class="org-constant">None</span>)
         <span class="org-keyword">for</span> index, fits <span class="org-keyword">in</span> <span class="org-builtin">enumerate</span>(<span class="org-builtin">map</span>(fitness, pool)):
@@ -221,13 +221,13 @@ could discuss more ideas!
         <span class="org-keyword">elif</span> best[0] == 0:
             pool[randint(0, <span class="org-builtin">len</span>(pool) - 1)] += 1
         <span class="org-keyword">else</span>:
-            <span class="org-keyword">print</span>(<span class="org-string">"I refuse to join these groups"</span>)
+            <span class="org-builtin">print</span>(<span class="org-string">"I refuse to join these groups"</span>)
             <span class="org-keyword">break</span>
-    <span class="org-keyword">print</span>(pool)
-    <span class="org-keyword">print</span>(<span class="org-builtin">map</span>(fitness,pool))
+    <span class="org-builtin">print</span>(pool)
+    <span class="org-builtin">print</span>(<span class="org-builtin">map</span>(fitness,pool))
 
-    <span class="org-keyword">print</span>(<span class="org-string">"optimal group size %d"</span> % (a/b) )
-    <span class="org-keyword">print</span>(<span class="org-string">"average non_empty group size %d"</span> %
+    <span class="org-builtin">print</span>(<span class="org-string">"optimal group size %d"</span> % (a/b) )
+    <span class="org-builtin">print</span>(<span class="org-string">"average non_empty group size %d"</span> %
             (<span class="org-builtin">sum</span>(pool) / <span class="org-builtin">len</span>(<span class="org-builtin">filter</span>(<span class="org-keyword">lambda</span> a: a != 0, pool))))
 </pre>
 </div>

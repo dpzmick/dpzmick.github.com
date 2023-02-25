@@ -40,9 +40,9 @@ There are many, many techniques which can be used to work around this trickiness
 This post is a discussion of one such method (presented in <a href="https://www.youtube.com/watch?v=boPEO2auJj4">this cppcon talk</a>) implemented in <a href="https://www.rust-lang.org/en-US/">Rust</a>.
 </p>
 
-<div id="outline-container-org1b2927b" class="outline-2">
-<h2 id="org1b2927b">Messaging between threads</h2>
-<div class="outline-text-2" id="text-org1b2927b">
+<div id="outline-container-orga102cd4" class="outline-2">
+<h2 id="orga102cd4">Messaging between threads</h2>
+<div class="outline-text-2" id="text-orga102cd4">
 <p>
 Suppose we are developing a synthesizer which produces sounds when keys are pressed on a <a href="https://en.wikipedia.org/wiki/MIDI_controller#Keyboards">MIDI keyboard</a>.
 The audio library calls a function we provide once ever 6 or so milliseconds to request a list of samples from us.
@@ -71,9 +71,9 @@ If messages lives on the heap, we must ensure they are allocated and freed outsi
 </p>
 </div>
 
-<div id="outline-container-org231652d" class="outline-3">
-<h3 id="org231652d">Reference counted garbage collection</h3>
-<div class="outline-text-3" id="text-org231652d">
+<div id="outline-container-org1f51b87" class="outline-3">
+<h3 id="org1f51b87">Reference counted garbage collection</h3>
+<div class="outline-text-3" id="text-org1f51b87">
 <p>
 It is totally fine to allocate on the UI thread, so when the UI thread handles an event it will compute a new list of samples and stick them into a freshly allocated block of memory.
 Then we will ship this message over to the realtime thread.
@@ -103,9 +103,9 @@ Sometime later, the collector thread will observe the decreased reference count 
 </div>
 </div>
 
-<div id="outline-container-org3a0ecb1" class="outline-3">
-<h3 id="org3a0ecb1">Tradeoffs</h3>
-<div class="outline-text-3" id="text-org3a0ecb1">
+<div id="outline-container-org8671b81" class="outline-3">
+<h3 id="org8671b81">Tradeoffs</h3>
+<div class="outline-text-3" id="text-org8671b81">
 <p>
 Let's consider the theoretical behavior of this approach.
 Note that anything I have to say should be taken with grain of salt; I haven't benchmarked anything, so I really have no evidence to support anything I'm claiming.
@@ -154,9 +154,9 @@ Regardless of the actual efficacy of this approach, it will be interesting to tr
 </div>
 </div>
 
-<div id="outline-container-org026f702" class="outline-2">
-<h2 id="org026f702">Let's make one</h2>
-<div class="outline-text-2" id="text-org026f702">
+<div id="outline-container-orge354e5d" class="outline-2">
+<h2 id="orge354e5d">Let's make one</h2>
+<div class="outline-text-2" id="text-orge354e5d">
 <p>
 For the sake of these examples, let's assume that the built-in Rust <a href="https://doc.rust-lang.org/std/sync/mpsc/index.html">mpsc channel</a> is an appropriate lock free queue.
 It will be pretty easy to swap this with something different later, and, if we use the standard library, all of the examples will easily run in the Rust playground.
@@ -164,9 +164,9 @@ We are also going to fake a bunch of the details of the audio library.
 </p>
 </div>
 
-<div id="outline-container-org8210876" class="outline-3">
-<h3 id="org8210876">Fake audio library</h3>
-<div class="outline-text-3" id="text-org8210876">
+<div id="outline-container-orgad51448" class="outline-3">
+<h3 id="orgad51448">Fake audio library</h3>
+<div class="outline-text-3" id="text-orgad51448">
 <p>
 <a href="https://play.rust-lang.org/?gist=27d1b7a693ffe01ac899b991317b170f&amp;version=stable&amp;backtrace=0">Rust Playground Link</a>.
 </p>
@@ -202,7 +202,7 @@ Here's the code:
 
     <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[realtime] thread started"</span>);
     <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">output</span> = [0.0; 64];
-    <span class="org-keyword">while</span> rt.realtime_callback(&amp;<span class="org-keyword">mut</span> output) != <span class="org-type">CallbackStatus</span>::<span class="org-type">Shutdown</span> { }
+    <span class="org-keyword">while</span> rt.realtime_callback(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> output) != <span class="org-type">CallbackStatus</span>::<span class="org-type">Shutdown</span> { }
     <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[realtime] thread shutting down"</span>);
 
     join_handle.join().unwrap();
@@ -218,7 +218,7 @@ Here's the code:
     <span class="org-keyword">fn</span> <span class="org-function-name">new</span>() -&gt; <span class="org-type">Self</span> { <span class="org-type">RealtimeThread</span>{} }
 
     <span class="org-doc">/// realtime callback, called to get the list of samples</span>
-    <span class="org-keyword">fn</span> <span class="org-function-name">realtime_callback</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">output_samples</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Samples</span>) -&gt; <span class="org-type">CallbackStatus</span> {
+    <span class="org-keyword">fn</span> <span class="org-function-name">realtime_callback</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">output_samples</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-type">Samples</span>) -&gt; <span class="org-type">CallbackStatus</span> {
         <span class="org-type">CallbackStatus</span>::<span class="org-type">Shutdown</span>
     }
 }
@@ -232,7 +232,7 @@ Here's the code:
     <span class="org-keyword">fn</span> <span class="org-function-name">new</span>() -&gt; <span class="org-type">Self</span> { <span class="org-type">UIThread</span>{} }
 
     <span class="org-doc">/// All of the UI thread code</span>
-    <span class="org-keyword">fn</span> <span class="org-function-name">run</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+    <span class="org-keyword">fn</span> <span class="org-function-name">run</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
         <span class="org-comment-delimiter">// </span><span class="org-comment">do nothing!</span>
     }
 }
@@ -249,19 +249,20 @@ Here's the code:
 Output (one of many possible):
 </p>
 
-<pre class="example">
-[realtime] thread started
+<div class="org-src-container">
+<pre class="src src-nil">[realtime] thread started
 [realtime] thread shutting down
 [ui] thread started
 [ui] thread shutting down
 </pre>
 </div>
 </div>
+</div>
 
 
-<div id="outline-container-orgc36ad2c" class="outline-3">
-<h3 id="orgc36ad2c">Sending Arcs between threads</h3>
-<div class="outline-text-3" id="text-orgc36ad2c">
+<div id="outline-container-orga67d2d6" class="outline-3">
+<h3 id="orga67d2d6">Sending Arcs between threads</h3>
+<div class="outline-text-3" id="text-orga67d2d6">
 <p>
 Now that we have an "audio library," let's try to make some messages and pass them between threads.
 </p>
@@ -284,7 +285,7 @@ Now that the realtime thread has a list of samples, we can fill in a bit of the 
 </p>
 
 <div class="org-src-container">
-<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">realtime_callback</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">output_samples</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Samples</span>) -&gt; <span class="org-type">CallbackStatus</span> {
+<pre class="src src-rust"><span class="org-keyword">fn</span> <span class="org-function-name">realtime_callback</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">output_samples</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-type">Samples</span>) -&gt; <span class="org-type">CallbackStatus</span> {
     <span class="org-keyword">self</span>.current_samples.as_ref().map(|samples| {
         <span class="org-comment-delimiter">// </span><span class="org-comment">samples: &amp;Arc&lt;[f32; 64]&gt;</span>
         output_samples.copy_from_slice(samples.as_ref())
@@ -307,7 +308,7 @@ Here is a function that computes 64 samples along a sine wave with a given peak 
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-doc">/// computes the samples needed for on cycle of a sine wave</span>
 <span class="org-doc">/// the volume parameter sets the audible volume of sound produced</span>
-<span class="org-keyword">fn</span> <span class="org-function-name">compute_samples</span>(&amp;<span class="org-keyword">self</span>, <span class="org-variable-name">volume</span>: <span class="org-type">f32</span>) -&gt; <span class="org-type">Samples</span> {
+<span class="org-keyword">fn</span> <span class="org-function-name">compute_samples</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">self</span>, <span class="org-variable-name">volume</span>: <span class="org-type">f32</span>) -&gt; <span class="org-type">Samples</span> {
     <span class="org-preprocessor">assert!</span>(volume &gt;= 0.0);
     <span class="org-preprocessor">assert!</span>(volume &lt;= 1.0);
 
@@ -329,7 +330,7 @@ The UI thread will generate some fake events, and compute samples for these even
 
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-doc">/// All of the UI thread code</span>
-<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
     <span class="org-comment-delimiter">// </span><span class="org-comment">create 5 "ui events"</span>
     <span class="org-keyword">for</span> <span class="org-variable-name">i</span> <span class="org-keyword">in</span> 0..5 {
         <span class="org-keyword">let</span> <span class="org-variable-name">volume</span> = i <span class="org-keyword">as</span> <span class="org-type">f32</span> / 10.0;
@@ -349,9 +350,9 @@ Now that we've done all of that, we need to send the samples between threads.
 </div>
 </div>
 
-<div id="outline-container-orgbf001aa" class="outline-3">
-<h3 id="orgbf001aa">Message type</h3>
-<div class="outline-text-3" id="text-orgbf001aa">
+<div id="outline-container-org96dead8" class="outline-3">
+<h3 id="org96dead8">Message type</h3>
+<div class="outline-text-3" id="text-org96dead8">
 <p>
 As discussed previously, we will create the <code>Arc</code> on the UI thread, then send it to the realtime thread.
 </p>
@@ -437,7 +438,7 @@ If any sends fails, something has gone horribly wrong, so its fine to <code>unwr
 
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-doc">/// All of the UI thread code</span>
-<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
     <span class="org-comment-delimiter">// </span><span class="org-comment">create 10 "ui events"</span>
     <span class="org-keyword">for</span> <span class="org-variable-name">i</span> <span class="org-keyword">in</span> 0..10 {
         <span class="org-keyword">let</span> <span class="org-variable-name">volume</span> = i <span class="org-keyword">as</span> <span class="org-type">f32</span> / 10.0;
@@ -462,7 +463,7 @@ If not, just keep doing what we were doing.
 
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-doc">/// realtime callback, called to get the list of samples</span>
-<span class="org-keyword">fn</span> <span class="org-function-name">realtime_callback</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">output_samples</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Samples</span>) -&gt; <span class="org-type">CallbackStatus</span> {
+<span class="org-keyword">fn</span> <span class="org-function-name">realtime_callback</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">output_samples</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-type">Samples</span>) -&gt; <span class="org-type">CallbackStatus</span> {
     <span class="org-keyword">match</span> <span class="org-keyword">self</span>.incoming.try_recv() {
         <span class="org-comment-delimiter">// </span><span class="org-comment">we've received a messaged</span>
         <span class="org-type">Ok</span>(message) =&gt; <span class="org-keyword">match</span> message {
@@ -503,8 +504,8 @@ It might timeout if you try running it. If you see any messages about timeout, d
 <p>
 Here is an example output:
 </p>
-<pre class="example">
-[realtime] thread started
+<div class="org-src-container">
+<pre class="src src-nil">[realtime] thread started
 [ui] thread started
 [ui] sending new samples. Second sample: 0
 [realtime] received new samples. Second sample: 0
@@ -521,10 +522,11 @@ Here is an example output:
 </pre>
 </div>
 </div>
+</div>
 
-<div id="outline-container-orgc5e0da1" class="outline-3">
-<h3 id="orgc5e0da1">Problems?</h3>
-<div class="outline-text-3" id="text-orgc5e0da1">
+<div id="outline-container-org3adfc53" class="outline-3">
+<h3 id="org3adfc53">Problems?</h3>
+<div class="outline-text-3" id="text-org3adfc53">
 <p>
 The last example <b>seems</b> to do the right thing, let's take a look at what the realtime callback does when it receives a new set of samples.
 </p>
@@ -575,9 +577,9 @@ We can't let our realtime callback perform memory allocation.
 </div>
 </div>
 
-<div id="outline-container-org2583a0a" class="outline-2">
-<h2 id="org2583a0a">Build the GC</h2>
-<div class="outline-text-2" id="text-org2583a0a">
+<div id="outline-container-org4026e97" class="outline-2">
+<h2 id="org4026e97">Build the GC</h2>
+<div class="outline-text-2" id="text-org4026e97">
 <p>
 We now need to build the GC that I promised we would build, to clean up after us, outside of the realtime thread.
 Sneak peak, once the GC is implemented, all we have to change is <code>UIThread::run</code>, in a very small way:
@@ -585,7 +587,7 @@ Sneak peak, once the GC is implemented, all we have to change is <code>UIThread:
 
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-doc">/// All of the UI thread code</span>
-<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
     <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">gc</span> = <span class="org-type">GC</span>::new(); <span class="org-comment-delimiter">// </span><span class="org-comment">+ NEW LINE</span>
 
     <span class="org-comment-delimiter">// </span><span class="org-comment">create 5 "ui events"</span>
@@ -623,7 +625,7 @@ With that in mind, lets sketch out the interface for the Garbage Collector.
 
     <span class="org-doc">/// Instruct the garbage collector to monitor this Arc&lt;T&gt;</span>
     <span class="org-doc">/// When no references remain, the collector will `drop` the value</span>
-    <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
+    <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
         <span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
     }
 }
@@ -645,7 +647,7 @@ We will keep this vector in the GC thread struct so that each of the references 
 <span class="org-keyword">impl</span>&lt;<span class="org-type">T</span>&gt; <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
     <span class="org-comment-delimiter">// </span><span class="org-comment">...</span>
 
-    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
         <span class="org-keyword">self</span>.pool.push(t);
     }
 }
@@ -686,7 +688,7 @@ This is (for now) the most natural way to solve the problem:
 
 <div class="org-src-container">
 <pre class="src src-rust">pool.retain(|<span class="org-variable-name">e</span>: <span class="org-type">Arc</span>&lt;_&gt;| {
-    <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(&amp;e) {
+    <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(<span class="org-rust-ampersand">&amp;</span>e) {
         <span class="org-keyword">return</span> <span class="org-keyword">true</span>
     } <span class="org-keyword">else</span> {
         <span class="org-keyword">return</span> <span class="org-keyword">false</span>
@@ -711,9 +713,9 @@ The join handle is wrapped in an <code>Option</code>, we will see why quite a bi
 
 <span class="org-keyword">impl</span>&lt;<span class="org-type">T</span>&gt; <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
     <span class="org-comment-delimiter">// </span><span class="org-comment">private. cleans up any dead pointers in a pool</span>
-    <span class="org-keyword">fn</span> <span class="org-function-name">cleanup</span>(<span class="org-variable-name">pool</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Vec</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;) {
-        pool.retain(|<span class="org-variable-name">e</span>: &amp;<span class="org-type">Arc</span>&lt;_&gt;| {
-            <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(&amp;e) &gt; 1 {
+    <span class="org-keyword">fn</span> <span class="org-function-name">cleanup</span>(<span class="org-variable-name">pool</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-type">Vec</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;) {
+        pool.retain(|<span class="org-variable-name">e</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-type">Arc</span>&lt;_&gt;| {
+            <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(<span class="org-rust-ampersand">&amp;</span>e) &gt; 1 {
                 <span class="org-keyword">return</span> <span class="org-keyword">true</span>
             } <span class="org-keyword">else</span> {
                 <span class="org-keyword">return</span> <span class="org-keyword">false</span>
@@ -727,7 +729,7 @@ The join handle is wrapped in an <code>Option</code>, we will see why quite a bi
         <span class="org-comment-delimiter">// </span><span class="org-comment">create a closure which will become a new thread</span>
         <span class="org-keyword">let</span> <span class="org-variable-name">gc</span> = || {
             <span class="org-keyword">loop</span> {
-                <span class="org-type">GC</span>::cleanup(&amp;<span class="org-keyword">mut</span> pool);
+                <span class="org-type">GC</span>::cleanup(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> pool);
 
                 <span class="org-comment-delimiter">// </span><span class="org-comment">wait for 100 milliseconds, then scan again</span>
                 <span class="org-keyword">let</span> <span class="org-variable-name">sleep</span> = <span class="org-constant">std</span>::<span class="org-constant">time</span>::<span class="org-type">Duration</span>::from_millis(100);
@@ -744,7 +746,7 @@ The join handle is wrapped in an <code>Option</code>, we will see why quite a bi
         }
     }
 
-    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
         <span class="org-keyword">self</span>.pool.push(t);
     }
 }
@@ -774,8 +776,8 @@ We've written a bunch of new code, better make sure it compiles (<a href="https:
     = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-constant">std</span>::<span class="org-constant">ptr</span>::<span class="org-type">Unique</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
     = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">alloc</span>::<span class="org-constant">raw_vec</span>::<span class="org-type">RawVec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
     = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
-    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
-    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `[closure@&lt;anon&gt;:<span class="org-variable-name">143</span>:1<span class="org-variable-name">8</span>: <span class="org-variable-name">151</span>:10 <span class="org-variable-name">pool</span>:&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;]`
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `[closure@&lt;anon&gt;:<span class="org-variable-name">143</span>:1<span class="org-variable-name">8</span>: <span class="org-variable-name">151</span>:10 <span class="org-variable-name">pool</span>:<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;]`
     = <span class="org-variable-name">note</span>: required by `<span class="org-constant">std</span>::<span class="org-constant">thread</span>::spawn`
 
 error[<span class="org-type">E0277</span>]: the <span class="org-keyword">trait</span> bound `<span class="org-variable-name">T</span>: <span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Sync</span>` is not satisfied
@@ -789,8 +791,8 @@ error[<span class="org-type">E0277</span>]: the <span class="org-keyword">trait<
     = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-constant">std</span>::<span class="org-constant">ptr</span>::<span class="org-type">Unique</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
     = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">alloc</span>::<span class="org-constant">raw_vec</span>::<span class="org-type">RawVec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
     = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
-    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
-    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `[closure@&lt;anon&gt;:<span class="org-variable-name">143</span>:1<span class="org-variable-name">8</span>: <span class="org-variable-name">151</span>:10 <span class="org-variable-name">pool</span>:&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;]`
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `[closure@&lt;anon&gt;:<span class="org-variable-name">143</span>:1<span class="org-variable-name">8</span>: <span class="org-variable-name">151</span>:10 <span class="org-variable-name">pool</span>:<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;]`
     = <span class="org-variable-name">note</span>: required by `<span class="org-constant">std</span>::<span class="org-constant">thread</span>::spawn`
 
 <span class="org-variable-name">error</span>: aborting due to 2 previous errors
@@ -855,8 +857,8 @@ Let's look more closely at the error we are getting:
     = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-constant">std</span>::<span class="org-constant">ptr</span>::<span class="org-type">Unique</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
     = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">alloc</span>::<span class="org-constant">raw_vec</span>::<span class="org-type">RawVec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
     = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `<span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
-    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
-    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `[closure@&lt;anon&gt;:<span class="org-variable-name">143</span>:1<span class="org-variable-name">8</span>: <span class="org-variable-name">151</span>:10 <span class="org-variable-name">pool</span>:&amp;<span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;]`
+    = <span class="org-variable-name">note</span>: required because of the requirements on the <span class="org-keyword">impl</span> of `<span class="org-constant">std</span>::<span class="org-constant">marker</span>::<span class="org-type">Send</span>` <span class="org-keyword">for</span> `<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;`
+    = <span class="org-variable-name">note</span>: required because it appears within the <span class="org-keyword">type</span> `[closure@&lt;anon&gt;:<span class="org-variable-name">143</span>:1<span class="org-variable-name">8</span>: <span class="org-variable-name">151</span>:10 <span class="org-variable-name">pool</span>:<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-constant">std</span>::<span class="org-constant">vec</span>::<span class="org-type">Vec</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">sync</span>::<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;]`
     = <span class="org-variable-name">note</span>: required by `<span class="org-constant">std</span>::<span class="org-constant">thread</span>::spawn`
 
 <span class="org-variable-name">error</span>: aborting due to previous error
@@ -922,9 +924,9 @@ Now, lets add this to our GC:
 
 <span class="org-keyword">impl</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span>&gt; <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
     <span class="org-comment-delimiter">// </span><span class="org-comment">private. cleans up any dead pointers in a pool</span>
-    <span class="org-keyword">fn</span> <span class="org-function-name">cleanup</span>(<span class="org-variable-name">pool</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Vec</span>&lt;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;&gt;) {
-        pool.retain(|<span class="org-variable-name">e</span>: &amp;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;_&gt;&gt;| {
-            <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(&amp;e.inner) &gt; 1 {
+    <span class="org-keyword">fn</span> <span class="org-function-name">cleanup</span>(<span class="org-variable-name">pool</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-type">Vec</span>&lt;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;&gt;) {
+        pool.retain(|<span class="org-variable-name">e</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;_&gt;&gt;| {
+            <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(<span class="org-rust-ampersand">&amp;</span>e.inner) &gt; 1 {
                 <span class="org-keyword">return</span> <span class="org-keyword">true</span>
             } <span class="org-keyword">else</span> {
                 <span class="org-keyword">return</span> <span class="org-keyword">false</span>
@@ -938,7 +940,7 @@ Now, lets add this to our GC:
         <span class="org-comment-delimiter">// </span><span class="org-comment">create a closure which will become a new thread</span>
         <span class="org-keyword">let</span> <span class="org-variable-name">gc</span> = || {
             <span class="org-keyword">loop</span> {
-                <span class="org-type">GC</span>::cleanup(&amp;<span class="org-keyword">mut</span> pool);
+                <span class="org-type">GC</span>::cleanup(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> pool);
 
                 <span class="org-comment-delimiter">// </span><span class="org-comment">wait for 100 milliseconds, then scan again</span>
                 <span class="org-keyword">let</span> <span class="org-variable-name">sleep</span> = <span class="org-constant">std</span>::<span class="org-constant">time</span>::<span class="org-type">Duration</span>::from_millis(100);
@@ -955,7 +957,7 @@ Now, lets add this to our GC:
         }
     }
 
-    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
         <span class="org-keyword">let</span> <span class="org-variable-name">t</span> = <span class="org-type">TrustMe</span> { <span class="org-variable-name">inner</span>: t };
         <span class="org-keyword">self</span>.pool.push(t);
     }
@@ -1016,7 +1018,7 @@ GUESS WHAT IT DIDN'T WORK.
 149 |         <span class="org-keyword">let</span> <span class="org-variable-name">gc</span> = || {
     |                  ^^ may outlive borrowed value `pool`
 150 |             <span class="org-keyword">loop</span> {
-151 |                 <span class="org-type">GC</span>::cleanup(&amp;<span class="org-keyword">mut</span> pool);
+151 |                 <span class="org-type">GC</span>::cleanup(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> pool);
     |                                  ---- `pool` is borrowed here
     |
 <span class="org-variable-name">help</span>: to force the closure to take ownership of `pool` (and any other referenced variables), <span class="org-keyword">use</span> <span class="org-constant">the</span> `<span class="org-keyword">move</span>` keyword, <span class="org-keyword">as</span> <span class="org-variable-name">shown</span>:
@@ -1076,7 +1078,7 @@ Here are most of the changes:
                 <span class="org-comment-delimiter">// </span><span class="org-comment">collector to track something.</span>
                 {
                     <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">pool</span> = thread_arc_copy.lock().unwrap();
-                    <span class="org-type">GC</span>::cleanup(&amp;<span class="org-keyword">mut</span> pool);
+                    <span class="org-type">GC</span>::cleanup(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> pool);
                 }
 
                 <span class="org-comment-delimiter">// </span><span class="org-comment">wait for a bit, then scan again</span>
@@ -1089,7 +1091,7 @@ Here are most of the changes:
         <span class="org-comment-delimiter">// </span><span class="org-comment">....</span>
     }
 
-    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
+    <span class="org-keyword">pub</span> <span class="org-keyword">fn</span> <span class="org-function-name">track</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>, <span class="org-variable-name">t</span>: <span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;) {
         <span class="org-keyword">let</span> <span class="org-variable-name">t</span> = <span class="org-type">TrustMe</span> { <span class="org-variable-name">inner</span>: t };
         <span class="org-keyword">let</span> <span class="org-keyword">mut</span> <span class="org-variable-name">pool</span> = <span class="org-keyword">self</span>.pool.lock().unwrap();
         pool.push(t);
@@ -1109,9 +1111,9 @@ There are only a few things left to do.
 </p>
 </div>
 
-<div id="outline-container-org28f368c" class="outline-3">
-<h3 id="org28f368c">Start and Stop the GC</h3>
-<div class="outline-text-3" id="text-org28f368c">
+<div id="outline-container-orge0cc837" class="outline-3">
+<h3 id="orge0cc837">Start and Stop the GC</h3>
+<div class="outline-text-3" id="text-orge0cc837">
 <p>
 The GC thread that we have created will never terminate.
 </p>
@@ -1177,7 +1179,7 @@ Next, update the <code>UIThread::run</code> method:
 
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-doc">/// All of the UI thread code</span>
-<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+<span class="org-keyword">fn</span> <span class="org-function-name">run</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
     <span class="org-comment-delimiter">// </span><span class="org-comment">create 5 "ui events"</span>
     <span class="org-keyword">for</span> <span class="org-variable-name">i</span> <span class="org-keyword">in</span> 0..5 {
         <span class="org-keyword">let</span> <span class="org-variable-name">volume</span> = i <span class="org-keyword">as</span> <span class="org-type">f32</span> / 5.0;
@@ -1199,9 +1201,9 @@ Next, update the <code>UIThread::run</code> method:
 </div>
 </div>
 
-<div id="outline-container-orgeb82fce" class="outline-3">
-<h3 id="orgeb82fce">Drop the GC</h3>
-<div class="outline-text-3" id="text-orgeb82fce">
+<div id="outline-container-org1ccd184" class="outline-3">
+<h3 id="org1ccd184">Drop the GC</h3>
+<div class="outline-text-3" id="text-org1ccd184">
 <p>
 Rust will make sure that <code>Drop</code> is called when the struct goes out of scope.
 This gives us a change to shut down the GC thread.
@@ -1225,7 +1227,7 @@ Here is most of that:
 <span class="org-comment-delimiter">// </span><span class="org-comment">....</span>
 
 <span class="org-keyword">impl</span>&lt;<span class="org-variable-name">T</span>: <span class="org-type">Send</span> + '<span class="org-keyword">static</span>&gt; <span class="org-type">Drop</span> <span class="org-keyword">for</span> <span class="org-type">GC</span>&lt;<span class="org-type">T</span>&gt; {
-    <span class="org-keyword">fn</span> <span class="org-function-name">drop</span>(&amp;<span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
+    <span class="org-keyword">fn</span> <span class="org-function-name">drop</span>(<span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-keyword">self</span>) {
         <span class="org-keyword">self</span>.running.store(<span class="org-keyword">false</span>, <span class="org-type">Ordering</span>::<span class="org-type">Relaxed</span>);
         <span class="org-keyword">match</span> <span class="org-keyword">self</span>.thread.take() {
             <span class="org-type">Some</span>(t) =&gt; t.join().unwrap(),
@@ -1245,8 +1247,8 @@ You may have some trouble getting this to run (timeouts occur), but I promise it
 Example output:
 </p>
 
-<pre class="example">
-[realtime] thread started
+<div class="org-src-container">
+<pre class="src src-nil">[realtime] thread started
 [ui] thread started
 [ui] sending new samples. Second sample: 0
 [ui] sending new samples. Second sample: 0.01960343
@@ -1259,19 +1261,20 @@ Example output:
 </pre>
 </div>
 </div>
+</div>
 
-<div id="outline-container-orga4abaa9" class="outline-3">
-<h3 id="orga4abaa9">Proof</h3>
-<div class="outline-text-3" id="text-orga4abaa9">
+<div id="outline-container-orga549779" class="outline-3">
+<h3 id="orga549779">Proof</h3>
+<div class="outline-text-3" id="text-orga549779">
 <p>
 Let's add some logging so we can see when things are getting freed:
 </p>
 
 <div class="org-src-container">
 <pre class="src src-rust"><span class="org-comment-delimiter">// </span><span class="org-comment">private. cleans up any dead pointers in a pool</span>
-<span class="org-keyword">fn</span> <span class="org-function-name">cleanup</span>(<span class="org-variable-name">pool</span>: &amp;<span class="org-keyword">mut</span> <span class="org-type">Vec</span>&lt;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;&gt;) {
-    pool.retain(|<span class="org-variable-name">e</span>: &amp;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;_&gt;&gt;| {
-        <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(&amp;e.inner) &gt; 1 {
+<span class="org-keyword">fn</span> <span class="org-function-name">cleanup</span>(<span class="org-variable-name">pool</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-keyword">mut</span> <span class="org-type">Vec</span>&lt;<span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;<span class="org-type">T</span>&gt;&gt;&gt;) {
+    pool.retain(|<span class="org-variable-name">e</span>: <span class="org-rust-ampersand">&amp;</span><span class="org-type">TrustMe</span>&lt;<span class="org-type">Arc</span>&lt;_&gt;&gt;| {
+        <span class="org-keyword">if</span> <span class="org-type">Arc</span>::strong_count(<span class="org-rust-ampersand">&amp;</span>e.inner) &gt; 1 {
             <span class="org-keyword">return</span> <span class="org-keyword">true</span>
         } <span class="org-keyword">else</span> {
             <span class="org-rust-builtin-formatting-macro">println!</span>(<span class="org-string">"[gc] dropping a value!"</span>);
@@ -1289,8 +1292,8 @@ The completed code lives at <a href="https://play.rust-lang.org/?gist=7c48a9e595
 <p>
 Example Output:
 </p>
-<pre class="example">
-[realtime] thread started
+<div class="org-src-container">
+<pre class="src src-nil">[realtime] thread started
 [ui] thread started
 [ui] sending new samples. Second sample: 0
 [realtime] received new samples. Second sample: 0
@@ -1312,10 +1315,11 @@ Example Output:
 </div>
 </div>
 </div>
+</div>
 
-<div id="outline-container-orgdf493a9" class="outline-2">
-<h2 id="orgdf493a9">Conclusion</h2>
-<div class="outline-text-2" id="text-orgdf493a9">
+<div id="outline-container-org1477bdf" class="outline-2">
+<h2 id="org1477bdf">Conclusion</h2>
+<div class="outline-text-2" id="text-org1477bdf">
 <p>
 We did it!
 </p>
