@@ -30,9 +30,9 @@ We can fortunately easily look under the covers with the Teensy's Arduino implem
 In this post I'm going to walk through a few bad ways this can be done, and the correct way (for Teensy 4.1).
 </p>
 
-<div id="outline-container-orgd94285f" class="outline-2">
-<h2 id="orgd94285f">Naive Implementation</h2>
-<div class="outline-text-2" id="text-orgd94285f">
+<div id="outline-container-org2364d67" class="outline-2">
+<h2 id="org2364d67">Naive Implementation</h2>
+<div class="outline-text-2" id="text-org2364d67">
 <p>
 The simplest possible way to set multiple pins is to just set them one at a time.
 </p>
@@ -86,7 +86,7 @@ Rising edge:
 </p>
 
 
-<figure id="org2d7f1be">
+<figure id="orgf1bd648">
 <img src="../static/teensy-many-pins/naive_rise.png" alt="naive_rise.png">
 
 </figure>
@@ -96,7 +96,7 @@ Falling edge:
 </p>
 
 
-<figure id="org46afb93">
+<figure id="orgb23447a">
 <img src="../static/teensy-many-pins/naive_fall.png" alt="naive_fall.png">
 
 </figure>
@@ -120,9 +120,9 @@ Let's dig in.
 </p>
 </div>
 
-<div id="outline-container-orged80570" class="outline-3">
-<h3 id="orged80570">ARM assembly</h3>
-<div class="outline-text-3" id="text-orged80570">
+<div id="outline-container-org3c93c5c" class="outline-3">
+<h3 id="org3c93c5c">ARM assembly</h3>
+<div class="outline-text-3" id="text-org3c93c5c">
 <p>
 This code compiles to something much more complicated that the simple "set pin x to value v" function calls would indicate.
 The Teensy 4.1 doesn't actually have any facility with which it can set a <span class="underline">single</span> output pin!
@@ -217,9 +217,9 @@ But, of course, we can do much better than this by getting away from the arduino
 </div>
 </div>
 
-<div id="outline-container-org59224c8" class="outline-2">
-<h2 id="org59224c8">Port implementation</h2>
-<div class="outline-text-2" id="text-org59224c8">
+<div id="outline-container-orge576bd1" class="outline-2">
+<h2 id="orge576bd1">Port implementation</h2>
+<div class="outline-text-2" id="text-orge576bd1">
 <p>
 It's easy to implement the appropriate GPIO port code by grabbing bits and pieces from the teensy arduino headers.
 </p>
@@ -276,9 +276,9 @@ And, the scope shows a much nicer shape for both the rising edge and falling edg
 </div>
 </div>
 
-<div id="outline-container-org0d38aa8" class="outline-2">
-<h2 id="org0d38aa8">Conclusion</h2>
-<div class="outline-text-2" id="text-org0d38aa8">
+<div id="outline-container-org787ac84" class="outline-2">
+<h2 id="org787ac84">Conclusion</h2>
+<div class="outline-text-2" id="text-org787ac84">
 <p>
 The Arduino APIs are fantastically useful for getting started quickly, but dropping to lower level APIs can be important.
 Fortunately, the Teensy makes it fantastically easy to dig around and use the chip when needed, and, the headers are even documented with where to look in the official manual!
@@ -291,9 +291,9 @@ So far the Teensy is filling that role well.
 </p>
 </div>
 
-<div id="outline-container-org448d984" class="outline-3">
-<h3 id="org448d984">Additional Recommended Reading</h3>
-<div class="outline-text-3" id="text-org448d984">
+<div id="outline-container-org7767d88" class="outline-3">
+<h3 id="org7767d88">Additional Recommended Reading</h3>
+<div class="outline-text-3" id="text-org7767d88">
 <ul class="org-ul">
 <li>Arduino docs on port manipulation: <a href="https://www.arduino.cc/en/Reference/PortManipulation">https://www.arduino.cc/en/Reference/PortManipulation</a></li>
 <li>Manipulating Teensy 3.6 pins without the arduino APIs: <a href="http://l0ner.github.io/2020-08-24_teensy-the-hard-way-blink/">http://l0ner.github.io/2020-08-24_teensy-the-hard-way-blink/</a></li>
@@ -303,9 +303,9 @@ So far the Teensy is filling that role well.
 </div>
 </div>
 
-<div id="outline-container-org66c2f96" class="outline-2">
-<h2 id="org66c2f96">Appendix 1: Array Implementation</h2>
-<div class="outline-text-2" id="text-org66c2f96">
+<div id="outline-container-orgb7ed52a" class="outline-2">
+<h2 id="orgb7ed52a">Appendix 1: Array Implementation</h2>
+<div class="outline-text-2" id="text-orgb7ed52a">
 <p>
 Suppose we replace the code with something a bit more flexible (and that was recommended in the arduino forums).
 </p>
@@ -340,7 +340,7 @@ Something bad clearly happens when we run this code:
 </p>
 
 
-<figure id="org46522c4">
+<figure id="orgc88e503">
 <img src="../static/teensy-many-pins/array_rise.png" alt="array_rise.png">
 
 </figure>

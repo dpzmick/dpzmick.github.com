@@ -36,9 +36,9 @@ Specifically, I've implemented a simple DSL for image processing which is JIT co
 I picked this project mostly to learn rust, so my result is certainly not production code but it may still be interesting to read a bit about.
 </p>
 
-<div id="outline-container-orgfd9b9b9" class="outline-2">
-<h2 id="orgfd9b9b9">Annotated example</h2>
-<div class="outline-text-2" id="text-orgfd9b9b9">
+<div id="outline-container-orgf798d2a" class="outline-2">
+<h2 id="orgf798d2a">Annotated example</h2>
+<div class="outline-text-2" id="text-orgf798d2a">
 <p>
 Before jumping into a discussion about how all of this works, lets look at an example of the DSL.
 In this example, we will define the sobel operator, then process an images with it.
@@ -115,9 +115,9 @@ They do not mutate their inputs, nor do they store any state, nor are they coupl
 </p>
 </div>
 
-<div id="outline-container-org35f4c97" class="outline-3">
-<h3 id="org35f4c97">Connecting functions</h3>
-<div class="outline-text-3" id="text-org35f4c97">
+<div id="outline-container-org80d1a4c" class="outline-3">
+<h3 id="org80d1a4c">Connecting functions</h3>
+<div class="outline-text-3" id="text-org80d1a4c">
 <p>
 Now that we have some abstract functions, we need to compose functions to create something meaningful.
 The composition of functions in my DSL is called a function chain.
@@ -149,9 +149,9 @@ For example, the entire sobel image processing chain looks something like this:
 </div>
 </div>
 
-<div id="outline-container-orgf70d065" class="outline-3">
-<h3 id="orgf70d065">Compiling and executing the chain</h3>
-<div class="outline-text-3" id="text-orgf70d065">
+<div id="outline-container-org350411d" class="outline-3">
+<h3 id="org350411d">Compiling and executing the chain</h3>
+<div class="outline-text-3" id="text-org350411d">
 <p>
 Now that we have built a chain representing the entire sobel algorithm, we only need to compile the chain and use the chain to process an image:
 </p>
@@ -176,9 +176,9 @@ Note: For the full sobel code, see <a href="https://github.com/dpzmick/rust_img_
 </div>
 </div>
 
-<div id="outline-container-orgaddac9a" class="outline-2">
-<h2 id="orgaddac9a">Details, Details, Details</h2>
-<div class="outline-text-2" id="text-orgaddac9a">
+<div id="outline-container-orgae830a7" class="outline-2">
+<h2 id="orgae830a7">Details, Details, Details</h2>
+<div class="outline-text-2" id="text-orgae830a7">
 <p>
 There's lots of little details which may be interesting to discuss, but I'm only going to discuss the compilation method.
 First, we need some slightly more rigorous definitions of things:
@@ -221,9 +221,9 @@ The generated <code>grad</code> code roughly corresponds to:
 </div>
 </div>
 
-<div id="outline-container-org339db8d" class="outline-2">
-<h2 id="org339db8d">Execution and image inputs</h2>
-<div class="outline-text-2" id="text-org339db8d">
+<div id="outline-container-orgf488b04" class="outline-2">
+<h2 id="orgf488b04">Execution and image inputs</h2>
+<div class="outline-text-2" id="text-orgf488b04">
 <p>
 A driver function is injected into the module.
 This function performs some bookkeeping tasks, then just loops over the pixels in the output image, calling the appropriate function (whichever was last in the chain) for every pixel:
@@ -253,9 +253,9 @@ There's lots of other interesting little idiosyncrasies in this code but I don't
 </div>
 </div>
 
-<div id="outline-container-orgdd1af82" class="outline-2">
-<h2 id="orgdd1af82">Performance</h2>
-<div class="outline-text-2" id="text-orgdd1af82">
+<div id="outline-container-orgd26f70b" class="outline-2">
+<h2 id="orgd26f70b">Performance</h2>
+<div class="outline-text-2" id="text-orgd26f70b">
 <p>
 Anyone who knows a little bit about computers and performance is probably hurting a little bit thinking about how this might perform.
 You've noticed all of the function calls, don't these have lots of overhead?
@@ -270,9 +270,9 @@ Every generated function is marked with an LLVM attribute <code>AlwaysInline</co
 </p>
 </div>
 
-<div id="outline-container-orgd0d7cd4" class="outline-3">
-<h3 id="orgd0d7cd4">Aside: Function inlining</h3>
-<div class="outline-text-3" id="text-orgd0d7cd4">
+<div id="outline-container-org6a14e4f" class="outline-3">
+<h3 id="org6a14e4f">Aside: Function inlining</h3>
+<div class="outline-text-3" id="text-org6a14e4f">
 <p>
 For those who are not totally familiar with the concept of function ininling, here's a quick example (note that the <code>inline</code> keyword in C doesn't guarantee this behavior, it is just a hint to the compiler):
 </p>
@@ -319,9 +319,9 @@ For example, because the call to <code>foo</code> has been inlined, the compiler
 </div>
 </div>
 
-<div id="outline-container-org554da7d" class="outline-3">
-<h3 id="org554da7d">Impact</h3>
-<div class="outline-text-3" id="text-org554da7d">
+<div id="outline-container-org63ec036" class="outline-3">
+<h3 id="org63ec036">Impact</h3>
+<div class="outline-text-3" id="text-org63ec036">
 <p>
 Aggressive function inlining gives me lots of freedom in my code generation.
 I can generate code which is totally inefficient, then inline everything and let the compiler do some of its magic.
@@ -332,9 +332,9 @@ If you're interested in looking at the optimized sobel LLVM module, here it is: 
 </div>
 </div>
 
-<div id="outline-container-org57fd14b" class="outline-3">
-<h3 id="org57fd14b">Numbers</h3>
-<div class="outline-text-3" id="text-org57fd14b">
+<div id="outline-container-orgd79588a" class="outline-3">
+<h3 id="orgd79588a">Numbers</h3>
+<div class="outline-text-3" id="text-orgd79588a">
 <p>
 To benchmark this code, I compared the JITed code with an implementation of the exact same thing written directly in Rust.
 My benchmarking is not extremely rigorous, but I've taken steps to try to create an honest benchmark.
@@ -367,7 +367,7 @@ Here is a plot of image vs average speedup (the images are sorted by the total n
 </p>
 
 
-<figure id="orge597f08">
+<figure id="org2357da6">
 <img src="../static/rust_img/img_vs_speedup.png" alt="img_vs_speedup.png" class="light-invert">
 
 </figure>
@@ -379,9 +379,9 @@ These results do indicate to me that I have at least achieved reasonable perform
 </p>
 </div>
 
-<div id="outline-container-org10bfe84" class="outline-4">
-<h4 id="org10bfe84">Final performance notes</h4>
-<div class="outline-text-4" id="text-org10bfe84">
+<div id="outline-container-orga17a309" class="outline-4">
+<h4 id="orga17a309">Final performance notes</h4>
+<div class="outline-text-4" id="text-orga17a309">
 <p>
 It should be noted that these results are not entirely surprising.
 Rust is also using LLVM as a backend.
@@ -406,9 +406,9 @@ The Halide talks give fantastic descriptions of many of the problems it aims to 
 </div>
 </div>
 
-<div id="outline-container-org3487fef" class="outline-2">
-<h2 id="org3487fef">Conclusions</h2>
-<div class="outline-text-2" id="text-org3487fef">
+<div id="outline-container-orge7607d5" class="outline-2">
+<h2 id="orge7607d5">Conclusions</h2>
+<div class="outline-text-2" id="text-orge7607d5">
 <p>
 Overall, this project was extremely enjoyable.
 I had yet another opportunity to fiddle with LLVM, which is always lots of fun (but sometimes very painful).
