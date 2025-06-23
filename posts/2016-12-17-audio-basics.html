@@ -33,10 +33,9 @@ about the things I learn as I work on this project.
 To start off this series, here's a short article about audio
 programming.
 </p>
-
-<div id="outline-container-orgb4a37b0" class="outline-2">
-<h2 id="orgb4a37b0">Digital audio</h2>
-<div class="outline-text-2" id="text-orgb4a37b0">
+<div id="outline-container-org6f6614a" class="outline-2">
+<h2 id="org6f6614a">Digital audio</h2>
+<div class="outline-text-2" id="text-org6f6614a">
 <p>
 To generate audio, audio software sends some digital audio signals to
 the audio card. Digital audio signals are just lists of floating point
@@ -53,7 +52,7 @@ wave like this (from Wikipedia):
 </p>
 
 
-<figure id="org601a238">
+<figure id="orgac54737">
 <img src="../static/sound/sine_samples.png" alt="sine_samples.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 1: </span>Samples</figcaption>
@@ -64,10 +63,9 @@ The audio card turns these lists of samples into some "real-world"
 audio, which is then played through the speakers.
 </p>
 </div>
-
-<div id="outline-container-orgebfae24" class="outline-3">
-<h3 id="orgebfae24">Types of audio software</h3>
-<div class="outline-text-3" id="text-orgebfae24">
+<div id="outline-container-orgf2fe378" class="outline-3">
+<h3 id="orgf2fe378">Types of audio software</h3>
+<div class="outline-text-3" id="text-orgf2fe378">
 <p>
 Next let's think about a few different kinds of audio software (this
 list is by no means complete):
@@ -91,7 +89,7 @@ interfaces.
 </p>
 
 
-<figure id="org27a06b7">
+<figure id="org25727e7">
 <img src="../static/sound/reason_drums.jpg" alt="reason_drums.jpg"> 
 
 <figcaption><span class="figure-number">Figure 2: </span>drum machine in some software</figcaption>
@@ -105,7 +103,7 @@ frequency ranges (make the bass louder, make the treble quieter):
 </p>
 
 
-<figure id="org3f5be40">
+<figure id="org3995cdd">
 <img src="../static/sound/itunes_eq.jpg" alt="itunes_eq.jpg">
 
 <figcaption><span class="figure-number">Figure 3: </span>equalizer</figcaption>
@@ -120,7 +118,7 @@ little mixer thing:
 </p>
 
 
-<figure id="org0761614">
+<figure id="orge5df6f9">
 <img src="../static/sound/win_mixer.png" alt="win_mixer.png">
 
 <figcaption><span class="figure-number">Figure 4: </span>windows mixer</figcaption>
@@ -139,10 +137,9 @@ developers use to develop audio applications.
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgc9b4c5b" class="outline-2">
-<h2 id="orgc9b4c5b">Software audio systems</h2>
-<div class="outline-text-2" id="text-orgc9b4c5b">
+<div id="outline-container-org7a834da" class="outline-2">
+<h2 id="org7a834da">Software audio systems</h2>
+<div class="outline-text-2" id="text-org7a834da">
 <p>
 Most software audio systems (as far as I know) tend to work the same
 way. There is a realtime thread that generates samples and a bunch of
@@ -152,10 +149,9 @@ provided callback function to get the samples it needs to deliver to the
 audio card.
 </p>
 </div>
-
-<div id="outline-container-org943789c" class="outline-3">
-<h3 id="org943789c">How fast is realtime?</h3>
-<div class="outline-text-3" id="text-org943789c">
+<div id="outline-container-org17679c0" class="outline-3">
+<h3 id="org17679c0">How fast is realtime?</h3>
+<div class="outline-text-3" id="text-org17679c0">
 <p>
 In the previous section, I claimed that, at 44.1 kHz (the standard CD
 sample rate), we need to take one audio sample approximately every 23
@@ -251,10 +247,9 @@ milliseconds can slow everyone else down.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org583545c" class="outline-3">
-<h3 id="org583545c">Time keeps on ticking</h3>
-<div class="outline-text-3" id="text-org583545c">
+<div id="outline-container-org80c69ae" class="outline-3">
+<h3 id="org80c69ae">Time keeps on ticking</h3>
+<div class="outline-text-3" id="text-org80c69ae">
 <p>
 If our callback function fails to generate samples quickly enough (or
 uses up all of the CPU time), the audio system will produce crackles,
@@ -298,13 +293,13 @@ the following code perform I/O?
 </p>
 
 <div class="org-src-container">
-<pre class="src src-C++"><span class="org-type">int</span> <span class="org-function-name">callback</span>(<span class="org-comment-delimiter">/* </span><span class="org-comment">args</span><span class="org-comment-delimiter"> */</span>) {
+<pre class="src src-C++"><code><span class="org-type">int</span> <span class="org-function-name">callback</span>(<span class="org-comment-delimiter">/* </span><span class="org-comment">args</span><span class="org-comment-delimiter"> */</span>) {
   <span class="org-type">float</span>* <span class="org-variable-name">samples</span> = <span class="org-comment-delimiter">// </span><span class="org-comment">get a contiguous array of samples in a nonblocking way</span>
   <span class="org-keyword">for</span> (<span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; N; i++) {
     output_sample( samples[i] );
   }
 }
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -359,10 +354,9 @@ allocators</a> which do not violate our realtime constraints.
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgd9afdc7" class="outline-2">
-<h2 id="orgd9afdc7">What do we do?</h2>
-<div class="outline-text-2" id="text-orgd9afdc7">
+<div id="outline-container-orgc12e1e0" class="outline-2">
+<h2 id="orgc12e1e0">What do we do?</h2>
+<div class="outline-text-2" id="text-orgc12e1e0">
 <p>
 In general, there are a few cool tricks we can use to design around
 these problems, but I'm not going to discuss any of them in this post.

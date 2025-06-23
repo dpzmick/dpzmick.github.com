@@ -37,10 +37,9 @@ The simulation ran for 1 hour (53,840,103 events were recorded).
   <iframe width="560" height="315" src="https://www.youtube.com/embed/tThh8m7cezw?start=185" frameborder="0" allowfullscreen>
   </iframe>
 </center>
-
-<div id="outline-container-org1be875f" class="outline-2">
-<h2 id="org1be875f">Model</h2>
-<div class="outline-text-2" id="text-org1be875f">
+<div id="outline-container-org8cba690" class="outline-2">
+<h2 id="org8cba690">Model</h2>
+<div class="outline-text-2" id="text-org8cba690">
 <p>
 I've attempted to capture two behaviors of real ants with my simulation:
 ants communicate using pheromones (scents), and they want to find food.
@@ -82,10 +81,9 @@ model.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org4d869b4" class="outline-2">
-<h2 id="org4d869b4">Pheromone Propagation</h2>
-<div class="outline-text-2" id="text-org4d869b4">
+<div id="outline-container-orgef0d308" class="outline-2">
+<h2 id="orgef0d308">Pheromone Propagation</h2>
+<div class="outline-text-2" id="text-orgef0d308">
 <p>
 When an ant is at a given cell, it gets the max pheromone strength of
 its neighbors. It then checks if the strength of the its current cell is
@@ -104,10 +102,9 @@ off too quickly, but, it is easy to implement, so I stuck with it.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org4296438" class="outline-2">
-<h2 id="org4296438">The Erlang Stuff</h2>
-<div class="outline-text-2" id="text-org4296438">
+<div id="outline-container-org92a9d5e" class="outline-2">
+<h2 id="org92a9d5e">The Erlang Stuff</h2>
+<div class="outline-text-2" id="text-org92a9d5e">
 <p>
 If you aren't familiar with Erlang, here is a super quick overview of
 the concurrency construct in the language.
@@ -162,10 +159,9 @@ who its neighbors are</li>
 </ul>
 </div>
 </div>
-
-<div id="outline-container-org0ca62e8" class="outline-2">
-<h2 id="org0ca62e8">Simulation</h2>
-<div class="outline-text-2" id="text-org0ca62e8">
+<div id="outline-container-orgd3add56" class="outline-2">
+<h2 id="orgd3add56">Simulation</h2>
+<div class="outline-text-2" id="text-orgd3add56">
 <p>
 When the simulator starts, it loads a config file
 specifying things like the size of the grid and the location of food,
@@ -178,10 +174,9 @@ These loops tell their respective ants to wake up and perform their move
 over and over again until the simulation is shut down.
 </p>
 </div>
-
-<div id="outline-container-org327ed43" class="outline-4">
-<h4 id="org327ed43">Wakeup_and_move</h4>
-<div class="outline-text-4" id="text-org327ed43">
+<div id="outline-container-org525c786" class="outline-4">
+<h4 id="org525c786">Wakeup_and_move</h4>
+<div class="outline-text-4" id="text-org525c786">
 <p>
 When an ant receives a wakeup_and_move message, it has to figure where
 it wants to move, if it can move there, and it needs to perform the
@@ -221,7 +216,7 @@ back to sleep</li>
 </ol>
 
 
-<figure id="orgec9a11b">
+<figure id="org63507d3">
 <img src="../static/ants/sequence.png" alt="sequence.png" class="light-invert">
 
 </figure>
@@ -235,10 +230,9 @@ the double occupancy issue than the collision issue.
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgd18bd73" class="outline-2">
-<h2 id="orgd18bd73">Data</h2>
-<div class="outline-text-2" id="text-orgd18bd73">
+<div id="outline-container-org726bb8e" class="outline-2">
+<h2 id="org726bb8e">Data</h2>
+<div class="outline-text-2" id="text-org726bb8e">
 <p>
 As the simulation runs, the ants are generating all sorts of data that
 should probably be recorded somewhere. This is a bit of a challenge
@@ -281,10 +275,9 @@ the scope of the project.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org13e2fbd" class="outline-2">
-<h2 id="org13e2fbd">Making the Video</h2>
-<div class="outline-text-2" id="text-org13e2fbd">
+<div id="outline-container-orgd519d72" class="outline-2">
+<h2 id="orgd519d72">Making the Video</h2>
+<div class="outline-text-2" id="text-orgd519d72">
 <p>
 Ants are moving all the time in an uncoordinated manner, moving a lot,
 and sometimes moving at exactly the same time so there isn't a totally
@@ -301,10 +294,9 @@ some number of frames per second.
 </p>
 </div>
 </div>
-
-<div id="outline-container-orgb6c3948" class="outline-2">
-<h2 id="orgb6c3948">Conclusions</h2>
-<div class="outline-text-2" id="text-orgb6c3948">
+<div id="outline-container-orgd63e07d" class="outline-2">
+<h2 id="orgd63e07d">Conclusions</h2>
+<div class="outline-text-2" id="text-orgd63e07d">
 <p>
 The naive model of any movement I used almost works. If I were to
 improve the pheromone propagation mechanism and add changing food

@@ -29,10 +29,9 @@ For simplicity, I'm using the Arduino libraries for this project (but writing C+
 We can fortunately easily look under the covers with the Teensy's Arduino implementation.
 In this post I'm going to walk through a few bad ways this can be done, and the correct way (for Teensy 4.1).
 </p>
-
-<div id="outline-container-org2364d67" class="outline-2">
-<h2 id="org2364d67">Naive Implementation</h2>
-<div class="outline-text-2" id="text-org2364d67">
+<div id="outline-container-orgf019e17" class="outline-2">
+<h2 id="orgf019e17">Naive Implementation</h2>
+<div class="outline-text-2" id="text-orgf019e17">
 <p>
 The simplest possible way to set multiple pins is to just set them one at a time.
 </p>
@@ -41,7 +40,7 @@ The simplest possible way to set multiple pins is to just set them one at a time
 For example, we could write:
 </p>
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
+<pre class="src src-cpp"><code><span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
 {
   <span class="org-comment-delimiter">// </span><span class="org-comment">configure a few pins as output pins</span>
   pinMode( 23, OUTPUT );
@@ -63,7 +62,7 @@ For example, we could write:
     delayMicroseconds( 10 );
   }
 }
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -86,7 +85,7 @@ Rising edge:
 </p>
 
 
-<figure id="orgf1bd648">
+<figure id="orgcae5b1f">
 <img src="../static/teensy-many-pins/naive_rise.png" alt="naive_rise.png">
 
 </figure>
@@ -96,7 +95,7 @@ Falling edge:
 </p>
 
 
-<figure id="orgb23447a">
+<figure id="org39639e4">
 <img src="../static/teensy-many-pins/naive_fall.png" alt="naive_fall.png">
 
 </figure>
@@ -119,10 +118,9 @@ Of course, this should not be surprising given that the code is setting the pin 
 Let's dig in.
 </p>
 </div>
-
-<div id="outline-container-org3c93c5c" class="outline-3">
-<h3 id="org3c93c5c">ARM assembly</h3>
-<div class="outline-text-3" id="text-org3c93c5c">
+<div id="outline-container-orga573082" class="outline-3">
+<h3 id="orga573082">ARM assembly</h3>
+<div class="outline-text-3" id="text-orga573082">
 <p>
 This code compiles to something much more complicated that the simple "set pin x to value v" function calls would indicate.
 The Teensy 4.1 doesn't actually have any facility with which it can set a <span class="underline">single</span> output pin!
@@ -157,7 +155,7 @@ For example, we could write a mask like <code>1010</code> to some "set" register
 Rephrasing the code above in these terms, we actually are doing something like:
 </p>
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-type">int</span> <span class="org-variable-name">state</span> = 0;
+<pre class="src src-cpp"><code><span class="org-type">int</span> <span class="org-variable-name">state</span> = 0;
 <span class="org-keyword">while</span>( 1 ) {
   <span class="org-keyword">if</span>( state ) {
     assign_to_set_register( 0b1000 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn on Pin 1</span>
@@ -172,7 +170,7 @@ Rephrasing the code above in these terms, we actually are doing something like:
     assign_to_clear_register( 0b0001 ); <span class="org-comment-delimiter">// </span><span class="org-comment">turn off Pin 4</span>
   }
 }
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -184,7 +182,7 @@ We should clearly just turn on every pin on in the first assignment (we'll get t
 Inspecting the generated assembly code (which is actually how I figured out what is going on), we can see this behavior:
 </p>
 <div class="org-src-container">
-<pre class="src src-asm"><span class="org-comment-delimiter">; </span><span class="org-comment">compute the bitmask values into r9, r8, ip, lr</span>
+<pre class="src src-asm"><code><span class="org-comment-delimiter">; </span><span class="org-comment">compute the bitmask values into r9, r8, ip, lr</span>
 <span class="org-comment-delimiter">;</span>
 <span class="org-comment-delimiter">; </span><span class="org-comment">.... some other code ....</span>
 <span class="org-comment-delimiter">;</span>
@@ -201,7 +199,7 @@ Inspecting the generated assembly code (which is actually how I figured out what
 <span class="org-function-name">str</span>     <span class="org-keyword">r8</span>, [r4, #136]  @ tmp150, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
 <span class="org-function-name">str</span>     <span class="org-keyword">ip</span>, [r4, #136]  @ tmp151, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
 <span class="org-function-name">str</span>     <span class="org-keyword">lr</span>, [r4, #136]  @ tmp152, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -216,16 +214,15 @@ But, of course, we can do much better than this by getting away from the arduino
 </div>
 </div>
 </div>
-
-<div id="outline-container-orge576bd1" class="outline-2">
-<h2 id="orge576bd1">Port implementation</h2>
-<div class="outline-text-2" id="text-orge576bd1">
+<div id="outline-container-orga1fb433" class="outline-2">
+<h2 id="orga1fb433">Port implementation</h2>
+<div class="outline-text-2" id="text-orga1fb433">
 <p>
 It's easy to implement the appropriate GPIO port code by grabbing bits and pieces from the teensy arduino headers.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
+<pre class="src src-cpp"><code><span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
 {
   <span class="org-comment-delimiter">// </span><span class="org-comment">use ardino functions for configuration</span>
   <span class="org-type">uint8_t</span> <span class="org-variable-name">pins</span>[] = { 23, 22, 21, 20 };
@@ -253,19 +250,19 @@ It's easy to implement the appropriate GPIO port code by grabbing bits and piece
     delayMicroseconds( 10 );
   }
 }
-</pre>
+</code></pre>
 </div>
 
 <p>
 The generated assembly does exactly what we're looking for:
 </p>
 <div class="org-src-container">
-<pre class="src src-asm"><span class="org-comment-delimiter">; </span><span class="org-comment">-- set</span>
+<pre class="src src-asm"><code><span class="org-comment-delimiter">; </span><span class="org-comment">-- set</span>
 <span class="org-function-name">str</span>     <span class="org-keyword">r7</span>, [lr, #132]  @ tmp175, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_SET
 
 <span class="org-comment-delimiter">; </span><span class="org-comment">-- clear</span>
 <span class="org-function-name">str</span>     <span class="org-keyword">r7</span>, [lr, #136]  @ tmp175, MEM[(struct IMXRT_GPIO_t *)1107296256B].DR_CLEAR
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -275,10 +272,9 @@ And, the scope shows a much nicer shape for both the rising edge and falling edg
 </p>
 </div>
 </div>
-
-<div id="outline-container-org787ac84" class="outline-2">
-<h2 id="org787ac84">Conclusion</h2>
-<div class="outline-text-2" id="text-org787ac84">
+<div id="outline-container-org7571c70" class="outline-2">
+<h2 id="org7571c70">Conclusion</h2>
+<div class="outline-text-2" id="text-org7571c70">
 <p>
 The Arduino APIs are fantastically useful for getting started quickly, but dropping to lower level APIs can be important.
 Fortunately, the Teensy makes it fantastically easy to dig around and use the chip when needed, and, the headers are even documented with where to look in the official manual!
@@ -290,10 +286,9 @@ I'm always looking for tools that have both a quick-and-easy beginner API, but d
 So far the Teensy is filling that role well.
 </p>
 </div>
-
-<div id="outline-container-org7767d88" class="outline-3">
-<h3 id="org7767d88">Additional Recommended Reading</h3>
-<div class="outline-text-3" id="text-org7767d88">
+<div id="outline-container-orgc7c19fe" class="outline-3">
+<h3 id="orgc7c19fe">Additional Recommended Reading</h3>
+<div class="outline-text-3" id="text-orgc7c19fe">
 <ul class="org-ul">
 <li>Arduino docs on port manipulation: <a href="https://www.arduino.cc/en/Reference/PortManipulation">https://www.arduino.cc/en/Reference/PortManipulation</a></li>
 <li>Manipulating Teensy 3.6 pins without the arduino APIs: <a href="http://l0ner.github.io/2020-08-24_teensy-the-hard-way-blink/">http://l0ner.github.io/2020-08-24_teensy-the-hard-way-blink/</a></li>
@@ -302,16 +297,15 @@ So far the Teensy is filling that role well.
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgb7ed52a" class="outline-2">
-<h2 id="orgb7ed52a">Appendix 1: Array Implementation</h2>
-<div class="outline-text-2" id="text-orgb7ed52a">
+<div id="outline-container-orgeb4d62f" class="outline-2">
+<h2 id="orgeb4d62f">Appendix 1: Array Implementation</h2>
+<div class="outline-text-2" id="text-orgeb4d62f">
 <p>
 Suppose we replace the code with something a bit more flexible (and that was recommended in the arduino forums).
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-preprocessor">#define</span> <span class="org-function-name">ARRAY_SIZE</span>( <span class="org-variable-name">arr</span> ) (<span class="org-keyword">sizeof</span>(arr)/<span class="org-keyword">sizeof</span>(*arr))
+<pre class="src src-cpp"><code><span class="org-preprocessor">#define</span> <span class="org-function-name">ARRAY_SIZE</span>( <span class="org-variable-name">arr</span> ) (<span class="org-keyword">sizeof</span>(arr)/<span class="org-keyword">sizeof</span>(*arr))
 
 <span class="org-keyword">extern</span> <span class="org-string">"C"</span> <span class="org-type">int</span> <span class="org-function-name">main</span>( <span class="org-type">void</span> )
 {
@@ -332,7 +326,7 @@ Suppose we replace the code with something a bit more flexible (and that was rec
     delayMicroseconds( 10 );
   }
 }
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -340,7 +334,7 @@ Something bad clearly happens when we run this code:
 </p>
 
 
-<figure id="orgc88e503">
+<figure id="org7a69243">
 <img src="../static/teensy-many-pins/array_rise.png" alt="array_rise.png">
 
 </figure>
@@ -359,7 +353,7 @@ The inner assignment loop this time compiled into:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-asm">    @ --- writes happen here
+<pre class="src src-asm"><code>    @ --- writes happen here
     <span class="org-keyword">add</span> r3, sp, #4      @ tmp202,,
 <span class="org-function-name">.L5</span>:
     <span class="org-keyword">ldrb</span>        r2, [r3], #1    @ zero_extendqisi2      @ D.14694, MEM[base: _138, offset: 0B]
@@ -373,7 +367,7 @@ The inner assignment loop this time compiled into:
     <span class="org-keyword">cmp</span> r3, r4  @ ivtmp.15, D.14699
     <span class="org-keyword">bne</span> .L5     @,
     @ --- done with writes
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -381,7 +375,7 @@ Inspecting the source for <code>digitalWriteFast</code> we can see that we've ta
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-keyword">static</span> <span class="org-keyword">inline</span> <span class="org-type">void</span> <span class="org-function-name">digitalWriteFast</span>(<span class="org-type">uint8_t</span> <span class="org-variable-name">pin</span>, <span class="org-type">uint8_t</span> <span class="org-variable-name">val</span>)
+<pre class="src src-cpp"><code><span class="org-keyword">static</span> <span class="org-keyword">inline</span> <span class="org-type">void</span> <span class="org-function-name">digitalWriteFast</span>(<span class="org-type">uint8_t</span> <span class="org-variable-name">pin</span>, <span class="org-type">uint8_t</span> <span class="org-variable-name">val</span>)
 {
   <span class="org-keyword">if</span> (__builtin_constant_p(pin)) {
     <span class="org-keyword">if</span> (val) {
@@ -404,7 +398,7 @@ Inspecting the source for <code>digitalWriteFast</code> we can see that we've ta
     <span class="org-keyword">if</span>(val) *portSetRegister(pin) = digitalPinToBitMask(pin);
     <span class="org-keyword">else</span> *portClearRegister(pin) = digitalPinToBitMask(pin);
   }
-</pre>
+</code></pre>
 </div>
 
 <p>

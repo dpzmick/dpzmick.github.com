@@ -32,10 +32,9 @@ On my single AMD 3800X desktop CPU, I have crafted a microbenchmark which has di
 Results like this should not be surprising on a multi-socket system, but this system has only a single processor.
 I believe this micro-benchmark is highlighting some of the features of the novel architecture on the new AMD chips.
 </p>
-
-<div id="outline-container-org8ce73c9" class="outline-2">
-<h2 id="org8ce73c9">Caches</h2>
-<div class="outline-text-2" id="text-org8ce73c9">
+<div id="outline-container-org5477051" class="outline-2">
+<h2 id="org5477051">Caches</h2>
+<div class="outline-text-2" id="text-org5477051">
 <p>
 Before diving in to Zen, I'd like to talk briefly CPU memory-caching systems.
 </p>
@@ -71,7 +70,7 @@ Something like this:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ditaa">/-----------------------------------\
+<pre class="src src-ditaa"><code>/-----------------------------------\
 |                                   |
 |   L3 cache (shared by all cores)  |
 |                                   |
@@ -84,7 +83,7 @@ Something like this:
 |  Core  |  Core  |  Core  |  Core  |
 |        |        |        |        |
 \--------+--------+--------+--------/
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -92,10 +91,9 @@ This style of L1/L2/L3 cache has been common in CPU designs for many years.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org7282637" class="outline-2">
-<h2 id="org7282637">Ryzen Architecture</h2>
-<div class="outline-text-2" id="text-org7282637">
+<div id="outline-container-orgcb74d87" class="outline-2">
+<h2 id="orgcb74d87">Ryzen Architecture</h2>
+<div class="outline-text-2" id="text-orgcb74d87">
 <p>
 To talk about AMD's Zen architecture, there's a few terms we need to define:
 </p>
@@ -137,10 +135,9 @@ If cores from different CCXs need to communicate, they will have to use the infi
 </p>
 </div>
 </div>
-
-<div id="outline-container-org7fa7381" class="outline-2">
-<h2 id="org7fa7381">Latency Test</h2>
-<div class="outline-text-2" id="text-org7fa7381">
+<div id="outline-container-org60a4ffd" class="outline-2">
+<h2 id="org60a4ffd">Latency Test</h2>
+<div class="outline-text-2" id="text-org60a4ffd">
 <p>
 To verify my hypothesis, lets start with a classic pingpong roundtrip latency test.
 </p>
@@ -164,11 +161,11 @@ Latency for A-&gt;B and B-&gt;A were both tested (for no particular reason).
 That is:
 </p>
 <div class="org-src-container">
-<pre class="src src-python"><span class="org-keyword">for</span> core1 <span class="org-keyword">in</span> cores:
+<pre class="src src-python"><code><span class="org-keyword">for</span> core1 <span class="org-keyword">in</span> cores:
     <span class="org-keyword">for</span> core2 <span class="org-keyword">in</span> cores:
-        <span class="org-keyword">if</span> core1 == core2: <span class="org-keyword">continue</span> <span class="org-comment-delimiter"># </span><span class="org-comment">skip self, both threads spin</span>
-        results[ (core1, core2) ] = mean_of_many_tests( core1, core2 )
-</pre>
+        <span class="org-keyword">if</span> core1 <span class="org-operator">==</span> core2: <span class="org-keyword">continue</span> <span class="org-comment-delimiter"># </span><span class="org-comment">skip self, both threads spin</span>
+        <span class="org-variable-name">results</span>[ (core1, core2) ] <span class="org-operator">=</span> mean_of_many_tests( core1, core2 )
+</code></pre>
 </div>
 
 <p>
@@ -196,19 +193,17 @@ Few applications actually have any reason to bounce a single value back and fort
 </p>
 </div>
 </div>
-
-<div id="outline-container-orgcbf966c" class="outline-2">
-<h2 id="orgcbf966c">Bandwidth Test</h2>
-<div class="outline-text-2" id="text-orgcbf966c">
+<div id="outline-container-org0d4153b" class="outline-2">
+<h2 id="org0d4153b">Bandwidth Test</h2>
+<div class="outline-text-2" id="text-org0d4153b">
 <p>
 When discussing latency, programmers who are more bandwidth focused will often (rightly) say something like "the latency doesn't matter, I only care about bandwidth."
 Most programmers are more focused on bandwidth than latency, because generally we care a lot more about throughput than latency.
 </p>
 </div>
-
-<div id="outline-container-org753949f" class="outline-3">
-<h3 id="org753949f">Baseline with large core-to-core copies</h3>
-<div class="outline-text-3" id="text-org753949f">
+<div id="outline-container-orgee634a7" class="outline-3">
+<h3 id="orgee634a7">Baseline with large core-to-core copies</h3>
+<div class="outline-text-3" id="text-orgee634a7">
 <p>
 Let's start by proving that, when moving around large chunks of data, none of this matters.
 </p>
@@ -246,10 +241,9 @@ For full details about this benchmark, please see the source and my results <a h
 </p>
 </div>
 </div>
-
-<div id="outline-container-org81a6662" class="outline-3">
-<h3 id="org81a6662">When might it matter?</h3>
-<div class="outline-text-3" id="text-org81a6662">
+<div id="outline-container-org571d588" class="outline-3">
+<h3 id="org571d588">When might it matter?</h3>
+<div class="outline-text-3" id="text-org571d588">
 <p>
 We are often able to amortize high latency operations over large transfers or by work on something else to hide the costs of high latency.
 However, as data sizes shrink, it becomes harder and harder to hide latency.
@@ -278,12 +272,12 @@ The threads share a region of memory that contains a bunch of "chunks".
 The array of chunks looks sort of a like a single producer, single consumer queue:
 </p>
 <div class="org-src-container">
-<pre class="src src-c"><span class="org-keyword">typedef</span> <span class="org-keyword">struct</span> {
+<pre class="src src-c"><code><span class="org-keyword">typedef</span> <span class="org-keyword">struct</span> {
   <span class="org-type">uint64_t</span> <span class="org-variable-name">ready</span>;          
   <span class="org-type">char</span>     <span class="org-variable-name">padding</span>[ CACHE_LINE_SIZE - <span class="org-keyword">sizeof</span>( <span class="org-type">uint64_t</span> ) ];
   <span class="org-type">char</span>     <span class="org-variable-name">data</span>[ N_DATA_LINES*CACHE_LINE_SIZE ];
 } <span class="org-type">chunk_t</span>;
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -297,24 +291,24 @@ Padding is introduced to ensure that the data region and the <code>ready</code> 
 In pseudocode, the writer looks something like this:
 </p>
 <div class="org-src-container">
-<pre class="src src-c"><span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; N_CHUNKS; ++i ) {
+<pre class="src src-c"><code><span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; N_CHUNKS; ++i ) {
   populate_chunk_data( &amp;chunks[i] );
   <span class="org-comment-delimiter">// </span><span class="org-comment">signal that the reader should read the data</span>
   atomic_store( &amp;chunks[i].ready, <span class="org-constant">true</span> );
 }
-</pre>
+</code></pre>
 </div>
 
 <p>
 The reader looks something like this:
 </p>
 <div class="org-src-container">
-<pre class="src src-c"><span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; N_CHUNKS; ++i ) {
+<pre class="src src-c"><code><span class="org-keyword">for</span>( <span class="org-type">size_t</span> <span class="org-variable-name">i</span> = 0; i &lt; N_CHUNKS; ++i ) {
   <span class="org-comment-delimiter">// </span><span class="org-comment">Wait for the chunk to be ready</span>
   <span class="org-keyword">while</span>( <span class="org-negation-char">!</span>atomic_load( &amp;chunks[i].ready ) ) { }
   read_and_discard_data( &amp;chunks[i] );
 }
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -330,17 +324,16 @@ I've kept the size low to highlight the effects I'm looking for, but, these effe
 </p>
 </div>
 </div>
-
-<div id="outline-container-orgaf0de70" class="outline-3">
-<h3 id="orgaf0de70">Results</h3>
-<div class="outline-text-3" id="text-orgaf0de70">
+<div id="outline-container-org624dad8" class="outline-3">
+<h3 id="org624dad8">Results</h3>
+<div class="outline-text-3" id="text-org624dad8">
 <p>
 Using the same style of plots that we've already see, let's first look at bandwidth reported by the writer.
 This plot shows the write rate when Y-axis core is sending data to X-axis core (rate is in GiB/s, I've again included the SMT cores):
 </p>
 
 
-<figure id="orgf9e3443">
+<figure id="orgb69d7c4">
 <img src="../static/ryzen_numa/writerplot.png" alt="writerplot.png">
 
 </figure>
@@ -377,10 +370,9 @@ For full details about this benchmark, please see the source and my results <a h
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgb49dd9b" class="outline-2">
-<h2 id="orgb49dd9b">Conclusions</h2>
-<div class="outline-text-2" id="text-orgb49dd9b">
+<div id="outline-container-orgeaca488" class="outline-2">
+<h2 id="orgeaca488">Conclusions</h2>
+<div class="outline-text-2" id="text-orgeaca488">
 <p>
 This sort of behavior will not come as a surprised for programmers used to programming for multi-socket (multiple physical CPU) server systems (see <a href="https://en.wikipedia.org/wiki/Non-uniform_memory_access">NUMA</a>).
 However, for those writing parallel applications, I feel like this effect is still notable and warrants slightly different considerations than traditional NUMA.

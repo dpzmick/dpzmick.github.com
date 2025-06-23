@@ -35,10 +35,9 @@ behavior of study group formation using similar methods. In later posts
 I plan to strengthen the model and (hopefully) present possible
 solutions to the problem.
 </p>
-
-<div id="outline-container-orgdd91be4" class="outline-2">
-<h2 id="orgdd91be4">The Model</h2>
-<div class="outline-text-2" id="text-orgdd91be4">
+<div id="outline-container-org42a37f0" class="outline-2">
+<h2 id="org42a37f0">The Model</h2>
+<div class="outline-text-2" id="text-org42a37f0">
 <p>
 The basic assumptions of the simulation we will use are as follows:
 </p>
@@ -112,10 +111,9 @@ optimal size is $ \frac{\alpha}{\beta} $.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org8ca9add" class="outline-2">
-<h2 id="org8ca9add">The Simulation</h2>
-<div class="outline-text-2" id="text-org8ca9add">
+<div id="outline-container-orga4d04a1" class="outline-2">
+<h2 id="orga4d04a1">The Simulation</h2>
+<div class="outline-text-2" id="text-orga4d04a1">
 <p>
 The simulation I have in mind is fairly simple.
 </p>
@@ -130,10 +128,9 @@ function)</li>
 </ol>
 </div>
 </div>
-
-<div id="outline-container-org8ac6ee6" class="outline-2">
-<h2 id="org8ac6ee6">Implementation and Results</h2>
-<div class="outline-text-2" id="text-org8ac6ee6">
+<div id="outline-container-orgb0ecfd7" class="outline-2">
+<h2 id="orgb0ecfd7">Implementation and Results</h2>
+<div class="outline-text-2" id="text-orgb0ecfd7">
 <p>
 I wrote some python code to see how this system would perform. I will
 leave the code at the bottom of the document. The results seem to
@@ -141,13 +138,13 @@ correspond with reality.
 </p>
 
 
-<figure id="org7c52d3a">
+<figure id="org917e841">
 <img src="../static/study_groups/1x.5.png" alt="1x.5.png" class="light-invert">
 
 </figure>
 
 
-<figure id="orgfba1624">
+<figure id="org08d18a2">
 <img src="../static/study_groups/1x.4.png" alt="1x.4.png" class="light-invert">
 
 </figure>
@@ -167,10 +164,9 @@ writing.
 </ul>
 </div>
 </div>
-
-<div id="outline-container-org3686581" class="outline-2">
-<h2 id="org3686581">Conclusion</h2>
-<div class="outline-text-2" id="text-org3686581">
+<div id="outline-container-org312b8e1" class="outline-2">
+<h2 id="org312b8e1">Conclusion</h2>
+<div class="outline-text-2" id="text-org312b8e1">
 <p>
 From this model, it seems like we tend to form groups larger than would
 be optimal, because people continue to join the group once their joining
@@ -188,48 +184,47 @@ could discuss more ideas!
 </p>
 </div>
 </div>
-
-<div id="outline-container-org72f7e86" class="outline-2">
-<h2 id="org72f7e86">Simulation Code (not pythonic!)</h2>
-<div class="outline-text-2" id="text-org72f7e86">
+<div id="outline-container-org748c1bc" class="outline-2">
+<h2 id="org748c1bc">Simulation Code (not pythonic!)</h2>
+<div class="outline-text-2" id="text-org748c1bc">
 <div class="org-src-container">
-<pre class="src src-python"><span class="org-keyword">from</span> math <span class="org-keyword">import</span> <span class="org-builtin">pow</span>
+<pre class="src src-python"><code><span class="org-keyword">from</span> math <span class="org-keyword">import</span> <span class="org-builtin">pow</span>
 <span class="org-keyword">from</span> random <span class="org-keyword">import</span> randint
 <span class="org-comment-delimiter">###### </span><span class="org-comment">Parameters</span>
-<span class="org-variable-name">a</span> = 1.0 <span class="org-comment-delimiter"># </span><span class="org-comment">alpha define above</span>
-<span class="org-variable-name">b</span> = .5  <span class="org-comment-delimiter"># </span><span class="org-comment">beta, also define above</span>
-<span class="org-variable-name">maxgroups</span> = 15
-<span class="org-variable-name">numjoiners</span> = 10
+<span class="org-variable-name">a</span> <span class="org-operator">=</span> 1.0 <span class="org-comment-delimiter"># </span><span class="org-comment">alpha define above</span>
+<span class="org-variable-name">b</span> <span class="org-operator">=</span> .5  <span class="org-comment-delimiter"># </span><span class="org-comment">beta, also define above</span>
+<span class="org-variable-name">maxgroups</span> <span class="org-operator">=</span> 15
+<span class="org-variable-name">numjoiners</span> <span class="org-operator">=</span> 10
 
 <span class="org-comment-delimiter">###### </span><span class="org-comment">Globals</span>
-<span class="org-variable-name">pool</span> = [0] * maxgroups
+<span class="org-variable-name">pool</span> <span class="org-operator">=</span> [0] <span class="org-operator">*</span> maxgroups
 
 <span class="org-comment-delimiter">###### </span><span class="org-comment">Functions</span>
 <span class="org-keyword">def</span> <span class="org-function-name">fitness</span>(n):
-    <span class="org-keyword">return</span> a*n - (b/2)*<span class="org-builtin">pow</span>(n,2)
+    <span class="org-keyword">return</span> a<span class="org-operator">*</span>n <span class="org-operator">-</span> (b<span class="org-operator">/</span>2)<span class="org-operator">*</span><span class="org-builtin">pow</span>(n,2)
 
 <span class="org-comment-delimiter">##### </span><span class="org-comment">Simulation</span>
-<span class="org-keyword">if</span> <span class="org-builtin">__name__</span> == <span class="org-string">"__main__"</span>:
+<span class="org-keyword">if</span> <span class="org-builtin">__name__</span> <span class="org-operator">==</span> <span class="org-string">"__main__"</span>:
     <span class="org-builtin">print</span>(<span class="org-string">"Starting the simulation"</span>)
     <span class="org-keyword">for</span> i <span class="org-keyword">in</span> <span class="org-builtin">xrange</span>(0, numjoiners):
-        best = (-1, <span class="org-constant">None</span>)
+        <span class="org-variable-name">best</span> <span class="org-operator">=</span> (<span class="org-operator">-</span>1, <span class="org-constant">None</span>)
         <span class="org-keyword">for</span> index, fits <span class="org-keyword">in</span> <span class="org-builtin">enumerate</span>(<span class="org-builtin">map</span>(fitness, pool)):
-            <span class="org-keyword">if</span> best[1] == <span class="org-constant">None</span> <span class="org-keyword">or</span> fits &gt; best[1]:
-                best = (index, fits)
-        <span class="org-keyword">if</span> best[0] &gt; 0:
-            pool[<span class="org-variable-name">best</span>[0]] += 1
-        <span class="org-keyword">elif</span> best[0] == 0:
-            pool[randint(0, <span class="org-builtin">len</span>(pool) - 1)] += 1
+            <span class="org-keyword">if</span> best[1] <span class="org-operator">==</span> <span class="org-constant">None</span> <span class="org-keyword">or</span> fits <span class="org-operator">&gt;</span> best[1]:
+                <span class="org-variable-name">best</span> <span class="org-operator">=</span> (index, fits)
+        <span class="org-keyword">if</span> best[0] <span class="org-operator">&gt;</span> 0:
+            pool[best[0]] <span class="org-operator">+=</span> 1
+        <span class="org-keyword">elif</span> best[0] <span class="org-operator">==</span> 0:
+            <span class="org-variable-name">pool</span>[randint(0, <span class="org-builtin">len</span>(pool) <span class="org-operator">-</span> 1)] <span class="org-operator">+=</span> 1
         <span class="org-keyword">else</span>:
             <span class="org-builtin">print</span>(<span class="org-string">"I refuse to join these groups"</span>)
             <span class="org-keyword">break</span>
     <span class="org-builtin">print</span>(pool)
     <span class="org-builtin">print</span>(<span class="org-builtin">map</span>(fitness,pool))
 
-    <span class="org-builtin">print</span>(<span class="org-string">"optimal group size %d"</span> % (a/b) )
-    <span class="org-builtin">print</span>(<span class="org-string">"average non_empty group size %d"</span> %
-            (<span class="org-builtin">sum</span>(pool) / <span class="org-builtin">len</span>(<span class="org-builtin">filter</span>(<span class="org-keyword">lambda</span> a: a != 0, pool))))
-</pre>
+    <span class="org-builtin">print</span>(<span class="org-string">"optimal group size %d"</span> <span class="org-operator">%</span> (a<span class="org-operator">/</span>b) )
+    <span class="org-builtin">print</span>(<span class="org-string">"average non_empty group size %d"</span> <span class="org-operator">%</span>
+            (<span class="org-builtin">sum</span>(pool) <span class="org-operator">/</span> <span class="org-builtin">len</span>(<span class="org-builtin">filter</span>(<span class="org-keyword">lambda</span> a: a <span class="org-operator">!=</span> 0, pool))))
+</code></pre>
 </div>
 </div>
 </div>

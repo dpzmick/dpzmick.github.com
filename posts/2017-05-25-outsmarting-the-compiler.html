@@ -30,7 +30,7 @@ Here are some example structs:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-keyword">struct</span> <span class="org-keyword">__attribute__</span>((packed)) <span class="org-type">A</span> {
+<pre class="src src-cpp"><code><span class="org-keyword">struct</span> <span class="org-keyword">__attribute__</span>((packed)) <span class="org-type">A</span> {
   int64_t a;
   <span class="org-type">int64_t</span> <span class="org-variable-name">b</span>;
   <span class="org-type">char</span>    <span class="org-variable-name">arr</span>[PADDING1];
@@ -43,7 +43,7 @@ Here are some example structs:
   <span class="org-type">char</span>    <span class="org-variable-name">arr</span>[PADDING2];
   <span class="org-type">int64_t</span> <span class="org-variable-name">c</span>;
 };
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -51,14 +51,14 @@ The "padding" arrays are populated ahead of time, so we just need to set <code>a
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>&gt;
+<pre class="src src-cpp"><code><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>&gt;
 <span class="org-type">void</span> <span class="org-function-name">writeFields</span>(<span class="org-type">T</span>* <span class="org-variable-name">t</span>)
 {
   t-&gt;a = 12;
   t-&gt;b = 25;
   t-&gt;c = 16;
 }
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -67,13 +67,13 @@ We just have a blob of memory and a tag which indicates which of the two variant
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-keyword">enum</span> <span class="org-keyword">class</span> <span class="org-type">Variant</span> { <span class="org-variable-name">eA</span>, <span class="org-variable-name">eB</span> };
+<pre class="src src-cpp"><code><span class="org-keyword">enum</span> <span class="org-keyword">class</span> <span class="org-type">Variant</span> { <span class="org-variable-name">eA</span>, <span class="org-variable-name">eB</span> };
 
 <span class="org-keyword">struct</span> <span class="org-type">Wrapper</span> {
   <span class="org-type">Variant</span> <span class="org-variable-name">v</span>;
   <span class="org-type">char</span> <span class="org-variable-name">payload</span>[];
 };
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -81,7 +81,7 @@ So, our fast path <code>write</code> function will need to take a wrapper struct
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-type">void</span> <span class="org-function-name">write</span>(<span class="org-type">Wrapper</span>* <span class="org-variable-name">w</span>)
+<pre class="src src-cpp"><code><span class="org-type">void</span> <span class="org-function-name">write</span>(<span class="org-type">Wrapper</span>* <span class="org-variable-name">w</span>)
 {
   <span class="org-keyword">if</span> (w-&gt;v == <span class="org-constant">Variant</span>::eA) {
     writeFields&lt;A&gt;(<span class="org-keyword">reinterpret_cast</span>&lt;<span class="org-type">A</span>*&gt;(w-&gt;payload));
@@ -90,7 +90,7 @@ So, our fast path <code>write</code> function will need to take a wrapper struct
     writeFields&lt;B&gt;(<span class="org-keyword">reinterpret_cast</span>&lt;<span class="org-type">B</span>*&gt;(w-&gt;payload));
   }
 }
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -100,7 +100,7 @@ Take a look (<code>clang-4.0 --std=c++1z -O3</code>):
 </p>
 
 <div class="org-src-container">
-<pre class="src src-asm"><span class="org-function-name">.LCPI2_0</span>:
+<pre class="src src-asm"><code><span class="org-function-name">.LCPI2_0</span>:
         <span class="org-keyword">.quad</span>   12                      # 0xc
         <span class="org-keyword">.quad</span>   25                      # 0x19
 <span class="org-function-name">write</span>(Wrapper*):                      # @write(Wrapper*)
@@ -108,7 +108,7 @@ Take a look (<code>clang-4.0 --std=c++1z -O3</code>):
         <span class="org-keyword">movups</span>  xmmword ptr [rdi + 4], xmm0
         <span class="org-keyword">mov</span>     qword ptr [rdi + 36], 16
         <span class="org-keyword">ret</span>
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -131,12 +131,12 @@ Introduce a new wrapper type (and abandon all type safety):
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-keyword">struct</span> <span class="org-type">WrapperWithOffset</span> {
+<pre class="src src-cpp"><code><span class="org-keyword">struct</span> <span class="org-type">WrapperWithOffset</span> {
   <span class="org-type">Variant</span> <span class="org-variable-name">v</span>;
   <span class="org-type">size_t</span> <span class="org-variable-name">offset</span>;
   <span class="org-type">char</span> <span class="org-variable-name">payload</span>[];
 };
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -144,7 +144,7 @@ Next, we can write a new function which will operate on structs of type <code>A<
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-type">void</span> <span class="org-function-name">writeFieldsWithOffset</span>(<span class="org-type">A</span>* <span class="org-variable-name">t</span>, <span class="org-type">size_t</span> <span class="org-variable-name">c_offset</span>)
+<pre class="src src-cpp"><code><span class="org-type">void</span> <span class="org-function-name">writeFieldsWithOffset</span>(<span class="org-type">A</span>* <span class="org-variable-name">t</span>, <span class="org-type">size_t</span> <span class="org-variable-name">c_offset</span>)
 {
   <span class="org-comment-delimiter">// </span><span class="org-comment">make sure a and b are always at the same offset in struct A and struct B</span>
   static_assert(offsetof(A, a) == offsetof(B, a), <span class="org-string">"!"</span>);
@@ -162,7 +162,7 @@ Next, we can write a new function which will operate on structs of type <code>A<
   <span class="org-type">A</span>* <span class="org-variable-name">a</span> = <span class="org-keyword">reinterpret_cast</span>&lt;<span class="org-type">A</span>*&gt;(w-&gt;payload);
   writeFieldsWithOffset(a, w-&gt;offset);
 }
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -170,7 +170,7 @@ Checking the code, this compiles down to exactly what we were hoping it would (a
 </p>
 
 <div class="org-src-container">
-<pre class="src src-asm"><span class="org-function-name">.LCPI1_0</span>:
+<pre class="src src-asm"><code><span class="org-function-name">.LCPI1_0</span>:
         <span class="org-keyword">.quad</span>   12                      # 0xc
         <span class="org-keyword">.quad</span>   25                      # 0x19
 <span class="org-function-name">writeLessSafe</span>(WrapperWithOffset*): # @writeLessSafe(WrapperWithOffset*)
@@ -179,24 +179,23 @@ Checking the code, this compiles down to exactly what we were hoping it would (a
         <span class="org-keyword">movups</span>  xmmword ptr [rdi + 16], xmm0
         <span class="org-keyword">mov</span>     qword ptr [rdi + rax + 16], 16
         <span class="org-keyword">ret</span>
-</pre>
+</code></pre>
 </div>
 
 <p>
 Hooray, no conditional generated, exactly as we desired.
 We've outsmarted the compiler!
 </p>
-
 <ul class="org-ul">
-<li><a id="org2c294b1"></a>Assertion Failed: smarter_than_compiler<br>
-<div class="outline-text-5" id="text-org2c294b1">
+<li><a id="org8ab2f26"></a>Assertion Failed: smarter_than_compiler<br>
+<div class="outline-text-5" id="text-org8ab2f26">
 <p>
 Let's set <code>PADDING1 = 16</code> and <code>PADDING2 = 17</code>.
 The code generated on clang-4.0 for <code>write(Wrapper*)</code> looks quite interesting:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-asm"><span class="org-function-name">.LCPI2_0</span>:
+<pre class="src src-asm"><code><span class="org-function-name">.LCPI2_0</span>:
         <span class="org-keyword">.quad</span>   12                      # 0xc
         <span class="org-keyword">.quad</span>   25                      # 0x19
 <span class="org-function-name">write</span>(Wrapper*):                      # @write(Wrapper*)
@@ -207,7 +206,7 @@ The code generated on clang-4.0 for <code>write(Wrapper*)</code> looks quite int
         <span class="org-keyword">setne</span>   al
         <span class="org-keyword">mov</span>     qword ptr [rdi + rax + 36], 16
         <span class="org-keyword">ret</span>
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -225,12 +224,12 @@ What happens if we change the values?
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp"><span class="org-keyword">enum</span> <span class="org-keyword">class</span> <span class="org-type">Variant</span> { <span class="org-variable-name">eA</span> = 666, <span class="org-variable-name">eB</span> = 1337 };
-</pre>
+<pre class="src src-cpp"><code><span class="org-keyword">enum</span> <span class="org-keyword">class</span> <span class="org-type">Variant</span> { <span class="org-variable-name">eA</span> = 666, <span class="org-variable-name">eB</span> = 1337 };
+</code></pre>
 </div>
 
 <div class="org-src-container">
-<pre class="src src-asm"><span class="org-function-name">.LCPI2_0</span>:
+<pre class="src src-asm"><code><span class="org-function-name">.LCPI2_0</span>:
         <span class="org-keyword">.quad</span>   12                      # 0xc
         <span class="org-keyword">.quad</span>   25                      # 0x19
 <span class="org-function-name">write</span>(Wrapper*):                      # @write(Wrapper*)
@@ -242,7 +241,7 @@ What happens if we change the values?
         <span class="org-keyword">setne</span>   cl
         <span class="org-keyword">mov</span>     qword ptr [rdi + rcx + 36], 16
         <span class="org-keyword">ret</span>
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -251,10 +250,9 @@ The code has changed slightly to account for the new potential values of <code>W
 </div>
 </li>
 </ul>
-
-<div id="outline-container-org452b209" class="outline-4">
-<h4 id="org452b209">Meaner PADDING</h4>
-<div class="outline-text-4" id="text-org452b209">
+<div id="outline-container-org0db6f3f" class="outline-4">
+<h4 id="org0db6f3f">Meaner PADDING</h4>
+<div class="outline-text-4" id="text-org0db6f3f">
 <p>
 Reminder: In the previous examples <code>PADDING1 = 16</code> and <code>PADDING2 = 17</code>.
 What happens to the generated code if we make the paddings completely wacky?
@@ -265,7 +263,7 @@ With <code>PADDING1 = 16</code> and <code>PADDING2 = 173</code>, and with the en
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp">.LCPI1_0:
+<pre class="src src-cpp"><code>.LCPI1_0:
         .quad   12                      # 0xc
         .quad   25                      # 0x19
 writeLessSafe(<span class="org-type">WrapperWithOffset</span>*): # @writeLessSafe(<span class="org-type">WrapperWithOffset</span>*)
@@ -287,7 +285,7 @@ write(<span class="org-type">Wrapper</span>*):                      # @write(<sp
         cmove   rcx, rax
         <span class="org-type">mov</span>     <span class="org-type">qword</span> <span class="org-variable-name">ptr</span> [rdi + rcx + 4], 16
         ret
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -301,16 +299,15 @@ The answer to that depends on which compiler you ask.
 </p>
 </div>
 </div>
-
-<div id="outline-container-orga66ee8c" class="outline-4">
-<h4 id="orga66ee8c">gcc 7.1 (&#x2013;std=c++1z -O3)</h4>
-<div class="outline-text-4" id="text-orga66ee8c">
+<div id="outline-container-org52a314f" class="outline-4">
+<h4 id="org52a314f">gcc 7.1 (&#x2013;std=c++1z -O3)</h4>
+<div class="outline-text-4" id="text-org52a314f">
 </div>
 <ul class="org-ul">
-<li><a id="org158dccf"></a><code>PADDING1</code> <code>= =PADDING2</code><br>
-<div class="outline-text-5" id="text-org158dccf">
+<li><a id="orge1a0219"></a><code>PADDING1</code> <code>= =PADDING2</code><br>
+<div class="outline-text-5" id="text-orge1a0219">
 <div class="org-src-container">
-<pre class="src src-asm"><span class="org-function-name">writeLessSafe</span>(WrapperWithOffset*):
+<pre class="src src-asm"><code><span class="org-function-name">writeLessSafe</span>(WrapperWithOffset*):
         <span class="org-keyword">mov</span>     rax, QWORD PTR [rdi+8]
         <span class="org-keyword">mov</span>     QWORD PTR [rdi+16], 12
         <span class="org-keyword">mov</span>     QWORD PTR [rdi+24], 25
@@ -326,7 +323,7 @@ The answer to that depends on which compiler you ask.
         <span class="org-keyword">rep</span> ret
 <span class="org-function-name">.L7</span>:
         <span class="org-keyword">rep</span> ret
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -334,11 +331,10 @@ That's a little odd.
 </p>
 </div>
 </li>
-
-<li><a id="org391674e"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 17</code><br>
-<div class="outline-text-5" id="text-org391674e">
+<li><a id="org1877955"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 17</code><br>
+<div class="outline-text-5" id="text-org1877955">
 <div class="org-src-container">
-<pre class="src src-asm"><span class="org-function-name">write</span>(Wrapper*):
+<pre class="src src-asm"><code><span class="org-function-name">write</span>(Wrapper*):
         <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
         <span class="org-keyword">mov</span>     QWORD PTR [rdi+4], 12
         <span class="org-keyword">mov</span>     QWORD PTR [rdi+12], 25
@@ -349,15 +345,14 @@ That's a little odd.
 <span class="org-function-name">.L7</span>:
         <span class="org-keyword">mov</span>     QWORD PTR [rdi+36], 16
         <span class="org-keyword">ret</span>
-</pre>
+</code></pre>
 </div>
 </div>
 </li>
-
-<li><a id="org3d6c48b"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 173</code><br>
-<div class="outline-text-5" id="text-org3d6c48b">
+<li><a id="orgeab4f94"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 173</code><br>
+<div class="outline-text-5" id="text-orgeab4f94">
 <div class="org-src-container">
-<pre class="src src-asm"><span class="org-function-name">write</span>(Wrapper*):
+<pre class="src src-asm"><code><span class="org-function-name">write</span>(Wrapper*):
         <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
         <span class="org-keyword">mov</span>     QWORD PTR [rdi+4], 12
         <span class="org-keyword">mov</span>     QWORD PTR [rdi+12], 25
@@ -368,7 +363,7 @@ That's a little odd.
 <span class="org-function-name">.L7</span>:
         <span class="org-keyword">mov</span>     QWORD PTR [rdi+36], 16
         <span class="org-keyword">ret</span>
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -380,10 +375,9 @@ At the moment I'm not convinced that it hurts much.
 </li>
 </ul>
 </div>
-
-<div id="outline-container-org93ea8aa" class="outline-2">
-<h2 id="org93ea8aa">Conclusion</h2>
-<div class="outline-text-2" id="text-org93ea8aa">
+<div id="outline-container-org45a7b22" class="outline-2">
+<h2 id="org45a7b22">Conclusion</h2>
+<div class="outline-text-2" id="text-org45a7b22">
 <p>
 No conclusion.
 None of my benchmarks have managed to detect any convincing cost for this branch (even when variants are randomly chosen inside of a loop in an attempt to confuse branch predictor) so none of this actually matters (probably).

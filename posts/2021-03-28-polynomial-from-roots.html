@@ -29,7 +29,7 @@ These plots show where a filter's<a href="https://ccrma.stanford.edu/~jos/filter
 </p>
 
 
-<figure id="orga7a7e44">
+<figure id="orga2e0380">
 <img src="../static/poly-roots/pole-zero.png" alt="pole-zero.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 1: </span>pole-zero diagram</figcaption>
@@ -45,10 +45,9 @@ My filter explorer more or less does one thing: convert a polynomial from one fo
 This took me more time than it should have; I already knew most of what I needed to know, but had some trouble putting the tools together.
 Fortunately, it was fun to figure this out, so here's the whole story, including the missteps.
 </p>
-
-<div id="outline-container-org4979918" class="outline-2">
-<h2 id="org4979918">Symbolic Pole-Zero expansion</h2>
-<div class="outline-text-2" id="text-org4979918">
+<div id="outline-container-org5cd9661" class="outline-2">
+<h2 id="org5cd9661">Symbolic Pole-Zero expansion</h2>
+<div class="outline-text-2" id="text-org5cd9661">
 <p>
 A Pole-Zero plot implies a transfer function in this form (\(q_i\) are zeros and all \(p_i\) are poles):
 </p>
@@ -74,10 +73,9 @@ There are many polynomials with the same roots (\(gB(z)\) and \(B(z)\) have same
 This algebra is pretty straightforward by hand or with a computer algebra system.
 </p>
 </div>
-
-<div id="outline-container-org0b99210" class="outline-3">
-<h3 id="org0b99210">Closed Form (Wild Goose Chase)</h3>
-<div class="outline-text-3" id="text-org0b99210">
+<div id="outline-container-orgdf9dc32" class="outline-3">
+<h3 id="orgdf9dc32">Closed Form (Wild Goose Chase)</h3>
+<div class="outline-text-3" id="text-orgdf9dc32">
 <p>
 I correctly didn't want to import an entire Computer Algebra System into my app to do this algebra.
 I <b>incorrectly</b> assumed that doing the multiplication without a computer algebra system would be tricky.
@@ -129,7 +127,7 @@ Here's a possibly even harder to understand version in Julia/SymPy:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-julia">z = symbols(<span class="org-string">"z"</span>)
+<pre class="src src-julia"><code>z = symbols(<span class="org-string">"z"</span>)
 <span class="org-keyword">function</span> <span class="org-function-name">build_expr</span>(n_roots)
     qs = symbols(<span class="org-string">"q1:$(n_roots+1)"</span>) <span class="org-comment-delimiter"># </span><span class="org-comment">generates q1,q2,...</span>
 
@@ -140,7 +138,7 @@ Here's a possibly even harder to understand version in Julia/SymPy:
     <span class="org-keyword">end</span>
     <span class="org-keyword">return</span> poly
 <span class="org-keyword">end</span>
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -148,7 +146,7 @@ Again, using SymPy, it's trivial to test if the code works for a given number of
 </p>
 
 <div class="org-src-container">
-<pre class="src src-julia"><span class="org-keyword">function</span> <span class="org-function-name">test_expr</span>(n_roots)
+<pre class="src src-julia"><code><span class="org-keyword">function</span> <span class="org-function-name">test_expr</span>(n_roots)
     mine = build_expr(n)
 
     <span class="org-comment-delimiter"># </span><span class="org-comment">first generate the actual solution</span>
@@ -164,7 +162,7 @@ test_expr(2) <span class="org-comment-delimiter"># </span><span class="org-comme
 test_expr(3) <span class="org-comment-delimiter"># </span><span class="org-comment">true</span>
 test_expr(4) <span class="org-comment-delimiter"># </span><span class="org-comment">true</span>
 test_expr(5) <span class="org-comment-delimiter"># </span><span class="org-comment">true... must be correct!</span>
-</pre>
+</code></pre>
 </div>
 
 <p>
@@ -221,10 +219,9 @@ Next question, what does <code>zpk2tf</code> do?
 </div>
 </div>
 </div>
-
-<div id="outline-container-org6b99f87" class="outline-2">
-<h2 id="org6b99f87">The Correct Way</h2>
-<div class="outline-text-2" id="text-org6b99f87">
+<div id="outline-container-org7b25c11" class="outline-2">
+<h2 id="org7b25c11">The Correct Way</h2>
+<div class="outline-text-2" id="text-org7b25c11">
 <p>
 I grab the scipy source and start reading.
 The function <code>zpk2tf</code> essentially just calls a numpy function <code>poly</code> to compute the coefficients of the polynomials \(A(z)\) and \(B(z)\) from their respective roots.
@@ -243,11 +240,11 @@ This produces the expected result <code>[1, 0, -1, -6]</code>, or \(1 - x^2 - 6x
 So, in psuedo-python, the entire roots-to-coefficients transformation boils down to:
 </p>
 <div class="org-src-container">
-<pre class="src src-python"><span class="org-variable-name">poly</span> = [1.0]                 <span class="org-comment-delimiter"># </span><span class="org-comment">start with the polynomal "1"</span>
-<span class="org-keyword">for</span> root <span class="org-keyword">in</span> <span class="org-variable-name">roots</span>:
-    term = [1.0, -root]      <span class="org-comment-delimiter"># </span><span class="org-comment">the term 1 - (q_i)x</span>
-    <span class="org-variable-name">poly</span> = conv(poly, term)  <span class="org-comment-delimiter"># </span><span class="org-comment">multiply in new term for this root</span>
-</pre>
+<pre class="src src-python"><code><span class="org-variable-name">poly</span> <span class="org-operator">=</span> [1.0]                 <span class="org-comment-delimiter"># </span><span class="org-comment">start with the polynomal "1"</span>
+<span class="org-keyword">for</span> root <span class="org-keyword">in</span> roots:
+    <span class="org-variable-name">term</span> <span class="org-operator">=</span> [1.0, <span class="org-operator">-</span>root]      <span class="org-comment-delimiter"># </span><span class="org-comment">the term 1 - (q_i)x</span>
+    <span class="org-variable-name">poly</span> <span class="org-operator">=</span> conv(poly, term)  <span class="org-comment-delimiter"># </span><span class="org-comment">multiply in new term for this root</span>
+</code></pre>
 </div>
 
 <p>
