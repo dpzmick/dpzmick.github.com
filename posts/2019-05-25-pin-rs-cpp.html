@@ -70,9 +70,9 @@ of that reference (using, for example <code>mem::swap</code>).
 Clearly moving is significant here, what does that mean exactly, and
 why is this such a big deal?
 </p>
-<div id="outline-container-org5b9eaa7" class="outline-2">
-<h2 id="org5b9eaa7">C++</h2>
-<div class="outline-text-2" id="text-org5b9eaa7">
+<div id="outline-container-org1de16a3" class="outline-2">
+<h2 id="org1de16a3">C++</h2>
+<div class="outline-text-2" id="text-org1de16a3">
 <p>
 I'm more familiar with C++ and my familiarity is probably where my
 misunderstandings are coming from. Let's start by understanding what
@@ -84,7 +84,7 @@ Consider the following <code>struct</code>:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="orga6af670"><code><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
+<pre class="src src-cpp" id="org3832880"><code><span class="org-keyword">struct</span> <span class="org-type">Thing</span> {
   <span class="org-function-name">Thing</span>(<span class="org-type">uint64_t</span> <span class="org-variable-name">id</span>)
     : id(id)
   { }
@@ -169,7 +169,7 @@ Let's consider one last struct.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-cpp" id="org7db8632"><code><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
+<pre class="src src-cpp" id="org8aaf9bb"><code><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>, <span class="org-type">size_t</span> <span class="org-variable-name">N</span>&gt;
 <span class="org-keyword">struct</span> <span class="org-type">ring_buffer</span> {
   <span class="org-constant">std</span>::<span class="org-type">array</span>&lt;<span class="org-type">T</span>, N+1&gt; <span class="org-variable-name">entries</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">use one extra element for easy book-keeping</span>
 
@@ -208,9 +208,9 @@ can take advantage of in some special places.
 </p>
 </div>
 </div>
-<div id="outline-container-orge07528d" class="outline-2">
-<h2 id="orge07528d">Rust</h2>
-<div class="outline-text-2" id="text-orge07528d">
+<div id="outline-container-org8737852" class="outline-2">
+<h2 id="org8737852">Rust</h2>
+<div class="outline-text-2" id="text-org8737852">
 <p>
 Let's do the same exercises again in Rust, starting with the <code>Thing</code>
 struct.
@@ -398,9 +398,9 @@ following these rules, but that's a topic for another time.
 </p>
 </div>
 </div>
-<div id="outline-container-orgd95dd73" class="outline-2">
-<h2 id="orgd95dd73">Futures/async.await</h2>
-<div class="outline-text-2" id="text-orgd95dd73">
+<div id="outline-container-org2cbdf53" class="outline-2">
+<h2 id="org2cbdf53">Futures/async.await</h2>
+<div class="outline-text-2" id="text-org2cbdf53">
 <p>
 Hopefully now, we can understand why this is prerequisite for
 async.await support in Rust.
