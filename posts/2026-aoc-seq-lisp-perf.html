@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+</head>
+
+<body>
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">Emacs Lisp Performance Oddity</h1>
+    </header>
+
+    <style>
+.results { width: 30% }
+</style>
+
+<p>
+I wrote my 2025 Advent of Code solutions in Emacs Lisp.
+My Emacs Lisp style was not very lispy or functional.
+I'll discuss this more, and why, in a future post.
+</p>
+
+<p>
+In this post, we will discuss a performance mistake I consistently made in my solutions with two examples.
+</p>
+<div id="outline-container-org4413329" class="outline-2">
+<h2 id="org4413329">argmax</h2>
+<div class="outline-text-2" id="text-org4413329">
+<p>
+I wrote this bit of code to find the location of the max element in a vector:
+</p>
+<div class="org-src-container">
+<pre class="src src-elisp"><code>(<span class="org-keyword">cl-loop</span> for i from 0 below (length vec)
+         with maxidx = nil
+         do (<span class="org-keyword">when</span> (<span class="org-keyword">or</span> (not maxidx)
+                      (&gt; (aref vec i) (aref vec maxidx)))
+              (<span class="org-keyword">setq</span> maxidx i))
+         finally return maxidx)
+</code></pre>
+</div>
+
+<p>
+Claude provided this example which uses a fold/reduce, which is "more idiomatic":
+</p>
+<div class="org-src-container">
+<pre class="src src-elisp"><code>(car (seq-reduce
+      (<span class="org-keyword">lambda</span> (acc i)
+        (<span class="org-keyword">if</span> (<span class="org-keyword">or</span> (not (car acc))
+                (&gt; (aref vec i) (aref vec (car acc))))
+            (cons i (cdr acc))
+          acc))
+      (number-sequence 0 (1- (length vec)))
+      (cons nil nil)))
+</code></pre>
+</div>
+
+<p>
+But, after producing this example, Claude said "the fold is arguable worse."
+I certainly think so, for a few reasons:
+</p>
+<ol class="org-ol">
+<li>the accumulation term <code>(cons nil nil)</code> is awkward because the purpose of each element is never specified. You have to read through all the other indexing gobbledygook to figure out that its <code>(cons max-idx max-val)</code>.</li>
+<li>There's a temporary <code>(number-sequence ...)</code> array being allocated/deleted just to iterate over it.</li>
+<li><code>(aref vec (car acc))</code> you can't tell me this is readable!</li>
+</ol>
+
+<p>
+The correctly-idiomatic answer turns out to be much simpler (though behavior for ties is slightly different):
+</p>
+<div class="org-src-container">
+<pre class="src src-elisp"><code>(seq-position vec (seq-max vec))
+</code></pre>
+</div>
+
+<p>
+This looks like it scans the vector twice.
+Both of the above do one scan (but the <code>reduce</code> option creates a potentially giant one then scans both).
+Let us take a closer look.
+</p>
+
+<p>
+<code>seq-position</code> looks as you'd expect:
+</p>
+<div class="org-src-container">
+<pre class="src src-elisp"><code>(<span class="org-keyword">cl-defgeneric</span> <span class="org-function-name">seq-position</span> (sequence elt <span class="org-type">&amp;optional</span> testfn)
+  (<span class="org-keyword">let</span> ((index 0))
+    (<span class="org-keyword">catch</span> '<span class="org-constant">seq--break</span>
+      (<span class="org-keyword">seq-doseq</span> (e sequence)
+        (<span class="org-keyword">when</span> (funcall (<span class="org-keyword">or</span> testfn #'equal) e elt)
+          (<span class="org-keyword">throw</span> '<span class="org-constant">seq--break</span> index))
+        (<span class="org-keyword">setq</span> index (1+ index)))
+      nil)))
+</code></pre>
+</div>
+
+<p>
+<code>seq-max</code> converts to a list first (copying it), then calls a <code>C</code> builtin <code>max</code>.
+</p>
+<div class="org-src-container">
+<pre class="src src-elisp"><code>(<span class="org-keyword">cl-defgeneric</span> <span class="org-function-name">seq-max</span> (sequence)
+  (apply #'max (seq-into sequence 'list)))
+</code></pre>
+</div>
+
+<p>
+So, the <code>seq</code> solution actually does <b>three</b> passes, which should obviously be much worse than the <code>cl-loop</code> version, right?
+Claude said yes, my intuition is probably correct: "the <code>cl-loop</code> is probably faster."
+</p>
+
+<p>
+Let's check!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-elisp"><code>&lt;&lt;timeit-setup-argmax&gt;&gt;
+(timeit-report
+  (list
+    (timeit* <span class="org-string">"cl-loop"</span> 100 (argmax-loop bench-vec-random))
+    (timeit* <span class="org-string">"seq-*"</span> 100 (argmax-builtin bench-vec-random))))
+</code></pre>
+</div>
+
+<table class="results">
+
+
+<colgroup>
+<col  class="org-left">
+
+<col  class="org-left">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Method</th>
+<th scope="col" class="org-left">Time</th>
+<th scope="col" class="org-right">Relative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">cl-loop</td>
+<td class="org-left">0.9196s</td>
+<td class="org-right">4.2x</td>
+</tr>
+
+<tr>
+<td class="org-left">seq-*</td>
+<td class="org-left">0.2169s</td>
+<td class="org-right">1.0x</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Well, hmm, I guess the fast <code>C</code> builtins make a big difference?
+If we native compile, that should eliminate a bunch of the overhead, right?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-elisp"><code>&lt;&lt;timeit-setup-argmax&gt;&gt;
+(native-compile 'argmax-loop-native)
+(native-compile 'argmax-builtin-native)
+
+(timeit-report
+  (list
+    (timeit* <span class="org-string">"cl-loop"</span> 100 (argmax-loop-native bench-vec-random))
+    (timeit* <span class="org-string">"seq-*"</span> 100 (argmax-builtin-native bench-vec-random))))
+</code></pre>
+</div>
+
+<table class="results">
+
+
+<colgroup>
+<col  class="org-left">
+
+<col  class="org-left">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Method</th>
+<th scope="col" class="org-left">Time</th>
+<th scope="col" class="org-right">Relative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">cl-loop</td>
+<td class="org-left">0.4801s</td>
+<td class="org-right">2.3x</td>
+</tr>
+
+<tr>
+<td class="org-left">seq-*</td>
+<td class="org-left">0.2114s</td>
+<td class="org-right">1.0x</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Closer, but the <code>cl-loop</code> is still a lot slower.
+Fascinating.
+This is not at all what I was expecting!
+</p>
+
+<p>
+So far, the best explanation I have is that the running the loop and compares in <code>C</code> helps a lot, but Claude and ChatGPT can't make up their mind about the loop being the problem, boxing/unboxing being the problem, or frequent switching between the <code>C</code> runtime and lisp being the problem.
+This warrants more investigation, or some expert feedback.
+</p>
+</div>
+</div>
+<div id="outline-container-orgc1040c2" class="outline-2">
+<h2 id="orgc1040c2">sum</h2>
+<div class="outline-text-2" id="text-orgc1040c2">
+<p>
+I also apparently wrote this:
+</p>
+<div class="org-src-container">
+<pre class="src src-elisp"><code>(<span class="org-keyword">cl-loop</span> for c across vec sum c)
+</code></pre>
+</div>
+
+<p>
+Instead of any of these:
+</p>
+<div class="org-src-container">
+<pre class="src src-elisp"><code>(seq-reduce #'+ vec 0)
+(cl-reduce #'+ vec)
+(apply #'+ (append vec nil))
+</code></pre>
+</div>
+
+<p>
+<code>seq-reduce</code> and <code>cl-reduce</code> seem like they should do roughly the same thing, so I'm just testing <code>seq-reduce</code>.
+I believe there are argument count limits for <code>apply</code>, but it seems to be working.
+If what we learned last time is correct, then <code>apply</code> solution will probably run fastest, despite having to convert the vec to a list first.
+</p>
+
+<p>
+Let's check!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-elisp"><code>&lt;&lt;timeit-setup-sum&gt;&gt;
+(timeit-report
+  (list
+    (timeit* <span class="org-string">"cl-loop"</span> 100 (sum-cl-loop bench-vec-random))
+    (timeit* <span class="org-string">"seq-reduce"</span> 100 (sum-seq-reduce bench-vec-random))
+    (timeit* <span class="org-string">"apply"</span> 100 (sum-apply bench-vec-random))))
+</code></pre>
+</div>
+
+<table class="results">
+
+
+<colgroup>
+<col  class="org-left">
+
+<col  class="org-left">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Method</th>
+<th scope="col" class="org-left">Time</th>
+<th scope="col" class="org-right">Relative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">cl-loop</td>
+<td class="org-left">5.4681s</td>
+<td class="org-right">44.3x</td>
+</tr>
+
+<tr>
+<td class="org-left">seq-reduce</td>
+<td class="org-left">0.1725s</td>
+<td class="org-right">1.4x</td>
+</tr>
+
+<tr>
+<td class="org-left">apply</td>
+<td class="org-left">0.1233s</td>
+<td class="org-right">1.0x</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+And native compiled:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-elisp"><code>&lt;&lt;timeit-setup-sum&gt;&gt;
+(native-compile 'sum-cl-loop-native)
+(native-compile 'sum-seq-reduce-native)
+(timeit-report
+  (list
+    (timeit* <span class="org-string">"cl-loop"</span> 100 (sum-cl-loop-native bench-vec-random))
+    (timeit* <span class="org-string">"seq-reduce"</span> 100 (sum-seq-reduce-native bench-vec-random))
+    (timeit* <span class="org-string">"apply"</span> 100 (sum-apply bench-vec-random))))
+</code></pre>
+</div>
+
+<table class="results">
+
+
+<colgroup>
+<col  class="org-left">
+
+<col  class="org-left">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Method</th>
+<th scope="col" class="org-left">Time</th>
+<th scope="col" class="org-right">Relative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">cl-loop</td>
+<td class="org-left">0.1382s</td>
+<td class="org-right">1.1x</td>
+</tr>
+
+<tr>
+<td class="org-left">seq-reduce</td>
+<td class="org-left">0.1715s</td>
+<td class="org-right">1.4x</td>
+</tr>
+
+<tr>
+<td class="org-left">apply</td>
+<td class="org-left">0.1202s</td>
+<td class="org-right">1.0x</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Wow!
+I guess getting into <code>C</code> to run the loop makes a big difference in Emacs Lisp, even when copying (also C) a 50k element vector to get there.
+</p>
+
+<p>
+To inspect the source for <code>timeit</code> and other support code, take a look at the raw org file on GitHub: <a href="https://github.com/dpzmick/dpzmick.github.com/blob/master/posts/2026-aoc-seq-lisp-perf.org">https://github.com/dpzmick/dpzmick.github.com/blob/master/posts/2026-aoc-seq-lisp-perf.org</a>
+</p>
+</div>
+</div>
+
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
+</body>
+</html>
+
+</body>
+
+</html>
