@@ -36,9 +36,9 @@ I'll discuss this more, and why, in a future post.
 <p>
 In this post, we will discuss a performance mistake I consistently made in my solutions with two examples.
 </p>
-<div id="outline-container-org48eb3ee" class="outline-2">
-<h2 id="org48eb3ee">argmax</h2>
-<div class="outline-text-2" id="text-org48eb3ee">
+<div id="outline-container-orgf01672f" class="outline-2">
+<h2 id="orgf01672f">argmax</h2>
+<div class="outline-text-2" id="text-orgf01672f">
 <p>
 I wrote this bit of code to find the location of the max element in a vector:
 </p>
@@ -226,9 +226,9 @@ This warrants more investigation, or some expert feedback.
 </p>
 </div>
 </div>
-<div id="outline-container-org9e15d2f" class="outline-2">
-<h2 id="org9e15d2f">sum</h2>
-<div class="outline-text-2" id="text-org9e15d2f">
+<div id="outline-container-org3aed6c9" class="outline-2">
+<h2 id="org3aed6c9">sum</h2>
+<div class="outline-text-2" id="text-org3aed6c9">
 <p>
 I also apparently wrote this:
 </p>
@@ -287,26 +287,31 @@ Let's check!
 <tbody>
 <tr>
 <td class="org-left">cl-loop</td>
-<td class="org-left">5.4681s</td>
-<td class="org-right">44.3x</td>
+<td class="org-left">5.6799s</td>
+<td class="org-right">43.1x</td>
 </tr>
 
 <tr>
 <td class="org-left">seq-reduce</td>
-<td class="org-left">0.1725s</td>
+<td class="org-left">0.1793s</td>
 <td class="org-right">1.4x</td>
 </tr>
 
 <tr>
 <td class="org-left">apply</td>
-<td class="org-left">0.1233s</td>
+<td class="org-left">0.1317s</td>
 <td class="org-right">1.0x</td>
 </tr>
 </tbody>
 </table>
 
 <p>
-And native compiled:
+So, maybe our rule works?
+Though, the <code>seq-reduce</code> version isn't that far off from <code>apply</code>.
+</p>
+
+<p>
+What if we native compile?
 </p>
 
 <div class="org-src-container">
@@ -341,19 +346,19 @@ And native compiled:
 <tbody>
 <tr>
 <td class="org-left">cl-loop</td>
-<td class="org-left">0.1382s</td>
-<td class="org-right">1.1x</td>
+<td class="org-left">0.5304s</td>
+<td class="org-right">4.1x</td>
 </tr>
 
 <tr>
 <td class="org-left">seq-reduce</td>
-<td class="org-left">0.1715s</td>
+<td class="org-left">0.1775s</td>
 <td class="org-right">1.4x</td>
 </tr>
 
 <tr>
 <td class="org-left">apply</td>
-<td class="org-left">0.1202s</td>
+<td class="org-left">0.1291s</td>
 <td class="org-right">1.0x</td>
 </tr>
 </tbody>
@@ -361,7 +366,13 @@ And native compiled:
 
 <p>
 Wow!
-I guess getting into <code>C</code> to run the loop makes a big difference in Emacs Lisp, even when copying (also C) a 50k element vector to get there.
+So in this case, the result is a bit different.
+Native compilation seems to make a big difference, but the <code>C</code> loop still seems to win.
+Note that I've had some variability in running <i>this</i> specific test, but after a few runs the result is pretty consistent.
+</p>
+
+<p>
+The conclusion seems to be calling builtins makes a huge difference.
 </p>
 
 <p>
