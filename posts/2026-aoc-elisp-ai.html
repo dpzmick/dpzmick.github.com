@@ -50,9 +50,9 @@ I treated Advent of Code 2025 as a small experiment in understanding what’s fu
 This post is a reflection on the experience
 I hope to capture what I think "fun" is, using AoC as a case study, then discuss of what happens when AI gets involved.
 </p>
-<div id="outline-container-org00286b7" class="outline-2">
-<h2 id="org00286b7">AoC 2025 Experience</h2>
-<div class="outline-text-2" id="text-org00286b7">
+<div id="outline-container-org0000001" class="outline-2">
+<h2 id="org0000001">AoC 2025 Experience</h2>
+<div class="outline-text-2" id="text-org0000001">
 <p>
 I am not a speedy competitive programmer; these problems take me a fair amount of time.
 A shorter set of 12 problems meant I was actually able to finish them all!
@@ -80,9 +80,9 @@ Maybe the "perfect balance" would be a challenge with 6 problems that are just h
 In other words&#x2026; a university problem set?
 </p>
 </div>
-<div id="outline-container-orgf8b2c22" class="outline-3">
-<h3 id="orgf8b2c22">Problem Highlights</h3>
-<div class="outline-text-3" id="text-orgf8b2c22">
+<div id="outline-container-org0000002" class="outline-3">
+<h3 id="org0000002">Problem Highlights</h3>
+<div class="outline-text-3" id="text-org0000002">
 <p>
 Days 9 and 10 were my favorites, for slightly different reasons.
 For both of them, I had a "idk what to do now" moment and had to do some careful web searching to avoid full spoilers.
@@ -106,9 +106,9 @@ Great problem, 10/10.
 </p>
 </div>
 </div>
-<div id="outline-container-org4f44ce2" class="outline-3">
-<h3 id="org4f44ce2">AoC Conclusions: Fun?</h3>
-<div class="outline-text-3" id="text-org4f44ce2">
+<div id="outline-container-org0000003" class="outline-3">
+<h3 id="org0000003">AoC Conclusions: Fun?</h3>
+<div class="outline-text-3" id="text-org0000003">
 <p>
 Overall, yes very fun!
 It was nice to be able to complete the full set of problems.
@@ -126,18 +126,18 @@ The self-reflection exercise I'm able to do following completing the problems is
 </div>
 </div>
 </div>
-<div id="outline-container-orgbea8982" class="outline-2">
-<h2 id="orgbea8982">Emacs Lisp</h2>
-<div class="outline-text-2" id="text-orgbea8982">
+<div id="outline-container-org0000004" class="outline-2">
+<h2 id="org0000004">Emacs Lisp</h2>
+<div class="outline-text-2" id="text-org0000004">
 <p>
 My overall experience with Emacs Lisp was good, and I’m glad I made this choice.
 The development environment is fantastic.
 The language itself may be a poor fit for AoC-style problems and I’m also not convinced I used it particularly well.
 </p>
 </div>
-<div id="outline-container-orgf648457" class="outline-3">
-<h3 id="orgf648457">The Language</h3>
-<div class="outline-text-3" id="text-orgf648457">
+<div id="outline-container-org0000005" class="outline-3">
+<h3 id="org0000005">The Language</h3>
+<div class="outline-text-3" id="text-org0000005">
 <p>
 According to Claude, what I ended up doing was more Common Lisp than Emacs Lisp:
 </p>
@@ -151,9 +151,9 @@ You're writing Common Lisp that happens to run in Emacs, not Emacs Lisp.
 I struggled with choices around mutation and program shape throughout these problems.
 </p>
 </div>
-<div id="outline-container-orgb9904e2" class="outline-4">
-<h4 id="orgb9904e2">Mutation and State</h4>
-<div class="outline-text-4" id="text-orgb9904e2">
+<div id="outline-container-org0000006" class="outline-4">
+<h4 id="org0000006">Mutation and State</h4>
+<div class="outline-text-4" id="text-org0000006">
 <p>
 Mutation seems to be everywhere in Emacs Lisp.
 I looked up best practices surrounding mutability when starting day 1.
@@ -165,9 +165,9 @@ The mutation-heavy style I used on these problems might have encouraged other ba
 </p>
 </div>
 </div>
-<div id="outline-container-orgf0ec9d1" class="outline-4">
-<h4 id="orgf0ec9d1">Program Shape</h4>
-<div class="outline-text-4" id="text-orgf0ec9d1">
+<div id="outline-container-org0000007" class="outline-4">
+<h4 id="org0000007">Program Shape</h4>
+<div class="outline-text-4" id="text-org0000007">
 <p>
 Emacs lisp does not perform tail recursion optimizations.
 This means deep trees of recursive calls are a bit risky.
@@ -183,9 +183,9 @@ See my <a href="./2026-aoc-seq-lisp-perf.html">Emacs Lisp Performance Oddity</a>
 </div>
 </div>
 </div>
-<div id="outline-container-org9b88455" class="outline-3">
-<h3 id="org9b88455">The Libraries</h3>
-<div class="outline-text-3" id="text-org9b88455">
+<div id="outline-container-org0000008" class="outline-3">
+<h3 id="org0000008">The Libraries</h3>
+<div class="outline-text-3" id="text-org0000008">
 <p>
 I didn't use any external packages because I didn't want to break my editor messing with the packages.
 The built in libraries are great, though a bit inconsistent (see <code>elt</code> vs <code>nth</code> vs <code>aref</code> argument order).
@@ -200,9 +200,9 @@ This wasn't necessary for many of the problems, but it was powerful when I neede
 </p>
 </div>
 </div>
-<div id="outline-container-org6669cdd" class="outline-3">
-<h3 id="org6669cdd">Tools and Workflow</h3>
-<div class="outline-text-3" id="text-org6669cdd">
+<div id="outline-container-org0000009" class="outline-3">
+<h3 id="org0000009">Tools and Workflow</h3>
+<div class="outline-text-3" id="text-org0000009">
 <p>
 All of the developer tools are great (profilers, debuggers, help system, etc).
 The emacs living-system, where I can inspect or change anything, is a nice change of pace.
@@ -237,9 +237,9 @@ I want to find a way to use emacs in my day job to <i>drive</i> more of the work
 </p>
 </div>
 </div>
-<div id="outline-container-org5b58d7d" class="outline-3">
-<h3 id="org5b58d7d">Language Conclusion: Fun?</h3>
-<div class="outline-text-3" id="text-org5b58d7d">
+<div id="outline-container-org000000a" class="outline-3">
+<h3 id="org000000a">Language Conclusion: Fun?</h3>
+<div class="outline-text-3" id="text-org000000a">
 <p>
 Elisp is probably the wrong choice for AoC, but that's okay.
 I'm happy to have learned more of the language; I will hopefully be using a lot more of it for workflow automation.
@@ -255,9 +255,9 @@ I had a lot of fun reflecting on, evaluating, and trying to tweak my programming
 </div>
 </div>
 </div>
-<div id="outline-container-org2233aa7" class="outline-2">
-<h2 id="org2233aa7">AI</h2>
-<div class="outline-text-2" id="text-org2233aa7">
+<div id="outline-container-org000000b" class="outline-2">
+<h2 id="org000000b">AI</h2>
+<div class="outline-text-2" id="text-org000000b">
 <p>
 Plenty of people have shown that autonomous agents can solve the entire AoC problem set on their own, so I didn't explore this.
 I used AI as a problem solving partner, asking it to review code, review ideas, discuss solutions, etc, rather than just asking it to do everything.
@@ -307,9 +307,9 @@ As an experienced developer who has fully embraced my real job, I should be thri
 </p>
 </div>
 </div>
-<div id="outline-container-orgd0d54ee" class="outline-2">
-<h2 id="orgd0d54ee">I am uneasy</h2>
-<div class="outline-text-2" id="text-orgd0d54ee">
+<div id="outline-container-org000000c" class="outline-2">
+<h2 id="org000000c">I am uneasy</h2>
+<div class="outline-text-2" id="text-org000000c">
 <p>
 I am not entirely thrilled yet.
 There are a few things that leave me uneasy, and I bet I'm not the only one.
@@ -329,9 +329,9 @@ Summarizing all the above commentary, it's roughly these two things:
 Let's talk through both.
 </p>
 </div>
-<div id="outline-container-org1cfd0e0" class="outline-3">
-<h3 id="org1cfd0e0">Writing Code</h3>
-<div class="outline-text-3" id="text-org1cfd0e0">
+<div id="outline-container-org000000d" class="outline-3">
+<h3 id="org000000d">Writing Code</h3>
+<div class="outline-text-3" id="text-org000000d">
 <p>
 The mechanical process of writing and debugging code <i>is extremely fun</i>.
 Getting into a flow state while writing code is deeply enjoyable.
@@ -350,9 +350,9 @@ I'm optimistic this AI-fueled coding thing can become mechanically fun too, just
 </p>
 </div>
 </div>
-<div id="outline-container-org02cd43f" class="outline-3">
-<h3 id="org02cd43f">Discovery and Thinking</h3>
-<div class="outline-text-3" id="text-org02cd43f">
+<div id="outline-container-org000000e" class="outline-3">
+<h3 id="org000000e">Discovery and Thinking</h3>
+<div class="outline-text-3" id="text-org000000e">
 <p>
 I'm in a bit of a pickle over how AI tools and programming work for this second thing.
 </p>
@@ -432,9 +432,9 @@ I am not sure what comes of this but it's fairly clear we still need tools for t
 </div>
 </div>
 </div>
-<div id="outline-container-orga32f684" class="outline-2">
-<h2 id="orga32f684">Overall Conclusion</h2>
-<div class="outline-text-2" id="text-orga32f684">
+<div id="outline-container-org000000f" class="outline-2">
+<h2 id="org000000f">Overall Conclusion</h2>
+<div class="outline-text-2" id="text-org000000f">
 <p>
 Here's some bullets on what this was all about:
 </p>

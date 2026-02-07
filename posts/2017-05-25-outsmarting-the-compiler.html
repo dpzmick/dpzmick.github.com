@@ -187,8 +187,8 @@ Hooray, no conditional generated, exactly as we desired.
 We've outsmarted the compiler!
 </p>
 <ul class="org-ul">
-<li><a id="org3d0ef46"></a>Assertion Failed: smarter_than_compiler<br>
-<div class="outline-text-5" id="text-org3d0ef46">
+<li><a id="org0000001"></a>Assertion Failed: smarter_than_compiler<br>
+<div class="outline-text-5" id="text-org0000001">
 <p>
 Let's set <code>PADDING1 = 16</code> and <code>PADDING2 = 17</code>.
 The code generated on clang-4.0 for <code>write(Wrapper*)</code> looks quite interesting:
@@ -250,9 +250,9 @@ The code has changed slightly to account for the new potential values of <code>W
 </div>
 </li>
 </ul>
-<div id="outline-container-org305c3ac" class="outline-4">
-<h4 id="org305c3ac">Meaner PADDING</h4>
-<div class="outline-text-4" id="text-org305c3ac">
+<div id="outline-container-org0000002" class="outline-4">
+<h4 id="org0000002">Meaner PADDING</h4>
+<div class="outline-text-4" id="text-org0000002">
 <p>
 Reminder: In the previous examples <code>PADDING1 = 16</code> and <code>PADDING2 = 17</code>.
 What happens to the generated code if we make the paddings completely wacky?
@@ -299,13 +299,13 @@ The answer to that depends on which compiler you ask.
 </p>
 </div>
 </div>
-<div id="outline-container-orgcc3c9dd" class="outline-4">
-<h4 id="orgcc3c9dd">gcc 7.1 (&#x2013;std=c++1z -O3)</h4>
-<div class="outline-text-4" id="text-orgcc3c9dd">
+<div id="outline-container-org0000006" class="outline-4">
+<h4 id="org0000006">gcc 7.1 (&#x2013;std=c++1z -O3)</h4>
+<div class="outline-text-4" id="text-org0000006">
 </div>
 <ul class="org-ul">
-<li><a id="org3235edc"></a><code>PADDING1</code> <code>= =PADDING2</code><br>
-<div class="outline-text-5" id="text-org3235edc">
+<li><a id="org0000003"></a><code>PADDING1</code> <code>= =PADDING2</code><br>
+<div class="outline-text-5" id="text-org0000003">
 <div class="org-src-container">
 <pre class="src src-asm"><code><span class="org-function-name">writeLessSafe</span>(WrapperWithOffset*):
         <span class="org-keyword">mov</span>     rax, QWORD PTR [rdi+8]
@@ -331,8 +331,8 @@ That's a little odd.
 </p>
 </div>
 </li>
-<li><a id="orgf0fe7cf"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 17</code><br>
-<div class="outline-text-5" id="text-orgf0fe7cf">
+<li><a id="org0000004"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 17</code><br>
+<div class="outline-text-5" id="text-org0000004">
 <div class="org-src-container">
 <pre class="src src-asm"><code><span class="org-function-name">write</span>(Wrapper*):
         <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
@@ -349,8 +349,8 @@ That's a little odd.
 </div>
 </div>
 </li>
-<li><a id="orgb4af465"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 173</code><br>
-<div class="outline-text-5" id="text-orgb4af465">
+<li><a id="org0000005"></a><code>PADDING1 = 16</code> and <code>PADDING2 = 173</code><br>
+<div class="outline-text-5" id="text-org0000005">
 <div class="org-src-container">
 <pre class="src src-asm"><code><span class="org-function-name">write</span>(Wrapper*):
         <span class="org-keyword">mov</span>     eax, DWORD PTR [rdi]
@@ -375,9 +375,9 @@ At the moment I'm not convinced that it hurts much.
 </li>
 </ul>
 </div>
-<div id="outline-container-org23eea8e" class="outline-2">
-<h2 id="org23eea8e">Conclusion</h2>
-<div class="outline-text-2" id="text-org23eea8e">
+<div id="outline-container-org0000007" class="outline-2">
+<h2 id="org0000007">Conclusion</h2>
+<div class="outline-text-2" id="text-org0000007">
 <p>
 No conclusion.
 None of my benchmarks have managed to detect any convincing cost for this branch (even when variants are randomly chosen inside of a loop in an attempt to confuse branch predictor) so none of this actually matters (probably).

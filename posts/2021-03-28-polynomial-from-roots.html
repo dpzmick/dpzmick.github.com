@@ -29,7 +29,7 @@ These plots show where a filter's<a href="https://ccrma.stanford.edu/~jos/filter
 </p>
 
 
-<figure id="org46c7765">
+<figure id="org0000001">
 <img src="../static/poly-roots/pole-zero.png" alt="pole-zero.png" class="light-invert">
 
 <figcaption><span class="figure-number">Figure 1: </span>pole-zero diagram</figcaption>
@@ -45,9 +45,9 @@ My filter explorer more or less does one thing: convert a polynomial from one fo
 This took me more time than it should have; I already knew most of what I needed to know, but had some trouble putting the tools together.
 Fortunately, it was fun to figure this out, so here's the whole story, including the missteps.
 </p>
-<div id="outline-container-org8f2fc57" class="outline-2">
-<h2 id="org8f2fc57">Symbolic Pole-Zero expansion</h2>
-<div class="outline-text-2" id="text-org8f2fc57">
+<div id="outline-container-org0000002" class="outline-2">
+<h2 id="org0000002">Symbolic Pole-Zero expansion</h2>
+<div class="outline-text-2" id="text-org0000002">
 <p>
 A Pole-Zero plot implies a transfer function in this form (\(q_i\) are zeros and all \(p_i\) are poles):
 </p>
@@ -73,9 +73,9 @@ There are many polynomials with the same roots (\(gB(z)\) and \(B(z)\) have same
 This algebra is pretty straightforward by hand or with a computer algebra system.
 </p>
 </div>
-<div id="outline-container-org3eb13cc" class="outline-3">
-<h3 id="org3eb13cc">Closed Form (Wild Goose Chase)</h3>
-<div class="outline-text-3" id="text-org3eb13cc">
+<div id="outline-container-org0000003" class="outline-3">
+<h3 id="org0000003">Closed Form (Wild Goose Chase)</h3>
+<div class="outline-text-3" id="text-org0000003">
 <p>
 I correctly didn't want to import an entire Computer Algebra System into my app to do this algebra.
 I <b>incorrectly</b> assumed that doing the multiplication without a computer algebra system would be tricky.
@@ -219,9 +219,9 @@ Next question, what does <code>zpk2tf</code> do?
 </div>
 </div>
 </div>
-<div id="outline-container-org042716c" class="outline-2">
-<h2 id="org042716c">The Correct Way</h2>
-<div class="outline-text-2" id="text-org042716c">
+<div id="outline-container-org0000004" class="outline-2">
+<h2 id="org0000004">The Correct Way</h2>
+<div class="outline-text-2" id="text-org0000004">
 <p>
 I grab the scipy source and start reading.
 The function <code>zpk2tf</code> essentially just calls a numpy function <code>poly</code> to compute the coefficients of the polynomials \(A(z)\) and \(B(z)\) from their respective roots.
