@@ -61,9 +61,9 @@ I was hoping to set up small cloud instances to run:
 <li>Perhaps a sql server for <a href="https://www.digikam.org/news/2010-10-15_using_digikam_with_mysql/">digikam's remote database</a> (if I can find a place to store the files)</li>
 <li><a href="https://github.com/awesome-selfhosted/awesome-selfhosted">lots of stuff</a></li>
 </ul>
-<div id="outline-container-orgb623f5c" class="outline-2">
-<h2 id="orgb623f5c">Cloud Cost</h2>
-<div class="outline-text-2" id="text-orgb623f5c">
+<div id="outline-container-org0840d36" class="outline-2">
+<h2 id="org0840d36">Cloud Cost</h2>
+<div class="outline-text-2" id="text-org0840d36">
 <p>
 A single, low ram, shared CPU, tiny storage cloud instance can cost something like $3.50 a month.
 If you want a real CPU, or some real storage, the prices go up quite a bit.
@@ -83,9 +83,9 @@ I know I've seen used rackmount servers on eBay for about this price, so I thoug
 </p>
 </div>
 </div>
-<div id="outline-container-org6714c45" class="outline-2">
-<h2 id="org6714c45">eBay time</h2>
-<div class="outline-text-2" id="text-org6714c45">
+<div id="outline-container-org04e2126" class="outline-2">
+<h2 id="org04e2126">eBay time</h2>
+<div class="outline-text-2" id="text-org04e2126">
 <p>
 The first order of business was finding a "quiet, low power, expandable, powerful server."
 I eventually settled on a Dell R720 with 2.5 inch drive bays.
@@ -112,22 +112,22 @@ The Xeon is a 2013 CPU, so the performance/power isn't going to be as good as ne
 This decision wasn't easy, but after reading almost every post on <a href="https://www.reddit.com/r/homelab/">r/homelab</a> I decided I'd give this a try.
 </p>
 </div>
-<div id="outline-container-org0144088" class="outline-3">
-<h3 id="org0144088">Barebones server setup</h3>
-<div class="outline-text-3" id="text-org0144088">
+<div id="outline-container-org4b6141f" class="outline-3">
+<h3 id="org4b6141f">Barebones server setup</h3>
+<div class="outline-text-3" id="text-org4b6141f">
 </div>
-<div id="outline-container-orgb2932d4" class="outline-4">
-<h4 id="orgb2932d4">Setup a RAID 0 array across the two drives</h4>
-<div class="outline-text-4" id="text-orgb2932d4">
+<div id="outline-container-orge5b3934" class="outline-4">
+<h4 id="orge5b3934">Setup a RAID 0 array across the two drives</h4>
+<div class="outline-text-4" id="text-orge5b3934">
 <p>
 For testing, I just stuck a RAID 0 array across the two drives.
 This is done using the remote management web ui, or by booting the machine and tweaking settings from the remote management virtual display.
 </p>
 </div>
 </div>
-<div id="outline-container-org51d7a17" class="outline-4">
-<h4 id="org51d7a17">Install an operating system</h4>
-<div class="outline-text-4" id="text-org51d7a17">
+<div id="outline-container-orgd490673" class="outline-4">
+<h4 id="orgd490673">Install an operating system</h4>
+<div class="outline-text-4" id="text-orgd490673">
 <p>
 Again, super straightforward.
 I mounted an arch ISO using the remote management tools, booted the box, and installed arch the standard way.
@@ -145,9 +145,9 @@ If I put a large amount of load on the machine, the fans will spin up, but that'
 </p>
 </div>
 </div>
-<div id="outline-container-org1f6ac0f" class="outline-4">
-<h4 id="org1f6ac0f">Adding PCIe cards</h4>
-<div class="outline-text-4" id="text-org1f6ac0f">
+<div id="outline-container-org4878d36" class="outline-4">
+<h4 id="org4878d36">Adding PCIe cards</h4>
+<div class="outline-text-4" id="text-org4878d36">
 <p>
 To install PCIe cards, all you have to do is lift the lid, pop out a little tool-less bay and plop the card in.
 Its useful to read the server documentation to make sure each card is installed is attached to the appropriate socket, if you are installing multiple cards.
@@ -204,9 +204,9 @@ Password:
 </div>
 </div>
 </div>
-<div id="outline-container-orgeed6923" class="outline-2">
-<h2 id="orgeed6923">Networking</h2>
-<div class="outline-text-2" id="text-orgeed6923">
+<div id="outline-container-orgddb3e24" class="outline-2">
+<h2 id="orgddb3e24">Networking</h2>
+<div class="outline-text-2" id="text-orgddb3e24">
 <p>
 As discussed in my <a href="./2020-01-09-vpn.html">previous post</a>, I already had a small TP-Link switch sitting behind the VPN/router box.
 Four ports was getting tight (I was unplugging my smart light hub to play with a network card).
@@ -227,15 +227,15 @@ However, as I'll discuss in my <a href="./2020-01-12-nas.html">next post</a>, I'
 </p>
 </div>
 </div>
-<div id="outline-container-orgf1d2130" class="outline-2">
-<h2 id="orgf1d2130">Rack</h2>
-<div class="outline-text-2" id="text-orgf1d2130">
+<div id="outline-container-org41b4987" class="outline-2">
+<h2 id="org41b4987">Rack</h2>
+<div class="outline-text-2" id="text-org41b4987">
 <p>
 I wired a bunch of stuff up and threw it under my desk:
 </p>
 
 
-<figure id="org04d5bbf">
+<figure id="org0f0c8c2">
 <img src="../static/homelab/server_desktop_wire_mess.jpg" alt="server_desktop_wire_mess.jpg">
 
 </figure>
@@ -245,15 +245,15 @@ That wasn't going to work, so I threw all of this into a small rack, moved my de
 </p>
 
 
-<figure id="orgca7e0a6">
+<figure id="orgef0c8e0">
 <img src="../static/homelab/battlestation.jpg" alt="battlestation.jpg">
 
 </figure>
 </div>
 </div>
-<div id="outline-container-org06ddaf4" class="outline-2">
-<h2 id="org06ddaf4">Do something with it</h2>
-<div class="outline-text-2" id="text-org06ddaf4">
+<div id="outline-container-org75ecdd3" class="outline-2">
+<h2 id="org75ecdd3">Do something with it</h2>
+<div class="outline-text-2" id="text-org75ecdd3">
 <p>
 At first I used this server mostly to poke at the network and write kernel bypass drivers for an Intel I350-T4 quad-gigabit-port network card.
 Side note: The <a href="https://github.com/emmericp/ixy">ixy</a> project is pretty neat and 100% worth poking at if you are interested in networking.

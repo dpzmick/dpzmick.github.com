@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Zmick</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script type='text/javascript' src='/static/scripts.js'></script>
+  <link rel='stylesheet' type='text/css' href='/static/base.css' />
+  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+</head>
+
+<body>
+  <div id="preamble" class="status">
+    <div id='#preamble'>
+      <h1><a href='/'>dpzmick.com</a></h1>
+    </div>
+  </div>
+  <div id="content">
+    <header>
+      <h1 class="title">AoC Self-Reflections (and a touch of AI doomerism)</h1>
+    </header>
+
+    <style>
+.results { width: 30% }
+</style>
+
+<p>
+I have never completed <a href="https://adventofcode.com/">Advent of Code</a> before, despite starting it almost every year.
+For 2025, there were 12 problems, so I thought maybe I could actually finish them all.
+</p>
+
+<p>
+But, there's also something else going on in 2025: AI.
+There's tons of evidence that AI tooling can just solve the AoC problems <a href="https://github.com/balintant/AdventOfClaude-2025">all on its own</a>.
+The models can even <a href="https://lucumr.pocoo.org/2025/12/23/advent-of-slop">write reflective blog posts about the problems</a>.
+</p>
+
+<p>
+In the face of this AI stuff, why even try?
+Just completing the problems isn't the goal.
+Anyone can just make AI do that now.
+I wanted to remind myself <i>why</i> I got into software in the first place; wanted to <i>enjoy</i> sitting down and writing some code just <i>for fun</i>.
+</p>
+
+<p>
+I treated Advent of Code 2025 as a small experiment in understanding what’s fun about the problems, what’s fun about programming, and how AI changes the experience of both.
+This post is a reflection on the experience
+I hope to capture what I think "fun" is, using AoC as a case study, then discuss of what happens when AI gets involved.
+</p>
+<div id="outline-container-org00286b7" class="outline-2">
+<h2 id="org00286b7">AoC 2025 Experience</h2>
+<div class="outline-text-2" id="text-org00286b7">
+<p>
+I am not a speedy competitive programmer; these problems take me a fair amount of time.
+A shorter set of 12 problems meant I was actually able to finish them all!
+</p>
+
+<p>
+On the trick question (you know which one) and questions that depend on careful interpretation of the exact input properties, I struggled a bit.
+I often found myself trying to solve larger/harder/more-general problems than required.
+Doing these problems was a good reminder to not over do it.
+</p>
+
+<p>
+I also think I would enjoy a set of problems that reward the performance and scalability of the solution.
+Someone on reddit said it this way:
+</p>
+<blockquote>
+<p>
+I would definitely enjoy a third star with a bigger input that requires an efficient algorithm to run in a reasonable time.
+</p>
+</blockquote>
+
+<p>
+Almost all of my real-world scalable algorithms depend on subtle properties of the expected inputs and require real thought about both the algorithm and computer architecture, but I like it when the problem isn't just picking up details.
+Maybe the "perfect balance" would be a challenge with 6 problems that are just hard enough to require <i>some</i> algorithmic thinking, but not large enough to be Day Job problems.
+In other words&#x2026; a university problem set?
+</p>
+</div>
+<div id="outline-container-orgf8b2c22" class="outline-3">
+<h3 id="orgf8b2c22">Problem Highlights</h3>
+<div class="outline-text-3" id="text-orgf8b2c22">
+<p>
+Days 9 and 10 were my favorites, for slightly different reasons.
+For both of them, I had a "idk what to do now" moment and had to do some careful web searching to avoid full spoilers.
+I think getting stuck on both, then (re)learning something, is a big part of what was fun.
+</p>
+
+<p>
+Day 9 is a problem I traditionally would have avoided had I not set a completion goal.
+The graphicsy coordinate manipulation stuff is fiddly and I always get it wrong.
+Fortunately, AI fixed all my bugs this time, and I really enjoyed doing the coordinate compression into flood fill into prefix sum into brute-force solution for part 2.
+Coordinate compression and using prefix sums in this way were both new to me and both really cool.
+</p>
+
+<p>
+Day 10 was super fun.
+It's a hard problem of exactly the style I was looking for.
+It requires a good algorithmic approach, but no really clever ILP space pruning or anything super fancy.
+Mechanically, writing and debugging the code for Gaussian elimination was tons of fun.
+And, the problem leaves me with a lot of followup ideas to explore and questions about how other people's solutions work.
+Great problem, 10/10.
+</p>
+</div>
+</div>
+<div id="outline-container-org4f44ce2" class="outline-3">
+<h3 id="org4f44ce2">AoC Conclusions: Fun?</h3>
+<div class="outline-text-3" id="text-org4f44ce2">
+<p>
+Overall, yes very fun!
+It was nice to be able to complete the full set of problems.
+</p>
+
+<p>
+The AoC problems I enjoyed had a pleasant balance between big-F Fundamental Problems and real world problem solving.
+I'm attracted to these big-F Fundamental Problems, especially when I can use a bit of low-level computer architecture stuff to make solutions go fast.
+In a (reductive) taxonomy of problems including (1) fundamental problems, (2) hard core engineering problems, (3) product problems, working through AoC reminds me that I'm most attracted to things in the intersection between (1) and (2).
+</p>
+
+<p>
+The self-reflection exercise I'm able to do following completing the problems is also fun.
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-orgbea8982" class="outline-2">
+<h2 id="orgbea8982">Emacs Lisp</h2>
+<div class="outline-text-2" id="text-orgbea8982">
+<p>
+My overall experience with Emacs Lisp was good, and I’m glad I made this choice.
+The development environment is fantastic.
+The language itself may be a poor fit for AoC-style problems and I’m also not convinced I used it particularly well.
+</p>
+</div>
+<div id="outline-container-orgf648457" class="outline-3">
+<h3 id="orgf648457">The Language</h3>
+<div class="outline-text-3" id="text-orgf648457">
+<p>
+According to Claude, what I ended up doing was more Common Lisp than Emacs Lisp:
+</p>
+<blockquote>
+<p>
+You're writing Common Lisp that happens to run in Emacs, not Emacs Lisp.
+</p>
+</blockquote>
+
+<p>
+I struggled with choices around mutation and program shape throughout these problems.
+</p>
+</div>
+<div id="outline-container-orgb9904e2" class="outline-4">
+<h4 id="orgb9904e2">Mutation and State</h4>
+<div class="outline-text-4" id="text-orgb9904e2">
+<p>
+Mutation seems to be everywhere in Emacs Lisp.
+I looked up best practices surrounding mutability when starting day 1.
+For these AoC problems, many of which have large-ish 2d grids and small updates, <i>I think</i> mutation is the right choice.
+</p>
+
+<p>
+The mutation-heavy style I used on these problems might have encouraged other bad behavior.
+</p>
+</div>
+</div>
+<div id="outline-container-orgf0ec9d1" class="outline-4">
+<h4 id="orgf0ec9d1">Program Shape</h4>
+<div class="outline-text-4" id="text-orgf0ec9d1">
+<p>
+Emacs lisp does not perform tail recursion optimizations.
+This means deep trees of recursive calls are a bit risky.
+Instead, elisp uses a lot of maps and folds and filters and stuff.
+But, maps, folds, etc, don't play well with heavy mutation.
+</p>
+
+<p>
+I found myself using a lot of <code>cl-loop</code>; it has flexible accumulation clauses, and the <code>if/when/unless</code> set of clauses map well to the way I write imperative code.
+This isn't a particularly "functional" way to write the code, nor does it turn out to actually perform that well.
+See my <a href="./2026-aoc-seq-lisp-perf.html">Emacs Lisp Performance Oddity</a> post for more details!
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org9b88455" class="outline-3">
+<h3 id="org9b88455">The Libraries</h3>
+<div class="outline-text-3" id="text-org9b88455">
+<p>
+I didn't use any external packages because I didn't want to break my editor messing with the packages.
+The built in libraries are great, though a bit inconsistent (see <code>elt</code> vs <code>nth</code> vs <code>aref</code> argument order).
+There is a built-in function for almost everything, though sometimes finding them is a bit tricky without reading all of <code>seq.el</code> over and over again.
+I'm sure I just didn't leverage the built-in help system to its fullest, and that this complaint isn't well founded (though nothing really comes close to hackage for discovery).
+</p>
+
+<p>
+I don't feel like I took advantage of the text processing tools in emacs, even though I needed to parse a lot of text.
+In only one problem did I drop the input into a buffer then walk it with a regex for input parsing.
+This wasn't necessary for many of the problems, but it was powerful when I needed it.
+</p>
+</div>
+</div>
+<div id="outline-container-org6669cdd" class="outline-3">
+<h3 id="org6669cdd">Tools and Workflow</h3>
+<div class="outline-text-3" id="text-org6669cdd">
+<p>
+All of the developer tools are great (profilers, debuggers, help system, etc).
+The emacs living-system, where I can inspect or change anything, is a nice change of pace.
+</p>
+
+<p>
+The most powerful part of working in emacs, in my opinion, is the ability to pop up a buffer with some internal state, and just <i>look at it</i>.
+For example, want to inspect a matrix?
+Just pop up a buffer and look at it:
+</p>
+<div class="org-src-container">
+<pre class="src src-elisp"><code>(<span class="org-keyword">defun</span> <span class="org-function-name">show-mat</span> (m)
+  (<span class="org-keyword">with-current-buffer</span> (get-buffer-create <span class="org-string">"*mat*"</span>)
+    (erase-buffer)
+    (<span class="org-keyword">cl-loop</span> for r from 0 below (mat-rows m) do
+             (<span class="org-keyword">cl-loop</span> for c from 0 below (mat-cols m) do
+                      (insert (format <span class="org-string">"%2d"</span> (mat-ref m r c))))
+             (insert <span class="org-string">"\n"</span>))
+    (goto-char (point-min))
+    (pop-to-buffer (current-buffer))))
+</code></pre>
+</div>
+
+<p>
+This is a fantastic level of introspection capability.
+The debugger of course also gives you significant access to internal state.
+</p>
+
+<p>
+Additionally, I automated much of the problem workflow, including running solutions and copying the result to the system clipboard to paste into AoC.
+I want to find a way to use emacs in my day job to <i>drive</i> more of the workflows I use on a regular basis.
+</p>
+</div>
+</div>
+<div id="outline-container-org5b58d7d" class="outline-3">
+<h3 id="org5b58d7d">Language Conclusion: Fun?</h3>
+<div class="outline-text-3" id="text-org5b58d7d">
+<p>
+Elisp is probably the wrong choice for AoC, but that's okay.
+I'm happy to have learned more of the language; I will hopefully be using a lot more of it for workflow automation.
+Programming in this environment was joyful.
+It scratched the "programming can be fun" itch.
+</p>
+
+<p>
+<i>Programming</i>, the mechanical bits of modifying some code, thinking about the code, debugging the code with nice tools, and automating repeated parts of the mechanical programming process, is something I find enjoyable.
+The hyper-focus is enjoyable and incredibly relaxing for me.
+I had a lot of fun reflecting on, evaluating, and trying to tweak my programming style/behaviors as well.
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org2233aa7" class="outline-2">
+<h2 id="org2233aa7">AI</h2>
+<div class="outline-text-2" id="text-org2233aa7">
+<p>
+Plenty of people have shown that autonomous agents can solve the entire AoC problem set on their own, so I didn't explore this.
+I used AI as a problem solving partner, asking it to review code, review ideas, discuss solutions, etc, rather than just asking it to do everything.
+</p>
+
+<p>
+It's not clear to me if I was more productive.
+I'm tempted to say that, on this problem set, I might have been faster without the AI, and the AI would have been faster without me.
+Working together seems to have been worse for both of us (though I could think a lot less hard, which is addictive).
+</p>
+
+<p>
+What happened?
+</p>
+<ul class="org-ul">
+<li>Using AI to fix bugs was a minor productivity boost.</li>
+<li>Using AI as a design partner/pair programmer was a big time waster.</li>
+</ul>
+
+<p>
+When I fed AI incorrect assumptions (while brainstorming), the AI tools struggled.
+The tools seem to struggle to discard or correct incorrect information.
+Even worse, they seem to "fixate" on specific sentences, snippets, code comments, etc, and keep bringing them up over and over again<sup><a id="fnr.1" class="footref" href="#fn.1" role="doc-backlink">1</a></sup>.
+Fixation combined with incorrect information is a recipe for productive-looking disaster.
+</p>
+
+<p>
+Maybe better prompting can help when there's a specific task to accomplish (i.e. "check these assumptions &#x2026; then solve &#x2026;").
+However, in cases where I'm trying to learn something and don't know what I don't know, this behavior is harmful.
+When a model fixates on a bad assumption, without correcting it, it's easy to lose an hour to "oh so close! maybe if I change the prompt in this small way and try again it'll work."
+</p>
+
+<p>
+AoC is small, bounded, and artificial, but the failure mode I encountered here maps well to my day job.
+The real world is messy, filled with bad assumptions, filled with mistakes, filled with buggy code, and filled with confused humans.
+</p>
+
+<p>
+Something I say <i>constantly</i> in my day job is: "if we knew how to solve this, it would already be solved."
+Experienced developers know that their job is figuring out what problem we are even solving, defining the problem well, managing the stakeholders, keeping the team aligned, and saying no reframing stuff in creative ways.
+Once all that is done, getting working code out is typically straightforward.
+</p>
+
+<p>
+Now that AI can crank out the code, for well defined problems, that leaves us developers to do the creative-human work and spend less time arguing with the programming language to get it to do the thing we finally figured out.
+As an experienced developer who has fully embraced my real job, I should be thrilled, right?!
+</p>
+</div>
+</div>
+<div id="outline-container-orgd0d54ee" class="outline-2">
+<h2 id="orgd0d54ee">I am uneasy</h2>
+<div class="outline-text-2" id="text-orgd0d54ee">
+<p>
+I am not entirely thrilled yet.
+There are a few things that leave me uneasy, and I bet I'm not the only one.
+Articulating why has taken me a long time and a lot of HN comment reading.
+</p>
+
+<p>
+I did AoC to reflect on what I think is fun about programming.
+Summarizing all the above commentary, it's roughly these two things:
+</p>
+<ol class="org-ol">
+<li>Actually writing code</li>
+<li>Discovering something / Thinking</li>
+</ol>
+
+<p>
+Let's talk through both.
+</p>
+</div>
+<div id="outline-container-org1cfd0e0" class="outline-3">
+<h3 id="org1cfd0e0">Writing Code</h3>
+<div class="outline-text-3" id="text-org1cfd0e0">
+<p>
+The mechanical process of writing and debugging code <i>is extremely fun</i>.
+Getting into a flow state while writing code is deeply enjoyable.
+</p>
+
+<p>
+Many of us <i>love code</i>, and love to argue about the right way to write it.
+Many of us <i>enjoy</i> the fun colors we've configured in our text editors, the keybindings we've internalized, the cool new LSP thing we found last week, etc.
+It's a huge bummer to me that there's probably not as much of this in my future.
+</p>
+
+<p>
+It's possible that I might be able to restore some of the flow state with AI tools and good integrations between them.
+I will spend significant time trying to make the new workflow fun and joyful.
+I'm optimistic this AI-fueled coding thing can become mechanically fun too, just in some different way.
+</p>
+</div>
+</div>
+<div id="outline-container-org02cd43f" class="outline-3">
+<h3 id="org02cd43f">Discovery and Thinking</h3>
+<div class="outline-text-3" id="text-org02cd43f">
+<p>
+I'm in a bit of a pickle over how AI tools and programming work for this second thing.
+</p>
+
+<p>
+The act of programming is a tool for thought and a tool for discovery.
+Nearly all of the code I write is thrown away; the point of writing it was to figure out what the problem even is.
+</p>
+
+<p>
+A great analogy here is writing text.
+This blog post, for example, took me a month to write.
+Writing text over and over again is <i>how</i> I figured out what I actually think!
+</p>
+
+<p>
+The specific thing I'm thinking about varies, but programming languages (for me) are often a good tool to explore the problem space (for problems I actually like working on).
+That is, programming languages are great tools for thinking about questions like:
+</p>
+<ul class="org-ul">
+<li>What's the right algorithm for this Fundamental Problem?</li>
+<li>What does the data look like?</li>
+<li>How do I lay all this stuff out in memory to go really fast?</li>
+<li>What is the interface that hides <i>just the right amount</i> of stuff?</li>
+</ul>
+
+<p>
+This "programming as thinking" also directly relates to the programming styles used, and why it's fun to explore different styles.
+Trying and thinking about styles of programming is a way to understand the problem better.
+</p>
+
+<p>
+I care about my tools, about programming languages, and interactive/iterative workflows because these are tools for thought.
+</p>
+
+<p>
+There's tons of good content in this discussion on HN related to this concept: <a href="https://news.ycombinator.com/item?id=46881264">https://news.ycombinator.com/item?id=46881264</a> and <a href="https://news.ycombinator.com/item?id=46909439">https://news.ycombinator.com/item?id=46909439</a> and <a href="https://news.ycombinator.com/item?id=46917567">https://news.ycombinator.com/item?id=46917567</a> and many more
+</p>
+
+<p>
+You’d be right to say “you know you can still write code, right?”
+Yes, of course, but it's really hard to know when the problem is defined well enough to switch from thinking to executing.
+Switching over when it is execution time is <i>probably</i> faster.
+But, the feedback loop between half-formed ideas, concrete representations, and small experiments is fragile.
+Writing bad code, throwing it away, rewriting it in a different style, or changing the representation entirely is how I notice when I have something wrong.
+When execution is outsourced too early, I worry that I lose the friction that tells me when something doesn’t make sense and get caught in the "one more try" prompt loops.
+</p>
+
+<p>
+This isn’t unique to AI-assisted programming.
+We see this problem frequently when working with design docs.
+You can write the design up all day, but when you actually go implement your ideas you'll almost certainly discover incorrect assumptions, important missed details, etc (this does not invalidate design doc writing, as long as everyone accepts that they are just a hypothesis of a design).
+</p>
+
+<p>
+Maybe getting the thinking/executing balance right will come with time and practice.
+Maybe it will get easier to tune my instincts when the progress on the models slows.
+</p>
+
+<p>
+Maybe the new experimentation is just making Claude write all the code, then A/B testing it in prod and spending all my time debugging stuff.
+This is sort of happening right now in day job, so it's a plausible future.
+Debugging someone else's code all day is a pretty grim job, and "production" is almost too late to be discovering what the problem actually is.
+</p>
+
+<p>
+A more optimistic path could be that thinking moves to tools other than classical programming languages.
+I already sometimes prototype in higher level languages than my final implementation, maybe that is taken to an extreme?
+Maybe thinking happens in specification languages, proof assistants, simulators, deliberately constrained DSLs, with models acting more like "compilers" that can plug the ideas into the final codebase and convert between languages or something.
+Maybe team-work works better with these models in a specification language?
+That's worth some experimentation.
+</p>
+
+<p>
+I am not sure what comes of this but it's fairly clear we still need tools for thinking (until <a href="#for-now">Appendix: For now&#x2026;</a>).
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-orga32f684" class="outline-2">
+<h2 id="orga32f684">Overall Conclusion</h2>
+<div class="outline-text-2" id="text-orga32f684">
+<p>
+Here's some bullets on what this was all about:
+</p>
+<ul class="org-ul">
+<li>AoC this year was fun, I'm glad I did it</li>
+<li>Emacs Lisp the language is good, but not great</li>
+<li>Emacs Lisp the programming environment is amazing</li>
+<li>The mechanical act of "doing programming" can be super fun
+<ul class="org-ul">
+<li>But AI can do it pretty well now, so maybe that's a bummer</li>
+</ul></li>
+<li>Writing code often <i>is</i> the thinking and I'm not sure what happens to this</li>
+</ul>
+
+<p>
+I am leaving this thinking-by-writing experience with more questions than answers.
+I'm hopeful that I've left you with some good questions too!
+</p>
+</div>
+</div>
+<div id="outline-container-for-now" class="outline-2">
+<h2 id="for-now">Appendix: For now&#x2026;</h2>
+<div class="outline-text-2" id="text-for-now">
+<p>
+When I asked Claude to review this post and give me a summary of "what's left for humans," it made a nice long list of skills humans have (most of which are in here somewhere), but concluded with "\n\nFor now."
+</p>
+
+<p>
+uhhhh
+</p>
+</div>
+</div>
+<div id="footnotes">
+<h2 class="footnotes">Footnotes: </h2>
+<div id="text-footnotes">
+
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1" role="doc-backlink">1</a></sup> <div class="footpara" role="doc-footnote"><p class="footpara">A coworker of mine pointed out that this might be a result of optimizing for needle-in-a-haystack benchmarks.</p></div></div>
+
+
+</div>
+</div>
+  </div>
+
+  <div id="postamble" class="status">
+    <div id='#postamble'>
+      <a href='/'>home</a>
+      <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+    </div>
+  </div>
+</body>
+</html>
+
+</body>
+
+</html>
