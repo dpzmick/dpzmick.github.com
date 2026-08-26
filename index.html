@@ -4,9 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>David Zmick</title>
-  <script type='text/javascript' src='/static/scripts.js'></script>
+  <script>
+    // before CSS loads the browser paints its own background; that flashes
+    document.documentElement.style.backgroundColor =
+      window.localStorage.getItem("theme") === "light" ? "#ffffff" : "#1d1f21";
+  </script>
+  <script type='text/javascript' src='/static/scripts.js' defer></script>
   <link rel='stylesheet' type='text/css' href='/static/base.css' />
-  <link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' />
+  <script>
+    // write the right sheet directly, so light mode never loads the dark one
+    document.write("<link rel='stylesheet' type='text/css' id='theme-css' href='/static/" +
+      (window.localStorage.getItem("theme") === "light" ? "base16-tomorrow" : "base16-tomorrow-night") +
+      ".css' />");
+  </script>
+  <noscript><link rel='stylesheet' type='text/css' id='theme-css' href='/static/base16-tomorrow-night.css' /></noscript>
 </head>
 <body>
   <div id="preamble" class="status">
@@ -16,7 +27,7 @@
   </div>
   <div id="content">
     <header>
-      <h1 class="title">David Zmick</h1>
+      <h1>David Zmick</h1>
     </header>
     <p>
     I am currently a software engineer at Jump Trading, living in Chicago.
@@ -35,26 +46,27 @@
     </ul>
     <h2>Blog Posts: <span id=rss><a href="/feed.xml"><img src="/static/rss.png"></a></span></h2>
     <ul>
-    <li><code>2026-02-06<code> - <a href="posts/2026-aoc-elisp-ai.html">AoC Self-Reflections (and a touch of AI doomerism)</a></li>
-    <li><code>2026-01-19<code> - <a href="posts/2026-aoc-seq-lisp-perf.html">Emacs Lisp Performance Oddity</a></li>
-    <li><code>2021-10-26<code> - <a href="posts/2021-10-26-teensy-4.1-set-many-pins.html">Setting Many Teensy 4.1 Pins at the Same Time</a></li>
-    <li><code>2021-03-28<code> - <a href="posts/2021-03-28-polynomial-from-roots.html">Badly Computing Polynomial Coefficients from Roots (correctly too!)</a></li>
-    <li><code>2020-09-12<code> - <a href="posts/2020-09-21-headset-latency.html">Audio/Visual Latency Tests</a></li>
-    <li><code>2020-05-10<code> - <a href="posts/2020-05-10-ryzen-memory.html">AMD Zen Memory Latency/Bandwidth Considerations</a></li>
-    <li><code>2020-02-23<code> - <a href="posts/2020-02-01-homelab4-cloud.html">Homelab Act 4: Services and Applications</a></li>
-    <li><code>2020-01-12<code> - <a href="posts/2020-01-12-nas.html">Homelab Act 3: NAS, ZFS, and NFS</a></li>
-    <li><code>2020-01-11<code> - <a href="posts/2020-01-11-server-network.html">Homelab Act 2: Servers and 10GbE</a></li>
-    <li><code>2020-01-09<code> - <a href="posts/2020-01-09-vpn.html">Homelab Act 1: VPNs</a></li>
-    <li><code>2019-11-26<code> - <a href="posts/2019-11-26-rust-tips.html">Rust for C/C++ developers</a></li>
-    <li><code>2019-11-15<code> - <a href="posts/2019-05-25-pin-rs-cpp.html">Understanding Pin (for C and C++ Developers)</a></li>
-    <li><code>2017-05-25<code> - <a href="posts/2017-05-25-outsmarting-the-compiler.html">Outsmarting the Compiler</a></li>
-    <li><code>2017-01-23<code> - <a href="posts/2017-01-23-rust-arc-gc-realtime.html">&quot;Garbage Collection&quot; for Rust Arc Pointers</a></li>
-    <li><code>2016-12-17<code> - <a href="posts/2016-12-17-audio-basics.html">Audio programming 101</a></li>
-    <li><code>2016-08-11<code> - <a href="posts/2016-08-11-rust-jit-image-processing.html">Rust Image Processing DSL</a></li>
-    <li><code>2015-06-09<code> - <a href="posts/2015-06-09-ants.html">Ants</a></li>
-    <li><code>2014-06-01<code> - <a href="posts/2014-07-07-study-groups-pt-2.html">Study Groups Pt. 2</a></li>
-    <li><code>2014-05-31<code> - <a href="posts/2014-05-31-study-groups-pt-1.html">Study Groups Pt. 1</a></li>
-    <li><code>2014-01-17<code> - <a href="posts/2014-01-17-decision-matrix.html">Decision Matrix</a></li>
+    <li><code>2026-08-26</code> - <a href="posts/2026-gf-lfsr.html">Galois Field Orbits and Shift Registers</a></li>
+    <li><code>2026-02-06</code> - <a href="posts/2026-aoc-elisp-ai.html">AoC Self-Reflections (and a touch of AI doomerism)</a></li>
+    <li><code>2026-01-19</code> - <a href="posts/2026-aoc-seq-lisp-perf.html">Emacs Lisp Performance Oddity</a></li>
+    <li><code>2021-10-26</code> - <a href="posts/2021-10-26-teensy-4.1-set-many-pins.html">Setting Many Teensy 4.1 Pins at the Same Time</a></li>
+    <li><code>2021-03-28</code> - <a href="posts/2021-03-28-polynomial-from-roots.html">Badly Computing Polynomial Coefficients from Roots (correctly too!)</a></li>
+    <li><code>2020-09-12</code> - <a href="posts/2020-09-21-headset-latency.html">Audio/Visual Latency Tests</a></li>
+    <li><code>2020-05-10</code> - <a href="posts/2020-05-10-ryzen-memory.html">AMD Zen Memory Latency/Bandwidth Considerations</a></li>
+    <li><code>2020-02-23</code> - <a href="posts/2020-02-01-homelab4-cloud.html">Homelab Act 4: Services and Applications</a></li>
+    <li><code>2020-01-12</code> - <a href="posts/2020-01-12-nas.html">Homelab Act 3: NAS, ZFS, and NFS</a></li>
+    <li><code>2020-01-11</code> - <a href="posts/2020-01-11-server-network.html">Homelab Act 2: Servers and 10GbE</a></li>
+    <li><code>2020-01-09</code> - <a href="posts/2020-01-09-vpn.html">Homelab Act 1: VPNs</a></li>
+    <li><code>2019-11-26</code> - <a href="posts/2019-11-26-rust-tips.html">Rust for C/C++ developers</a></li>
+    <li><code>2019-11-15</code> - <a href="posts/2019-05-25-pin-rs-cpp.html">Understanding Pin (for C and C++ Developers)</a></li>
+    <li><code>2017-05-25</code> - <a href="posts/2017-05-25-outsmarting-the-compiler.html">Outsmarting the Compiler</a></li>
+    <li><code>2017-01-23</code> - <a href="posts/2017-01-23-rust-arc-gc-realtime.html">&quot;Garbage Collection&quot; for Rust Arc Pointers</a></li>
+    <li><code>2016-12-17</code> - <a href="posts/2016-12-17-audio-basics.html">Audio programming 101</a></li>
+    <li><code>2016-08-11</code> - <a href="posts/2016-08-11-rust-jit-image-processing.html">Rust Image Processing DSL</a></li>
+    <li><code>2015-06-09</code> - <a href="posts/2015-06-09-ants.html">Ants</a></li>
+    <li><code>2014-06-01</code> - <a href="posts/2014-07-07-study-groups-pt-2.html">Study Groups Pt. 2</a></li>
+    <li><code>2014-05-31</code> - <a href="posts/2014-05-31-study-groups-pt-1.html">Study Groups Pt. 1</a></li>
+    <li><code>2014-01-17</code> - <a href="posts/2014-01-17-decision-matrix.html">Decision Matrix</a></li>
     </ul>
   </div>
 
@@ -62,6 +74,7 @@
     <div id='#postamble'>
       <a href='/'>home</a>
       <a class='need-js' href='#/' onclick='switchModes()'>switch-color-mode</a>
+      <span id='perf-stats'></span>
     </div>
   </div>
 </body>

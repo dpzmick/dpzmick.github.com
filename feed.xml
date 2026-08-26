@@ -9,6 +9,1322 @@
     <email>david@dpzmick.com</email>
   </author>
   <entry>
+    <title>Galois Field Orbits and Shift Registers</title>
+    <link rel="alternate" type="text/html" href="http://dpzmick.com/posts/2026-gf-lfsr.html"/>
+    <id>urn:uuid:96c9e8f4-2b70-35ac-8aa1-a7157977ef8a</id>
+    <updated>2026-08-26</updated>
+    <content type="html">
+      <![CDATA[<style>.org-src-container {white-space: pre; font-family: monospace }</style>
+               <p>
+I have been trying to generate musical-sounding rhythms and melodies using Galois Fields.
+<a href="https://cgm.cs.mcgill.ca/~godfried/publications/banff.pdf">Euclidean (algo)Rhythms</a> are frequently used in electronic music, so there is some prior art for mathy things producing musically interesting results.
+In \(GF(2^n)\) (the Galois Field of \(2^n\) elements), the field elements are bitstrings, which map naturally to gate sequences.
+Since we can do math over field elements, we can do math over sequences.
+Maybe we can combine sequences in exciting ways.
+</p>
+
+<p>
+Most of what I've tried with fields so far hasn't been interesting, but one thing produced a series of decent-sounding "shifts" of the same sequence, which I found surprising.
+We need two things to understand this: a way to write rhythms as zeros and ones, and a way to treat those same zeros and ones as elements of a Galois Field.
+</p>
+
+<style>
+  aside { border-left: 3px solid #666; padding-left: 1em; margin: 1.2em 0; font-size: 0.94em; opacity: 0.85; }
+  aside p:first-child { margin-top: 0; }
+  aside p:last-child { margin-bottom: 0; }
+  details { border-left: 3px solid transparent; padding-left: 1em; margin: 1.2em 0; }
+  details[open] { border-left-color: #666; }
+  /* exported raw, so not in a <p> and gets no margins from anything */
+  audio { display: block; margin: 1.2em 0; }
+</style>
+<div id="outline-container-org0000007" class="outline-2">
+<h2 id="org0000007">Ingredients</h2>
+<div class="outline-text-2" id="text-org0000007">
+</div>
+<div id="outline-container-org0000001" class="outline-3">
+<h3 id="org0000001">Gates and Sequences</h3>
+<div class="outline-text-3" id="text-org0000001">
+<p>
+In electronic music, sequences of "gates" express rhythms.
+A gate is either "open" or "closed."
+An "open" gate says "play this instrument at this step" and a "closed" gate says "play nothing at this step."
+A gate sequence is a bunch of gates in a row, like "open closed open open", which would mean the associated sound is played, skipped, played, played (repeating forever).
+</p>
+
+<p>
+If we use 1 for "open" and 0 for "closed," we can write sequences compactly.
+For example, we can write a kick (bass drum) pattern of <code>1000</code>, a snare pattern of <code>0010</code>, and a hihat pattern of <code>0101</code>.
+Read these one digit at a time, left to right: <code>1000</code> is "one zero zero zero", not "one thousand".
+Drawn out, those would be:
+</p>
+
+<svg viewBox="0 0 386 204" xmlns="http://www.w3.org/2000/svg" style="max-width:386px;width:100%;height:auto;font-family:Consolas,Monaco,monospace">
+<title>Kick, snare, and hihat gate sequences over four steps</title>
+<line x1="166.0" y1="188" x2="334.0" y2="188" stroke="#666" stroke-width="1"/>
+<circle cx="166.0" cy="188" r="2.5" fill="#666"/>
+<circle cx="222.0" cy="188" r="2.5" fill="#666"/>
+<circle cx="278.0" cy="188" r="2.5" fill="#666"/>
+<circle cx="334.0" cy="188" r="2.5" fill="#666"/>
+<text x="4" y="41.0" font-size="15" fill="currentColor">kick 1000</text>
+<rect x="144" y="14" width="44" height="44" rx="8" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="200" y="14" width="44" height="44" rx="8" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="256" y="14" width="44" height="44" rx="8" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="312" y="14" width="44" height="44" rx="8" fill="none" stroke="#666" stroke-width="2"/>
+<text x="4" y="101.0" font-size="15" fill="currentColor">snare 0010</text>
+<rect x="144" y="74" width="44" height="44" rx="8" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="200" y="74" width="44" height="44" rx="8" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="256" y="74" width="44" height="44" rx="8" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="312" y="74" width="44" height="44" rx="8" fill="none" stroke="#666" stroke-width="2"/>
+<text x="4" y="161.0" font-size="15" fill="currentColor">hihat 0101</text>
+<rect x="144" y="134" width="44" height="44" rx="8" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="200" y="134" width="44" height="44" rx="8" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="256" y="134" width="44" height="44" rx="8" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="312" y="134" width="44" height="44" rx="8" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+</svg>
+
+<p>
+Here's what that pattern sounds like:
+</p>
+
+<audio controls src="../static/gflfsr/gates_demo.ogg"></audio>
+
+<p>
+These <code>0101..</code> bitstrings look an awful lot like binary numbers!
+</p>
+</div>
+</div>
+<div id="outline-container-org0000002" class="outline-3">
+<h3 id="org0000002">Galois Fields</h3>
+<div class="outline-text-3" id="text-org0000002">
+<p>
+I'll attempt to explain Galois Fields well enough here to follow the rest of the post, but I recommend reading <a href="https://xorvoid.com/galois_fields_for_great_good_00.html">Learn you Galois Fields for Great Good</a> if you'd actually like to learn how they work.
+</p>
+
+<p>
+When people talk about math, they are typically discussing numbers and operations.
+The most familiar operations are addition, subtraction, multiplication, and division.
+These operations take (usually) two numbers and give you back a new one.
+</p>
+
+<p>
+We've come up with a bunch of rules that these operations follow.
+One such rule is the "distributive property," which says: <code>x × (y + z) = x × y + x × z</code>.
+</p>
+
+<p>
+Sometimes we change the way the operations work.
+When doing "clock math" (math with time), numbers past 12 "wrap around", so <code>6+7 = 1</code>.
+Wrapping is the same as keeping the remainder: <code>13 ÷ 12</code> leaves a remainder of 1.
+The number we wrap around, 12 in this case, is called the <i>modulus</i>, and this style of math is called <i>modular arithmetic</i>.
+Math (for some definition of math) still works on a clock face.
+</p>
+
+<p>
+If we can change what operations do, can we also change what numbers <i>are</i>?
+Maybe; we could, for example, replace numbers with drum patterns, then define specific operations over these patterns that allow us to "add patterns together."
+Imagine "adding" two patterns together with a simple rule:
+</p>
+<blockquote>
+<p>
+In each output position, the gate is open (1) only when the gate in the same position was open in <i>exactly</i> one of the two input patterns.
+</p>
+</blockquote>
+
+<style>
+  table.small { width: auto; margin: 0 auto; border-collapse: collapse; }
+  .small th, .small td { padding: 0.1em 0.7em; text-align: center; }
+  .small td:last-child, .small th:last-child { border-left: 2px solid #333; color: #81a2be; }
+</style>
+
+<p>
+Working that out for a single position, we get this table:
+</p>
+
+<table class="small">
+
+
+<colgroup>
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">input 1</th>
+<th scope="col" class="org-right">input 2</th>
+<th scope="col" class="org-right">output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-right">1</td>
+<td class="org-right">1</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-right">0</td>
+<td class="org-right">1</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-right">1</td>
+<td class="org-right">0</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Then, for a full sequence, we'd say: <code>0110 + 1101 = 1011</code> (check this yourself).
+</p>
+
+<p>
+We've changed our numbers and changed our operations.
+Are we still doing math?
+We have a new "add" operation, does it follow any familiar rules?
+One familiar way to understand multiplication by a nonnegative whole number <code>N</code> is repeated addition: combine <code>N</code> copies of a value.
+But our new things are gate sequences, not whole numbers, so that recipe no longer tells us what multiplication should do.
+Can we define multiplication at all?
+</p>
+
+<p>
+It turns out that the answer to these questions is <i>sometimes</i>.
+For <i>some</i> combinations of "things" and "operations," the familiar rules of math keep working (the distributive property, for example).
+When a combination allows the rules to work, we call it a <i>field</i>.
+A field built from only a <i>finite</i> collection of things is called a Finite Field, or Galois Field (named after <a href="https://en.wikipedia.org/wiki/%C3%89variste_Galois">Évariste Galois</a>).
+</p>
+</div>
+<div id="outline-container-org0000004" class="outline-4">
+<h4 id="org0000004">When Clock Math Forms a Field</h4>
+<div class="outline-text-4" id="text-org0000004">
+<p>
+We can now build a working Galois Field using:
+</p>
+<ul class="org-ul">
+<li>Numbers: 0, 1, 2, 3, 4, 5, 6 (7 total)</li>
+<li>Operations: Clock-math/modular arithmetic</li>
+</ul>
+
+<p>
+With a modulus of 7, addition and multiplication work normally, followed by taking the remainder.
+</p>
+
+<p>
+Division is a bit trickier.
+For division to make sense, <code>6 ÷ 2</code> needs to have exactly one answer: "the number that produces 6 when multiplied by 2."
+</p>
+
+<p>
+In other words, dividing by 2 is impossible if we can find any <code>A</code> and <code>B</code> where:
+</p>
+<ul class="org-ul">
+<li><code>A</code> and <code>B</code> are different numbers</li>
+<li><code>A × 2</code> and <code>B × 2</code> produce the same answer</li>
+</ul>
+
+<p>
+When the modulus is 7, this is our multiplication table, with every <code>6</code> marked:
+</p>
+
+<style>
+  table.multable { width: auto; margin: 0 auto; border-collapse: collapse; }
+  .multable th, .multable td { padding: 0.1em 0.55em; text-align: center; }
+  .multable thead th { color: #81a2be; }
+  .multable td:first-child, .multable th:first-child { border-right: 2px solid #333; color: #81a2be; }
+  /* highlighted cells (org *bold*) get a ring; box-shadow + cancelled padding
+     so highlighting doesn't change the table's size */
+  .multable.hl b {
+    font-weight: inherit;
+    display: inline-block;
+    line-height: 1.25;
+    padding: 0 0.18em;
+    margin: 0 -0.18em;
+    border-radius: 6px;
+    box-shadow: 0 0 0 2px #81a2be;
+  }
+</style>
+
+<table class="multable hl">
+
+
+<colgroup>
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">×</th>
+<th scope="col" class="org-right">0</th>
+<th scope="col" class="org-right">1</th>
+<th scope="col" class="org-right">2</th>
+<th scope="col" class="org-right">3</th>
+<th scope="col" class="org-right">4</th>
+<th scope="col" class="org-right">5</th>
+<th scope="col" class="org-right">6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-right">0</td>
+<td class="org-right">1</td>
+<td class="org-right">2</td>
+<td class="org-right">3</td>
+<td class="org-right">4</td>
+<td class="org-right">5</td>
+<td class="org-right"><b>6</b></td>
+</tr>
+
+<tr>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">4</td>
+<td class="org-right"><b>6</b></td>
+<td class="org-right">1</td>
+<td class="org-right">3</td>
+<td class="org-right">5</td>
+</tr>
+
+<tr>
+<td class="org-right">3</td>
+<td class="org-right">0</td>
+<td class="org-right">3</td>
+<td class="org-right"><b>6</b></td>
+<td class="org-right">2</td>
+<td class="org-right">5</td>
+<td class="org-right">1</td>
+<td class="org-right">4</td>
+</tr>
+
+<tr>
+<td class="org-right">4</td>
+<td class="org-right">0</td>
+<td class="org-right">4</td>
+<td class="org-right">1</td>
+<td class="org-right">5</td>
+<td class="org-right">2</td>
+<td class="org-right"><b>6</b></td>
+<td class="org-right">3</td>
+</tr>
+
+<tr>
+<td class="org-right">5</td>
+<td class="org-right">0</td>
+<td class="org-right">5</td>
+<td class="org-right">3</td>
+<td class="org-right">1</td>
+<td class="org-right"><b>6</b></td>
+<td class="org-right">4</td>
+<td class="org-right">2</td>
+</tr>
+
+<tr>
+<td class="org-right">6</td>
+<td class="org-right">0</td>
+<td class="org-right"><b>6</b></td>
+<td class="org-right">5</td>
+<td class="org-right">4</td>
+<td class="org-right">3</td>
+<td class="org-right">2</td>
+<td class="org-right">1</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+These are the ways to multiply numbers together and get 6:
+</p>
+<ul class="org-ul">
+<li><code>3 × 2</code> (or <code>2 × 3</code>)</li>
+<li><code>6 × 1</code> (or <code>1 × 6</code>)</li>
+<li><code>4 × 5</code> (or <code>5 × 4</code>)</li>
+</ul>
+
+<p>
+Ignoring zero (division by zero isn't defined normally either), the only answer to <code>6 ÷ 2</code> is 3.
+Work this out for enough values to convince yourself that we can still do division.
+</p>
+
+<aside id="org0000003">
+<p>
+If we do clock math with a modulus of 12, this doesn't work anymore.
+Consider that:
+</p>
+<ul class="org-ul">
+<li><code>1 × 4 = 4 (mod 12)</code></li>
+<li><code>4 × 4 = 4 (mod 12)</code> (<code>16 ÷ 12 = 1</code> with a remainder of 4)</li>
+</ul>
+
+<p>
+So what is <code>4 ÷ 4</code>?
+It could be <code>1</code> or <code>4</code>.
+</p>
+</aside>
+
+<p>
+So, with a modulus of 7 (or <i>any prime number</i>): addition works, subtraction works (try it! use the addition table), multiplication works, division works.
+With these basics working, most of normal math works too.
+</p>
+</div>
+</div>
+<div id="outline-container-org0000006" class="outline-4">
+<h4 id="org0000006">Math Using Gate Sequences</h4>
+<div class="outline-text-4" id="text-org0000006">
+<p>
+Math over gate sequences turns out to be possible.
+Start with the four two-bit sequences: <code>00</code>, <code>01</code>, <code>10</code>, and <code>11</code>.
+They are still sequences, not numbers; <code>10</code> is "one zero", not "ten".
+</p>
+
+<p>
+We can define addition using the same rule we sketched earlier:
+</p>
+
+<table class="multable">
+
+
+<colgroup>
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">+</th>
+<th scope="col" class="org-right">00</th>
+<th scope="col" class="org-right">01</th>
+<th scope="col" class="org-right">10</th>
+<th scope="col" class="org-right">11</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">00</td>
+<td class="org-right">00</td>
+<td class="org-right">01</td>
+<td class="org-right">10</td>
+<td class="org-right">11</td>
+</tr>
+
+<tr>
+<td class="org-right">01</td>
+<td class="org-right">01</td>
+<td class="org-right">00</td>
+<td class="org-right">11</td>
+<td class="org-right">10</td>
+</tr>
+
+<tr>
+<td class="org-right">10</td>
+<td class="org-right">10</td>
+<td class="org-right">11</td>
+<td class="org-right">00</td>
+<td class="org-right">01</td>
+</tr>
+
+<tr>
+<td class="org-right">11</td>
+<td class="org-right">11</td>
+<td class="org-right">10</td>
+<td class="org-right">01</td>
+<td class="org-right">00</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Multiplication is trickier, so you'll have to trust me.
+Here's the worked-out table, with every <code>01</code> marked so we can check that division still makes sense:
+</p>
+
+<table class="multable hl">
+
+
+<colgroup>
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">×</th>
+<th scope="col" class="org-right">00</th>
+<th scope="col" class="org-right">01</th>
+<th scope="col" class="org-right">10</th>
+<th scope="col" class="org-right">11</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">00</td>
+<td class="org-right">00</td>
+<td class="org-right">00</td>
+<td class="org-right">00</td>
+<td class="org-right">00</td>
+</tr>
+
+<tr>
+<td class="org-right">01</td>
+<td class="org-right">00</td>
+<td class="org-right"><b>01</b></td>
+<td class="org-right">10</td>
+<td class="org-right">11</td>
+</tr>
+
+<tr>
+<td class="org-right">10</td>
+<td class="org-right">00</td>
+<td class="org-right">10</td>
+<td class="org-right">11</td>
+<td class="org-right"><b>01</b></td>
+</tr>
+
+<tr>
+<td class="org-right">11</td>
+<td class="org-right">00</td>
+<td class="org-right">11</td>
+<td class="org-right"><b>01</b></td>
+<td class="org-right">10</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+You know the drill.
+We can create <code>01</code> from:
+</p>
+<ul class="org-ul">
+<li><code>01 × 01</code></li>
+<li><code>10 × 11</code> (or <code>11 × 10</code>)</li>
+</ul>
+
+<p>
+You can check the rest of the values if you'd like.
+</p>
+
+<p>
+So we have all four operations:
+</p>
+<ul class="org-ul">
+<li>Addition: a gate is open when exactly one of the two inputs is open (this operation is called XOR)</li>
+<li>Subtraction: exactly the same as addition (try it)</li>
+<li>Multiplication: complicated, but doable</li>
+<li>Division: complicated, but also doable</li>
+</ul>
+
+<p>
+Nothing here is special about two-bit sequences.
+For any length \(n\), there are \(2^n\) different sequences, and we can form a field from them.
+There can be more than one multiplication table that works for a particular \(n\), but the resulting fields are all structurally equivalent (isomorphic).
+</p>
+
+<aside id="org0000005">
+<p>
+You might notice that 4 is not <i>prime</i>, even though our clock-math field needed a prime modulus.
+Galois Fields can have any prime-power size \(p^n\), where \(p\) is prime and \(n\) is a positive integer.
+The seven-element field used \(p=7\) and \(n=1\); gate-sequence fields use \(p=2\) and any positive integer \(n\).
+</p>
+</aside>
+
+<p>
+So, yes!
+We can replace numbers with sequences, redefine the operations, and have something that works like "normal math".
+Multiplication of gate sequences is all we need to start producing the strange rhythmic property I've encountered.
+</p>
+
+<details>
+<summary>Show me how this actually works (optional detour)</summary>
+
+<p>
+Each element is really a polynomial, with the bits as its coefficients.
+The leftmost bit is the <i>highest</i> power (but either endian works), so <code>1011</code> is:
+\[
+1 x^3 + 0 x^2 + 1 x^1 + 1 x^0
+\]
+</p>
+
+<p>
+The modulus is an irreducible polynomial.
+A given \(n\) might have a few different choices for the irreducible polynomial.
+We do our operation normally, divide by the modulus (using long division of polynomials), and keep the remainder.
+</p>
+
+<p>
+The examples in this post use \(x^2+x+1\) for length two sequences, \(x^3+x^2+1\) for length three, and \(x^4+x+1\) for length four.
+</p>
+
+<p>
+Addition and subtraction are just bitwise XOR.
+Multiplying by \(x\) starts as a left-shift by 1; if the result is too long, we reduce it using the modulus.
+</p>
+
+<p>
+Once we have addition, subtraction, and multiplication by \(x\), we can build the "remainder function" by adding shifted copies of the irreducible polynomial until we have the remainder.
+</p>
+
+<p>
+With those pieces, we can implement multiplication and division.
+</p>
+
+<p>
+<a href="https://xorvoid.com/galois_fields_for_great_good_00.html">Learn you Galois Fields for Great Good</a> goes into much more detail.
+Read that if this seems interesting to you!
+</p>
+
+</details>
+</div>
+</div>
+</div>
+</div>
+<div id="outline-container-org0000008" class="outline-2">
+<h2 id="org0000008">Galois Orbit Sequences</h2>
+<div class="outline-text-2" id="text-org0000008">
+<p>
+My first idea was to use field elements directly to sequence drums, then find some mechanism to move between sequences and evolve the rhythm.
+An <i>orbit</i> in a field is the path you get by starting with one field element and repeatedly multiplying by another.
+We can use an orbit as that mechanism.
+</p>
+
+<p>
+In code, that'd be:
+</p>
+<div class="org-src-container">
+<pre class="src src-python"><code><span class="org-keyword">def</span> <span class="org-function-name">orbit</span>(start, gen):
+    <span class="org-variable-name">ret</span> <span class="org-operator">=</span> []
+    <span class="org-variable-name">current</span> <span class="org-operator">=</span> start
+    <span class="org-keyword">while</span> current <span class="org-keyword">not</span> <span class="org-keyword">in</span> ret:
+        ret.append(current)
+        <span class="org-variable-name">current</span> <span class="org-operator">=</span> current <span class="org-operator">*</span> gen   <span class="org-comment-delimiter"># </span><span class="org-comment">field multiplication</span>
+    <span class="org-keyword">return</span> ret
+</code></pre>
+</div>
+
+<p>
+As long as neither <code>start</code> nor <code>gen</code> is <code>000</code>, the field is finite, so an orbit will always come back to where it started.
+Some choices of <code>gen</code> visit all \(2^n-1\) nonzero elements of the field; others only visit a few of them.
+I'll call the first kind a <i>full</i> orbit, since the distinction turns out to matter later.
+</p>
+
+<p>
+The orbit using sequences of length 3, <code>gen=010</code>, and <code>start=001</code> is:
+</p>
+
+<pre class="example">
+001  010  100  101  111  011  110
+</pre>
+
+<p>
+It contains seven steps, covering every element other than <code>000</code>.
+</p>
+</div>
+<div id="outline-container-org000000a" class="outline-3">
+<h3 id="org000000a">Elements as Patterns</h3>
+<div class="outline-text-3" id="text-org000000a">
+<p>
+Next we'll convert the orbit into drum sequences using each element to sequence a single drum.
+We play a sequence for a while, then switch to the next sequence in the orbit.
+</p>
+
+<p>
+For example, running the kick through one trip around the orbit, playing each sequence one time:
+</p>
+
+<svg viewBox="0 0 782 56" xmlns="http://www.w3.org/2000/svg" style="max-width:782px;width:100%;height:auto;font-family:Consolas,Monaco,monospace">
+<title>A kick plays each three-bit element in the seven-step orbit</title>
+<text x="99.0" y="15" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.65">001</text>
+<text x="205.0" y="15" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.65">010</text>
+<text x="311.0" y="15" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.65">100</text>
+<text x="417.0" y="15" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.65">101</text>
+<text x="523.0" y="15" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.65">111</text>
+<text x="629.0" y="15" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.65">011</text>
+<text x="735.0" y="15" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.65">110</text>
+<text x="4" y="42.0" font-size="15" fill="currentColor">kick</text>
+<rect x="56" y="24" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="86" y="24" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="116" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="162" y="24" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="192" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="222" y="24" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="268" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="298" y="24" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="328" y="24" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="374" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="404" y="24" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="434" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="480" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="510" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="540" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="586" y="24" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="616" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="646" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="692" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="722" y="24" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="752" y="24" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+</svg>
+
+<p>
+This sounds like:
+</p>
+<audio controls src="../static/gflfsr/orbit_demo.ogg"></audio>
+
+<p>
+On its own, it's fun.
+Each element is 3 steps long, so the full loop has 21 steps and does not naturally line up with the four-step groupings common in 4/4.
+I enjoy polyrhythmic/odd-metered music, so this is a good start.
+</p>
+
+<p>
+Let's add more drums to the beat.
+We'll give each instrument its own starting element, then play the sequences all together.
+This looks something like:
+</p>
+<svg viewBox="0 0 782 110" xmlns="http://www.w3.org/2000/svg" style="max-width:782px;width:100%;height:auto;font-family:Consolas,Monaco,monospace">
+<title>Three drums enter the same orbit at different points</title>
+<text x="4" y="24.0" font-size="15" fill="currentColor">kick</text>
+<rect x="56" y="6" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="86" y="6" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="116" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="162" y="6" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="192" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="222" y="6" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="268" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="298" y="6" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="328" y="6" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="374" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="404" y="6" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="434" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="480" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="510" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="540" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="586" y="6" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="616" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="646" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="692" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="722" y="6" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="752" y="6" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<text x="4" y="60.0" font-size="15" fill="currentColor">snare</text>
+<rect x="56" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="86" y="42" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="116" y="42" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="162" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="192" y="42" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="222" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="268" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="298" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="328" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="374" y="42" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="404" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="434" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="480" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="510" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="540" y="42" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="586" y="42" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="616" y="42" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="646" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="692" y="42" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="722" y="42" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="752" y="42" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<text x="4" y="96.0" font-size="15" fill="currentColor">hihat</text>
+<rect x="56" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="86" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="116" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="162" y="78" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="192" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="222" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="268" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="298" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="328" y="78" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="374" y="78" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="404" y="78" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="434" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="480" y="78" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="510" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="540" y="78" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="586" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="616" y="78" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="646" y="78" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="692" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="722" y="78" width="26" height="26" rx="5" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="752" y="78" width="26" height="26" rx="5" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+</svg>
+
+<p>
+And sounds like:
+</p>
+<audio controls src="../static/gflfsr/orbit_stack_demo.ogg"></audio>
+
+<p>
+I do not like listening to this beat.
+</p>
+
+<p>
+It's too dense, there's nothing obviously repeating to gravitate to; the structure is all buried.
+Every instrument also eventually plays <code>111</code>, which adds more busyness to the beat.
+</p>
+
+<p>
+Changing <code>start</code>, or choosing another <code>gen</code> that produced a full orbit, did not resolve the problem.
+The orbit visits every possible nonzero three-bit pattern, so this ends up just being dense and chaotic.
+</p>
+
+<aside id="org0000009">
+<p>
+This is the opposite of what makes Euclidean rhythms work.
+A Euclidean rhythm designs a well-spaced pattern for each instrument.
+A full orbit just <i>enumerates</i> every possible nonzero pattern, and some patterns in a field aren't ones you'd pick to be musical.
+</p>
+</aside>
+
+<p>
+Let's try something different.
+</p>
+</div>
+</div>
+<div id="outline-container-org000000b" class="outline-3">
+<h3 id="org000000b">Bits as Patterns</h3>
+<div class="outline-text-3" id="text-org000000b">
+<p>
+Let's "transpose" the sequences.
+For three-bit elements, we'll sequence 3 different instruments.
+Then, as we move through the orbit, use each bit of each element as the gates for the 3 instruments.
+</p>
+
+<p>
+The pattern an instrument plays is defined by the whole orbit, rather than a single element.
+</p>
+
+<p>
+Here's a diagram to help this make sense:
+</p>
+
+<svg viewBox="0 0 338 186" xmlns="http://www.w3.org/2000/svg" style="max-width:338px;width:100%;height:auto;font-family:Consolas,Monaco,monospace">
+<title>Seven three-bit orbit elements transposed into three instrument rows</title>
+<text x="77.0" y="25" font-size="14" text-anchor="middle" fill="currentColor">001</text>
+<path d="M61,32 v5 h32 v-5" fill="none" stroke="#666" stroke-width="1.5"/>
+<line x1="77.0" y1="42" x2="77.0" y2="56" stroke="#666" stroke-width="1.5"/>
+<path d="M77.0,61 l-4.5,-7 l9,0 z" fill="#666"/>
+<rect x="60" y="66" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="60" y="106" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="60" y="146" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<text x="117.0" y="25" font-size="14" text-anchor="middle" fill="currentColor">010</text>
+<path d="M101,32 v5 h32 v-5" fill="none" stroke="#666" stroke-width="1.5"/>
+<line x1="117.0" y1="42" x2="117.0" y2="56" stroke="#666" stroke-width="1.5"/>
+<path d="M117.0,61 l-4.5,-7 l9,0 z" fill="#666"/>
+<rect x="100" y="66" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="100" y="106" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="100" y="146" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<text x="157.0" y="25" font-size="14" text-anchor="middle" fill="currentColor">100</text>
+<path d="M141,32 v5 h32 v-5" fill="none" stroke="#666" stroke-width="1.5"/>
+<line x1="157.0" y1="42" x2="157.0" y2="56" stroke="#666" stroke-width="1.5"/>
+<path d="M157.0,61 l-4.5,-7 l9,0 z" fill="#666"/>
+<rect x="140" y="66" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="140" y="106" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="140" y="146" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<text x="197.0" y="25" font-size="14" text-anchor="middle" fill="currentColor">101</text>
+<path d="M181,32 v5 h32 v-5" fill="none" stroke="#666" stroke-width="1.5"/>
+<line x1="197.0" y1="42" x2="197.0" y2="56" stroke="#666" stroke-width="1.5"/>
+<path d="M197.0,61 l-4.5,-7 l9,0 z" fill="#666"/>
+<rect x="180" y="66" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="180" y="106" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="180" y="146" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<text x="237.0" y="25" font-size="14" text-anchor="middle" fill="currentColor">111</text>
+<path d="M221,32 v5 h32 v-5" fill="none" stroke="#666" stroke-width="1.5"/>
+<line x1="237.0" y1="42" x2="237.0" y2="56" stroke="#666" stroke-width="1.5"/>
+<path d="M237.0,61 l-4.5,-7 l9,0 z" fill="#666"/>
+<rect x="220" y="66" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="220" y="106" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="220" y="146" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<text x="277.0" y="25" font-size="14" text-anchor="middle" fill="currentColor">011</text>
+<path d="M261,32 v5 h32 v-5" fill="none" stroke="#666" stroke-width="1.5"/>
+<line x1="277.0" y1="42" x2="277.0" y2="56" stroke="#666" stroke-width="1.5"/>
+<path d="M277.0,61 l-4.5,-7 l9,0 z" fill="#666"/>
+<rect x="260" y="66" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="260" y="106" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="260" y="146" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<text x="317.0" y="25" font-size="14" text-anchor="middle" fill="currentColor">110</text>
+<path d="M301,32 v5 h32 v-5" fill="none" stroke="#666" stroke-width="1.5"/>
+<line x1="317.0" y1="42" x2="317.0" y2="56" stroke="#666" stroke-width="1.5"/>
+<path d="M317.0,61 l-4.5,-7 l9,0 z" fill="#666"/>
+<rect x="300" y="66" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="300" y="106" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="300" y="146" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<text x="50" y="88.0" font-size="14" text-anchor="end" fill="currentColor">kick</text>
+<text x="50" y="128.0" font-size="14" text-anchor="end" fill="currentColor">snare</text>
+<text x="50" y="168.0" font-size="14" text-anchor="end" fill="currentColor">hihat</text>
+</svg>
+
+<p>
+This sounds like:
+</p>
+<audio controls src="../static/gflfsr/lanes_demo.ogg"></audio>
+
+<p>
+This new beat sounds way better to me.
+What's going on?
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org000000c" class="outline-2">
+<h2 id="org000000c">Lining Up the Rhythms</h2>
+<div class="outline-text-2" id="text-org000000c">
+<p>
+Here are those three rhythms lined up against each other.
+</p>
+
+<pre class="example">
+kick    0011101
+hihat   1001110
+snare   0100111
+</pre>
+
+<p>
+Maybe you can see what is happening.
+The hihat is playing the same rhythm as the kick, just shifted right by one space.
+The snare is also the same rhythm, this time shifted right by two.
+</p>
+
+<svg viewBox="0 0 366 170" xmlns="http://www.w3.org/2000/svg" style="max-width:366px;width:100%;height:auto;font-family:Consolas,Monaco,monospace">
+<title>Kick, hihat, and snare rhythms shown as cyclic shifts</title>
+<text x="298" y="30.0" font-size="14" fill="currentColor">kick</text>
+<rect x="8" y="8" width="34" height="34" rx="7" fill="none" stroke="#cc6666" stroke-width="3.5"/>
+<rect x="48" y="8" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="88" y="8" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="128" y="8" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="168" y="8" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="208" y="8" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="248" y="8" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<line x1="132.0" y1="52.0" x2="152.0" y2="52.0" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
+<path d="M158.0,52.0 l-7,-4 l0,8 z" fill="currentColor" opacity="0.6"/>
+<text x="298" y="90.0" font-size="14" fill="currentColor">hihat</text>
+<rect x="8" y="68" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="48" y="68" width="34" height="34" rx="7" fill="none" stroke="#cc6666" stroke-width="3.5"/>
+<rect x="88" y="68" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="128" y="68" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="168" y="68" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="208" y="68" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="248" y="68" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<line x1="132.0" y1="112.0" x2="152.0" y2="112.0" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
+<path d="M158.0,112.0 l-7,-4 l0,8 z" fill="currentColor" opacity="0.6"/>
+<text x="298" y="150.0" font-size="14" fill="currentColor">snare</text>
+<rect x="8" y="128" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="48" y="128" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="88" y="128" width="34" height="34" rx="7" fill="none" stroke="#cc6666" stroke-width="3.5"/>
+<rect x="128" y="128" width="34" height="34" rx="7" fill="none" stroke="#666" stroke-width="2"/>
+<rect x="168" y="128" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="208" y="128" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+<rect x="248" y="128" width="34" height="34" rx="7" fill="#81a2be" stroke="#81a2be" stroke-width="2"/>
+</svg>
+
+<p>
+I tried a bunch of different start values, gen values, and field polynomials.
+At the time, this property seemed to hold for everything I tried.
+</p>
+
+<p>
+For example, with <code>gen=100</code> (and the same field and start), we get a different full orbit, but the rows are still rotations of each other:
+</p>
+<pre class="example">
+orbit   001 100 111 110 010 101 011
+kick    0111010
+snare   0011101
+hihat   1010011
+</pre>
+
+<p>
+Here's another one for a larger field (follow the <code>1111</code> at the end of the first row):
+</p>
+<pre class="example">
+orbit  0001 0010 0100 1000 0011 0110 1100 1011 0101 1010 0111 1110 1111 1101 1001
+rows   000100110101111
+       001001101011110
+       010011010111100
+       100010011010111
+</pre>
+
+<p>
+Transposing a full orbit always seems to produce a bunch of instrument rows that are just shifts of each other.
+</p>
+</div>
+</div>
+<div id="outline-container-org000000e" class="outline-2">
+<h2 id="org000000e">This is Strange</h2>
+<div class="outline-text-2" id="text-org000000e">
+<p>
+Why would the kick's rhythm have any relationship to the snare's?
+</p>
+
+<p>
+Look back at the multiplication table for the <a href="#org0000006">four-element field</a>.
+Consider <code>01 × 01 = 01</code> and <code>11 × 11 = 10</code>.
+The inputs to both multiplications end in a <code>1</code>, but the results <code>01</code> and <code>10</code> end in <code>1</code> and <code>0</code> respectively.
+Clearly multiplication "mixes" all the bits up somehow.
+</p>
+
+<p>
+If multiplication mixes up the entire sequence, how do we end up with the <i>same</i> sequence shifted around when we turn the sequences sideways?
+</p>
+
+<p>
+A full orbit contains all seven nonzero elements, regardless of where it starts.
+Changing the start only rotates the loop; the generator determines their order.
+If we pin one element in the first position, the other six can appear in \(6! = 720\) possible orders.
+Only 48 of those cycles make the three transposed rows shifts of one another.
+I checked all 720 by brute force; every full field orbit is one of those 48.
+</p>
+
+<p>
+Still, an orbit only does one thing: multiply by the same value over and over.
+Why does that make the rows line up?
+</p>
+
+<p>
+<a href="#org000000d">Skip the proof!</a>
+</p>
+</div>
+</div>
+<div id="outline-container-org0000014" class="outline-2">
+<h2 id="org0000014">Why the Rows Shift</h2>
+<div class="outline-text-2" id="text-org0000014">
+</div>
+<div id="outline-container-org000000f" class="outline-3">
+<h3 id="org000000f">Setup</h3>
+<div class="outline-text-3" id="text-org000000f">
+<p>
+We want to prove that, in any full orbit, every row is a shift of row 0.
+</p>
+
+<p>
+Define \(L=2^n-1\); the number of nonzero elements in the field.
+</p>
+
+<p>
+An orbit is:
+\[
+e(t)=s g^t,
+\]
+where \(s\) is <code>start</code> and \(g\) is <code>gen</code>, both nonzero.
+Because the orbit is full, \(g^0,g^1,\ldots,g^{L-1}\) are distinct and \(g^L=1\).
+</p>
+
+<p>
+Multiplying by a fixed nonzero value rearranges the field: every element comes out exactly once, or division would break.
+</p>
+
+<p>
+Let \(b_i\) be the function that returns bit \(i\) of an element, counting from the left.
+For example, \(b_0(110)=1\) and \(b_2(110)=0\).
+</p>
+
+<p>
+For each possible shift \(k\), and any element \(z\), define a "shift" function \(S_k\):
+\[
+S_k(z)=b_0(g^kz), \qquad 0\leq k\lt L.
+\]
+</p>
+
+<p>
+Observe:
+\[ g^k e(t) = g^k s g^t = s g^{k+t} = e(t+k) \]
+</p>
+
+<p>
+So then, if we plug in an orbit \(e(t)\) for \(z\), we get:
+\[
+S_k(e(t))=b_0(g^ke(t))=b_0(e(t+k)),
+\]
+</p>
+
+<p>
+In English, this means that \(S_k\) produces row 0 (on the orbit) shifted by \(k\) steps.
+</p>
+
+<p>
+We will show that, in a full orbit, for every \(b_i\) there is some \(S_k\) that is the same function.
+</p>
+</div>
+</div>
+<div id="outline-container-org0000011" class="outline-3">
+<h3 id="org0000011">Counting Readouts</h3>
+<div class="outline-text-3" id="text-org0000011">
+<p>
+Call any function that takes an element and returns a bit a <i>readout</i>:
+\[
+f:\{n\text{-bit field elements}\}\longrightarrow\{0,1\}.
+\]
+</p>
+
+<p>
+Two readouts are the <i>same</i> when they return the same bit for every element.
+</p>
+
+<p>
+A readout is <i>additive</i> if it respects addition:
+\[
+f(u+v)=f(u)+f(v)
+\]
+</p>
+
+<p>
+Both \(+\) signs are the same XOR.
+Field addition applies it one position at a time, across all \(n\) positions at once.
+A readout hands back a single bit, so on the right there is only one position left to apply it to.
+</p>
+
+<p>
+Addition of any two field elements never mixes the bits across positions.
+So this means that every \(b_i\) is an additive readout:
+\[
+b_i(u+v) = b_i(u) + b_i(v) \qquad \forall i
+\]
+</p>
+
+<p>
+No \(b_i\) is 0 everywhere, either: \(b_i\) returns 1 on the element whose only <code>1</code> sits at position \(i\).
+</p>
+
+<p>
+We can count the additive readouts by looking at what they do to elements containing a single <code>1</code>.
+</p>
+
+<p>
+In a three-bit field, suppose \(f\) is additive.
+Since \(101 = 100 + 001\),
+\[
+f(101)=f(100)+f(001).
+\]
+</p>
+
+<p>
+We can apply the rule repeatedly. Since \(111=110+001\) and \(110=100+010\),
+</p>
+\begin{align*}
+f(111) &= f(110)+f(001) \\
+       &= f(100)+f(010)+f(001).
+\end{align*}
+
+<p>
+A three-bit field has three single-<code>1</code> elements: <code>100</code>, <code>010</code>, <code>001</code>.
+Every element breaks down into some combination of them, so \(f\) is determined entirely by \(f(100)\), \(f(010)\), and \(f(001)\).
+Every other output \(f(u)\) is found by XORing some combination of these three bits.
+Each of the three answers can be either 0 or 1, giving at most \(2^3\) additive readouts.
+</p>
+
+<aside id="org0000010">
+<p>
+An element can be broken down with its components in a different order, and we could repeat some elements.
+Neither changes the valid count: XOR is commutative, and two copies of the same bit cancel.
+For example,
+\[
+f(100)+f(100)+f(001)=f(100+100+001)=f(001).
+\]
+</p>
+</aside>
+
+<p>
+With \(n\) bits, this means there are at most \(2^n\) additive readouts.
+One is 0 everywhere, leaving at most \(2^n-1=L\) nonzero additive readouts.
+</p>
+</div>
+</div>
+<div id="outline-container-org0000012" class="outline-3">
+<h3 id="org0000012">The Argument</h3>
+<div class="outline-text-3" id="text-org0000012">
+<p>
+We just showed that there are at most \(L\) nonzero additive readouts.
+We also have \(L\) shift functions:
+\[
+S_0,S_1,\ldots,S_{L-1}.
+\]
+</p>
+
+<p>
+If these are all additive, nonzero, and different from one another, they must fill all \(L\) available spots.
+There are three things to check.
+</p>
+
+<ol class="org-ol">
+<li><p>
+Each \(S_k\) is additive.
+Multiplication distributes, and \(b_0\) is additive:
+</p>
+\begin{align*}
+S_k(u+v)
+  &= b_0(g^k(u+v)) \\
+  &= b_0(g^ku+g^kv) \\
+  &= b_0(g^ku)+b_0(g^kv) \\
+  &= S_k(u)+S_k(v).
+\end{align*}</li>
+
+<li>No \(S_k\) is 0 everywhere.
+Multiplication by \(g^k\) rearranges the field, so some element \(z\) must satisfy \(g^kz=100\ldots0\).
+For that element,
+\[
+   S_k(z)=b_0(g^kz)=b_0(100\ldots0)=1.
+   \]
+So \(S_k\) is not 0 everywhere.</li>
+
+<li><p>
+No two shift amounts give the same readout.
+Suppose two different shifts produce the same readout: \(S_j=S_k\), with \(j\neq k\).
+Then, for every \(z\),
+\[
+   b_0(g^jz)=b_0(g^kz).
+   \]
+</p>
+
+<p>
+XORing these two equal bits gives 0.
+Since \(b_0\) is additive,
+</p>
+\begin{align*}
+0
+  &= b_0(g^jz)+b_0(g^kz) \\
+  &= b_0(g^jz+g^kz) \\
+  &= b_0((g^j+g^k)z).
+\end{align*}
+
+<p>
+Because \(j\neq k\), the coefficient \(g^j+g^k\) is nonzero.
+Multiplication by this coefficient rearranges the field, so the equation would make \(b_0\) return 0 on every element.
+But \(b_0(100\ldots0)=1\), so that is impossible.
+</p></li>
+</ol>
+
+<p>
+We have found \(L\) distinct nonzero additive readouts, the most there can be.
+Thus, for every \(i\), there is some \(k\) such that
+\[
+b_i(e(t))=S_k(e(t))=b_0(e(t+k)).
+\]
+Every row is therefore a shift of row 0, so every pair of rows differs by a shift. \(\square\)
+</p>
+</div>
+</div>
+<div id="outline-container-org0000013" class="outline-3">
+<h3 id="org0000013">Why Full Orbits Matter</h3>
+<div class="outline-text-3" id="text-org0000013">
+<p>
+Suppose the orbit repeats after \(d\) steps, where \(d\lt L\).
+Then \(g^d=1\), so
+\[
+S_{k+d}(z)=b_0(g^{k+d}z)=b_0(g^kz)=S_k(z).
+\]
+There are only \(d\) different shift functions.
+The count no longer matches: there are \(d\) shift functions, not \(L\), so nothing forces every \(b_i\) to be a shift function.
+</p>
+
+<p>
+For example, in the field of four-bit elements (\(2^4=16\) elements), <code>gen=1000</code> produces this short orbit:
+</p>
+<pre class="example">
+orbit   0001 1000 1100 1010 1111
+rows    01111
+        00101
+        00011
+        10001
+</pre>
+
+<p>
+Row 0 contains four ones, while every other row contains two.
+A shift preserves that count, so row 0 cannot be a shift of any other row.
+The property can fail when the orbit is short.
+</p>
+
+<p>
+I had tried short orbits earlier, but some of them were deceptive: the active rows were shifts of one another while another row was all zero.
+That looked like another version of the same pattern, and I missed that only full orbits guarantee it for <i>every</i> row.
+An all-zero row just means that the short orbit never visits an element with a <code>1</code> in that bit position.
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org000000d" class="outline-2">
+<h2 id="org000000d">Conclusion</h2>
+<div class="outline-text-2" id="text-org000000d">
+<p>
+It turns out I hadn't discovered anything.
+In the polynomial view from the optional detour, the connection is literal: our first <code>gen=010</code> is \(x\), and multiplying by \(x\) shifts the bits left, XORing the modulus back in when a bit falls off the end.
+That is a Linear Feedback Shift Register update.
+</p>
+
+<p>
+The rows of a full orbit are <i>m-sequences</i>, the sequences produced by maximal-length <a href="https://en.wikipedia.org/wiki/Linear-feedback_shift_register">Linear Feedback Shift Registers</a>.
+Being shifted copies of one another is one of their standard properties.
+</p>
+
+<p>
+So I rebuilt a piece of old hardware by accident, and it happens to make decent drum patterns.
+</p>
+
+<p>
+The rhythms work.
+I'm still looking for the melodies.
+</p>
+</div>
+</div>
+<div id="outline-container-org0000015" class="outline-2">
+<h2 id="org0000015">AI Disclosure</h2>
+<div class="outline-text-2" id="text-org0000015">
+<ul class="org-ul">
+<li>AI was used heavily for this post, but nearly all of the prose was rewritten by me.</li>
+<li>Many of the diagrams use AI-generated SVG code, but most were hand-drawn first, then pasted into Claude Code, which generated the SVGs.</li>
+<li>The sound clips were produced by entirely AI-generated code that I did not read.</li>
+<li>The proof went through three major versions, with substantial AI help during development and review.</li>
+</ul>
+</div>
+</div>
+]]>
+    </content>
+  </entry>
+  <entry>
     <title>AoC Self-Reflections (and a touch of AI doomerism)</title>
     <link rel="alternate" type="text/html" href="http://dpzmick.com/posts/2026-aoc-elisp-ai.html"/>
     <id>urn:uuid:34f10344-77e1-3c8c-8d2c-4fd42471da09</id>
@@ -69,7 +1385,7 @@ I would definitely enjoy a third star with a bigger input that requires an effic
 <p>
 Almost all of my real-world scalable algorithms depend on subtle properties of the expected inputs and require real thought about both the algorithm and computer architecture, but I like it when the problem isn't just picking up details.
 Maybe the "perfect balance" would be a challenge with 6 problems that are just hard enough to require <i>some</i> algorithmic thinking, but not large enough to be Day Job problems.
-In other words&#x2026; a university problem set?
+In other words&hellip; a university problem set?
 </p>
 </div>
 <div id="outline-container-org0000002" class="outline-3">
@@ -277,7 +1593,7 @@ Fixation combined with incorrect information is a recipe for productive-looking 
 </p>
 
 <p>
-Maybe better prompting can help when there's a specific task to accomplish (i.e. "check these assumptions &#x2026; then solve &#x2026;").
+Maybe better prompting can help when there's a specific task to accomplish (i.e. "check these assumptions &hellip; then solve &hellip;").
 However, in cases where I'm trying to learn something and don't know what I don't know, this behavior is harmful.
 When a model fixates on a bad assumption, without correcting it, it's easy to lose an hour to "oh so close! maybe if I change the prompt in this small way and try again it'll work."
 </p>
@@ -419,7 +1735,7 @@ That's worth some experimentation.
 </p>
 
 <p>
-I am not sure what comes of this but it's fairly clear we still need tools for thinking (until <a href="#for-now">Appendix: For now&#x2026;</a>).
+I am not sure what comes of this but it's fairly clear we still need tools for thinking (until <a href="#for-now">Appendix: For now&hellip;</a>).
 </p>
 </div>
 </div>
@@ -448,7 +1764,7 @@ I'm hopeful that I've left you with some good questions too!
 </div>
 </div>
 <div id="outline-container-for-now" class="outline-2">
-<h2 id="for-now">Appendix: For now&#x2026;</h2>
+<h2 id="for-now">Appendix: For now&hellip;</h2>
 <div class="outline-text-2" id="text-for-now">
 <p>
 When I asked Claude to review this post and give me a summary of "what's left for humans," it made a nice long list of skills humans have (most of which are in here somewhere), but concluded with "\n\nFor now."
@@ -4697,7 +6013,7 @@ The answer to that depends on which compiler you ask.
 </div>
 </div>
 <div id="outline-container-org0000006" class="outline-4">
-<h4 id="org0000006">gcc 7.1 (&#x2013;std=c++1z -O3)</h4>
+<h4 id="org0000006">gcc 7.1 (&ndash;std=c++1z -O3)</h4>
 <div class="outline-text-4" id="text-org0000006">
 </div>
 <ul class="org-ul">
@@ -7273,8 +8589,8 @@ differential equation:
 </p>
 
 <p>
-where $ &alpha; $ is an individual member's contribution (every member is
-assumed to have the same contribution) and $ &beta; $ is the amount the
+where \( \alpha \) is an individual member's contribution (every member is
+assumed to have the same contribution) and \( \beta \) is the amount the
 member will detract from the group (also assumed the same for all
 members).
 </p>
@@ -7318,8 +8634,8 @@ selflessness.
 
 <ul class="org-ul">
 <li>However, I did a small test to see how much of an impact this has
-and I (weakly) concluded that for large $ n $ this effect goes
-away. Unfortunatley, I'm not really testing with large $ n $, so we
+and I (weakly) concluded that for large \( n \) this effect goes
+away. Unfortunatley, I'm not really testing with large \( n \), so we
 will have to take this fact into consideration in our
 interpretation of the results.</li>
 </ul></li>
@@ -7358,7 +8674,7 @@ large groups).
 </p>
 
 <p>
-So, for some values of $ &alpha; $, and $ &beta; $, I varied both the
+So, for some values of \( \alpha \), and \( \beta \), I varied both the
 selflessness chance and the group split chance from 0.0 to 0.95, in 5
 percent increments. So every pair is tested.
 </p>
@@ -7665,25 +8981,25 @@ where:
 </p>
 
 <ul class="org-ul">
-<li>$ F $ is the fitness function.</li>
-<li>$ n $ is the number of people currently in the group</li>
-<li>$ &alpha; $ is an individual's contribution to the study group</li>
-<li>$ &beta; $ is an individual's detriment to the study group</li>
+<li>\( F \) is the fitness function.</li>
+<li>\( n \) is the number of people currently in the group</li>
+<li>\( \alpha \) is an individual's contribution to the study group</li>
+<li>\( \beta \) is an individual's detriment to the study group</li>
 </ul>
 
 <p>
-Let's explore this for a moment before moving on. Consider just $
-\frac{dF}{dn} = &alpha; $. This piece of the equation tells us that as
+Let's explore this for a moment before moving on. Consider just
+\( \frac{dF}{dn} = \alpha \). This piece of the equation tells us that as
 the number of people in the study group changes, the change in the
-fitness of the study group is proportional to $ &alpha; $, the individual
+fitness of the study group is proportional to \( \alpha \), the individual
 contribution rate. But, we know that as the number of people increases,
 the effectiveness of the group decreases, so subtract something that
-grows as the population grows: $ &beta; n $.
+grows as the population grows: \( \beta n \).
 </p>
 
 <p>
 This equations is simple to solve, and we should impose the initial
-condition $ F(0) = 0 $, as a group with zero members has 0 fitness. The
+condition \( F(0) = 0 \), as a group with zero members has 0 fitness. The
 solutions then are:
 </p>
 
@@ -7693,8 +9009,8 @@ solutions then are:
 
 <p>
 Additionally, we probably want to know what the optimal study group size
-is. We can easily find (by setting $ \frac{dF}{dn} = 0 $) that the
-optimal size is $ \frac{\alpha}{\beta} $.
+is. We can easily find (by setting \( \frac{dF}{dn} = 0 \)) that the
+optimal size is \( \frac{\alpha}{\beta} \).
 </p>
 </div>
 </div>
